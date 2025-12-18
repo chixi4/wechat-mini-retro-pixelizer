@@ -1,4 +1,4 @@
-<view class="page {{themeClass}}" style="--safe-top: {{safeTopPx}}px;">
+<view class="page {{themeClass}}" style="--safe-top: {{safeTopPx}}px; --safe-bottom: {{safeBottomPx}}px;">
   <view class="header {{headerVisible ? 'visible' : ''}}" id="headerRef">
     <view class="title">Retro Pixelizer Pro</view>
     <view class="theme-btn" bindtap="onToggleTheme">◐</view>
@@ -114,6 +114,7 @@
       <view class="panel">
         <view class="action-btn {{canDownload ? '' : 'disabled'}}" bindtap="onDownload">下载图片</view>
       </view>
+
     </scroll-view>
 
     <view

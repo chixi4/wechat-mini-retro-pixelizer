@@ -106,6 +106,7 @@ Page({
     hasImage: false,
     closeVisible: false,
     safeTopPx: 0,
+    safeBottomPx: 0,
 
     targetWidth: 128,
     sliderThumbLeftPx: 0,
@@ -152,6 +153,23 @@ Page({
       const statusBarHeight = sys && typeof sys.statusBarHeight === "number" ? sys.statusBarHeight : null;
       const raw = Math.max(0, safeAreaTop != null ? safeAreaTop : statusBarHeight != null ? statusBarHeight : 0);
       return Math.max(0, raw - 9);
+    })();
+    this._safeBottom = (() => {
+      const minGap = 15;
+      const safeInsets =
+        sys && sys.safeAreaInsets && typeof sys.safeAreaInsets.bottom === "number" ? sys.safeAreaInsets.bottom : null;
+      if (safeInsets != null) return Math.max(minGap, Math.max(0, safeInsets));
+
+      const safeAreaBottom = sys && sys.safeArea && typeof sys.safeArea.bottom === "number" ? sys.safeArea.bottom : null;
+      if (safeAreaBottom == null) return minGap;
+
+      const candidates = [];
+      if (sys && typeof sys.screenHeight === "number") candidates.push(sys.screenHeight - safeAreaBottom);
+      if (sys && typeof sys.windowHeight === "number") candidates.push(sys.windowHeight - safeAreaBottom);
+
+      const nonNeg = candidates.filter((v) => typeof v === "number" && isFinite(v) && v >= 0);
+      const raw = nonNeg.length ? Math.min(...nonNeg) : 0;
+      return Math.max(minGap, raw);
     })();
 
     const stored = wx.getStorageSync("pixelizer_theme");
@@ -219,6 +237,7 @@ Page({
     this._lockPreviewHeight = false;
 
     const safeTopPx = this._safeTop;
+    const safeBottomPx = this._safeBottom;
     const previewHeightPx = this._isMobile ? Math.floor((sys.windowHeight || 0) * 0.4) : 0;
     const controlsPaddingTopPx = this._isMobile ? 15 + safeTopPx : 0;
     this.setData({
@@ -226,6 +245,7 @@ Page({
       closeIconSrc: theme === "dark" ? "/assets/icons/close-dark.svg" : "/assets/icons/close-light.svg",
       paletteList,
       safeTopPx,
+      safeBottomPx,
       previewHeightPx,
       controlsPaddingTopPx
     });

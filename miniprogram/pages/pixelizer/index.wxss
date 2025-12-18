@@ -560,7 +560,7 @@
     overflow-y: auto;
     overflow-x: hidden;
     padding: 15px;
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: 0;
     flex: 1;
     position: relative;
     box-sizing: border-box;
@@ -570,6 +570,10 @@
 
   .controls .panel:first-child {
     margin-top: 15px;
+  }
+
+  .controls .panel:last-child {
+    margin-bottom: var(--safe-bottom, 15px);
   }
 
   .palette-list {
