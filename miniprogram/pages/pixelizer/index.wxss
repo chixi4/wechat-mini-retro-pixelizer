@@ -572,8 +572,9 @@
     margin-top: 15px;
   }
 
-  .controls .panel:last-child {
-    margin-bottom: var(--safe-bottom, 15px);
+  .bottom-spacer {
+    width: 100%;
+    flex-shrink: 0;
   }
 
   .palette-list {

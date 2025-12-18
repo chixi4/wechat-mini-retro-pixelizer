@@ -155,6 +155,7 @@ Page({
       return Math.max(0, raw - 9);
     })();
     this._safeBottom = (() => {
+      if (!this._isMobile) return 0;
       const minGap = 15;
       const safeInsets =
         sys && sys.safeAreaInsets && typeof sys.safeAreaInsets.bottom === "number" ? sys.safeAreaInsets.bottom : null;

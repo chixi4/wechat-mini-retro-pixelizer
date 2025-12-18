@@ -115,6 +115,7 @@
         <view class="action-btn {{canDownload ? '' : 'disabled'}}" bindtap="onDownload">下载图片</view>
       </view>
 
+      <view class="bottom-spacer" style="height: {{safeBottomPx}}px;"></view>
     </scroll-view>
 
     <view
