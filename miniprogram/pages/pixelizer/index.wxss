@@ -413,10 +413,11 @@
   height: 32px;
   background: #ffffff;
   border: 2px solid #000000;
-  display: none;
-  z-index: 20;
-  align-items: center;
-  justify-content: center;
+  display: block;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 200;
+  transition: opacity 0.15s ease-out;
 }
 
 .theme-dark .close-btn {
@@ -424,17 +425,17 @@
   border-color: #eeeeee;
 }
 
-.main.has-image .close-btn {
-  display: flex;
-}
-
 .close-btn.visible {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .close-icon {
   width: 18px;
   height: 18px;
+  position: absolute;
+  left: 7px;
+  top: 7px;
 }
 
 .fullscreen-modal {
@@ -510,11 +511,14 @@
     z-index: 100;
     border-bottom: 2px solid #000000;
     padding: 8px;
+    box-sizing: border-box;
+    background: #ffffff;
     height: var(--preview-h, 40vh);
     overflow: hidden;
     opacity: 0;
     pointer-events: none;
-    transition: transform 0.3s ease-out, opacity 0.2s ease-out;
+    transition: transform 0.35s cubic-bezier(0.2, 0, 0.2, 1), opacity 0s linear;
+    will-change: transform, opacity;
   }
 
   .main.has-image .preview-area {
@@ -569,7 +573,8 @@
   .main.has-image .controls {
     padding-top: calc(40vh + 15px);
     padding-bottom: 40px;
-    transition: padding-top 0.3s ease-out;
+    transition: padding-top 0.35s cubic-bezier(0.2, 0, 0.2, 1);
+    will-change: padding-top;
   }
 
   .header.visible + .main.has-image .controls {

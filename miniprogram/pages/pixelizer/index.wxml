@@ -121,9 +121,9 @@
       style="--preview-h: {{previewHeightPx}}px; transform: translateY({{previewTranslateYPx}}px);"
     >
       <view class="canvas-container" id="canvasContainer">
-        <view class="close-btn {{closeVisible ? 'visible' : ''}}" catchtap="onCloseImage">
-          <image class="close-icon" src="{{closeIconSrc}}" mode="aspectFit"></image>
-        </view>
+        <cover-view class="close-btn {{closeVisible ? 'visible' : ''}}" bindtap="onCloseImage">
+          <cover-image class="close-icon" src="{{closeIconSrc}}" mode="aspectFit"></cover-image>
+        </cover-view>
         <canvas
           type="2d"
           id="mainCanvas"

@@ -150,7 +150,8 @@ Page({
     this._safeTop = (() => {
       const safeAreaTop = sys && sys.safeArea && typeof sys.safeArea.top === "number" ? sys.safeArea.top : null;
       const statusBarHeight = sys && typeof sys.statusBarHeight === "number" ? sys.statusBarHeight : null;
-      return Math.max(0, safeAreaTop != null ? safeAreaTop : statusBarHeight != null ? statusBarHeight : 0);
+      const raw = Math.max(0, safeAreaTop != null ? safeAreaTop : statusBarHeight != null ? statusBarHeight : 0);
+      return Math.max(0, raw - 7);
     })();
 
     const stored = wx.getStorageSync("pixelizer_theme");
@@ -293,7 +294,7 @@ Page({
 
     const headerHeightPx = this._headerRect ? this._headerRect.height || 0 : 0;
     const safeTopPx = this._safeTop || 0;
-    const gap = 8;
+    const gap = 0;
 
     let controlsPaddingTopPx = safeTopPx + 15;
     let previewTranslateYPx = 0;
@@ -312,9 +313,12 @@ Page({
     }
 
     this.setData({ controlsPaddingTopPx, previewTranslateYPx }, async () => {
-      await sleep(50);
-      await this._refreshRects();
-      this._syncToneCursorToRect();
+      const delayMs = this._isMobile && this.data.hasImage ? 360 : 0;
+      if (this._layoutRefreshTimer) clearTimeout(this._layoutRefreshTimer);
+      this._layoutRefreshTimer = setTimeout(async () => {
+        await this._refreshRects();
+        this._syncToneCursorToRect();
+      }, delayMs);
     });
     this._updateCloseVisibility();
   },
@@ -673,9 +677,15 @@ Page({
           console.log("开始处理图片");
           await sleep(50);
           await this._refreshRects();
-          await this.onResetTone();
+          await this.onResetTone({ skipProcess: true });
           this._updateLayout();
-          this._scheduleProcess();
+
+          const delayMs = this._isMobile ? 360 : 0;
+          if (this._initialProcessTimer) clearTimeout(this._initialProcessTimer);
+          this._initialProcessTimer = setTimeout(() => {
+            this._initialProcessTimer = null;
+            this._scheduleProcess();
+          }, delayMs);
         }
       );
     } catch (e) {
@@ -689,6 +699,15 @@ Page({
   },
 
   onCloseImage() {
+    if (this._initialProcessTimer) {
+      clearTimeout(this._initialProcessTimer);
+      this._initialProcessTimer = null;
+    }
+    if (this._layoutRefreshTimer) {
+      clearTimeout(this._layoutRefreshTimer);
+      this._layoutRefreshTimer = null;
+    }
+
     this._state.imageToken += 1;
     this._state.originalImage = null;
     this._state.imageInfo = null;
@@ -786,7 +805,8 @@ Page({
     this._grid.dragging = false;
   },
 
-  async onResetTone() {
+  async onResetTone(options) {
+    const skipProcess = options && options.skipProcess;
     const rect = await selectRect(this, "#xyPadContainer");
     if (!rect) return;
 
@@ -797,7 +817,9 @@ Page({
     this._grid.cursorY = rect.height / 2;
     this.setData(
       { toneX: 0, toneY: 0, xyCursorLeftPx: this._grid.cursorX, xyCursorTopPx: this._grid.cursorY },
-      () => this._scheduleProcess()
+      () => {
+        if (!skipProcess) this._scheduleProcess();
+      }
     );
   },
 
@@ -892,7 +914,11 @@ Page({
           fail: reject
         });
       });
-      this.setData({ fullscreenVisible: true, fullscreenSrc: tmp.tempFilePath });
+
+      wx.previewImage({
+        current: tmp.tempFilePath,
+        urls: [tmp.tempFilePath]
+      });
     } catch {
       wx.showToast({ title: "预览失败", icon: "none" });
     }
