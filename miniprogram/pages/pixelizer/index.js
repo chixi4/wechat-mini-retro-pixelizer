@@ -105,6 +105,7 @@ Page({
     headerVisible: true,
     hasImage: false,
     closeVisible: false,
+    safeTopPx: 0,
 
     targetWidth: 128,
     sliderThumbLeftPx: 0,
@@ -135,6 +136,7 @@ Page({
     controlsScrollTop: 0,
     controlsPaddingTopPx: 15,
     previewTranslateYPx: 0,
+    previewHeightPx: 0,
 
     mainCanvasCssW: 1,
     mainCanvasCssH: 1
@@ -214,11 +216,15 @@ Page({
     this._updatePending = false;
     this._lastRenderKey = "";
 
-    const controlsPaddingTopPx = this._isMobile ? 15 + this._safeTop : 0;
+    const safeTopPx = this._safeTop;
+    const previewHeightPx = this._isMobile ? Math.floor((sys.windowHeight || 0) * 0.4) : 0;
+    const controlsPaddingTopPx = this._isMobile ? 15 + safeTopPx : 0;
     this.setData({
       themeClass: theme === "dark" ? "theme-dark" : "theme-light",
       closeIconSrc: theme === "dark" ? "/assets/icons/close-dark.svg" : "/assets/icons/close-light.svg",
       paletteList,
+      safeTopPx,
+      previewHeightPx,
       controlsPaddingTopPx
     });
   },
@@ -286,22 +292,23 @@ Page({
     }
 
     const headerHeightPx = this._headerRect ? this._headerRect.height || 0 : 0;
-    const basePadding = 15 + (this._safeTop || 0);
-    const previewH = (this._sys.windowHeight || 0) * 0.4;
+    const safeTopPx = this._safeTop || 0;
+    const gap = 8;
 
-    let controlsPaddingTopPx = basePadding;
+    let controlsPaddingTopPx = safeTopPx + 15;
     let previewTranslateYPx = 0;
 
     if (this.data.hasImage) {
-      controlsPaddingTopPx += previewH;
-      if (this.data.headerVisible) {
-        controlsPaddingTopPx += headerHeightPx;
-        previewTranslateYPx = headerHeightPx;
-      }
+      const previewHeightPx =
+        typeof this.data.previewHeightPx === "number" && this.data.previewHeightPx > 0
+          ? this.data.previewHeightPx
+          : Math.floor((this._sys.windowHeight || 0) * 0.4);
+
+      const headerOffset = this.data.headerVisible ? headerHeightPx : 0;
+      previewTranslateYPx = headerOffset;
+      controlsPaddingTopPx = safeTopPx + previewHeightPx + headerOffset + gap;
     } else {
-      if (this.data.headerVisible) {
-        controlsPaddingTopPx += headerHeightPx;
-      }
+      if (this.data.headerVisible) controlsPaddingTopPx = safeTopPx + headerHeightPx + 15;
     }
 
     this.setData({ controlsPaddingTopPx, previewTranslateYPx }, async () => {
@@ -313,7 +320,7 @@ Page({
   },
 
   _updateCloseVisibility() {
-    const visible = this.data.hasImage && (!this._isMobile || this.data.headerVisible);
+    const visible = this.data.hasImage;
     if (visible !== this.data.closeVisible) this.setData({ closeVisible: visible });
   },
 
@@ -516,17 +523,48 @@ Page({
     this._canvas.work.ctx.putImageData(workImageData, 0, 0);
 
     const container = this._canvasContainerRect;
-    const availW = container && container.width ? Math.max(1, Math.floor(container.width)) : 1000;
-    const availH = container && container.height ? Math.max(1, Math.floor(container.height)) : 600;
+    const containerW = container && container.width ? Math.max(1, Math.floor(container.width)) : 1000;
+    const containerH = container && container.height ? Math.max(1, Math.floor(container.height)) : 600;
 
-    const scaleW = Math.floor(availW / targetWidth);
-    const scaleH = Math.floor(availH / targetHeight);
-    const displayScale = Math.max(1, Math.min(scaleW, scaleH));
+    const previewPadding = 8; // 同 mobile .preview-area padding
+    const previewBorder = 2; // mobile 预览区底边线
 
-    const displayW = targetWidth * displayScale;
-    const displayH = targetHeight * displayScale;
+    let availW = Math.max(1, containerW - 44);
+    let availH = Math.max(1, containerH - 44);
 
-    this.setData({ mainCanvasCssW: displayW, mainCanvasCssH: displayH, canDownload: true });
+    if (this._isMobile) {
+      const winW = this._sys && this._sys.windowWidth ? Math.max(1, Math.floor(this._sys.windowWidth)) : containerW;
+      const winH = this._sys && this._sys.windowHeight ? Math.max(1, Math.floor(this._sys.windowHeight)) : containerH;
+      const maxPreviewH = Math.max(1, Math.floor(winH * 0.4));
+
+      availW = Math.max(1, winW - previewPadding * 2);
+      availH = Math.max(1, maxPreviewH - previewPadding * 2 - previewBorder);
+    }
+
+    // 预览尺寸只由容器与图片纵横比决定，避免拖动“像素尺寸”时预览大小跳变
+    let displayW = availW;
+    let displayH = Math.round(displayW * aspect);
+    if (displayH > availH) {
+      displayH = availH;
+      displayW = Math.round(displayH / aspect);
+    }
+    displayW = Math.max(1, Math.floor(displayW));
+    displayH = Math.max(1, Math.floor(displayH));
+
+    const nextData = { mainCanvasCssW: displayW, mainCanvasCssH: displayH, canDownload: true };
+    const nextPreviewHeightPx = this._isMobile
+      ? Math.max(1, displayH + previewPadding * 2 + previewBorder)
+      : this.data.previewHeightPx;
+
+    let needsLayoutUpdate = false;
+    if (this._isMobile && nextPreviewHeightPx !== this.data.previewHeightPx) {
+      nextData.previewHeightPx = nextPreviewHeightPx;
+      needsLayoutUpdate = true;
+    }
+
+    this.setData(nextData, () => {
+      if (needsLayoutUpdate) this._updateLayout();
+    });
 
     const dpr = this._dpr;
     this._canvas.main.node.width = Math.max(1, Math.floor(displayW * dpr));
@@ -618,7 +656,7 @@ Page({
       this._proc.toneStats = { token: 0, w: 0, h: 0, stats: null };
       this._proc.work = { w: 0, h: 0, imageData: null };
 
-      const headerVisible = this._isMobile ? false : this.data.headerVisible;
+      const headerVisible = true;
 
       console.log("设置图片状态");
 
@@ -674,80 +712,23 @@ Page({
   },
 
   onControlsScroll(e) {
-    if (!this._isMobile || !this.data.hasImage) return;
-
-    const scrollTop = e && e.detail ? e.detail.scrollTop || 0 : 0;
-    const m = this._mobile;
-    m.currentScrollTop = scrollTop;
-
-    if (m.activeToken !== this._state.imageToken) {
-      m.activeToken = this._state.imageToken;
-      m.armed = false;
-      m.armedAtGesture = -1;
-      m.didScrollSinceLoad = false;
-      m.lastScrollTop = 0;
-    }
-
-    const scrollingUp = scrollTop < m.lastScrollTop;
-    m.lastScrollTop = scrollTop;
-    if (scrollTop > 5) m.didScrollSinceLoad = true;
-
-    if (m.didScrollSinceLoad && scrollingUp && scrollTop <= m.topEps && !this.data.headerVisible) {
-      m.armed = true;
-      m.armedAtGesture = m.gestureId;
-    }
-
-    if (!scrollingUp && scrollTop > 100 && this.data.headerVisible) {
-      this._hideHeader();
-    }
+    // Mobile 端标题栏常驻，不再跟随滚动隐藏/下拉显示
+    if (!this._isMobile) return;
   },
 
   onControlsTouchStart(e) {
-    if (!this._isMobile || !this.data.hasImage) return;
-    const t = e && e.touches && e.touches[0] ? e.touches[0] : null;
-    this._mobile.gestureId += 1;
-    this._mobile.touchStartY = t ? t.clientY : null;
-    this._mobile.pulledThisGesture = false;
+    // Mobile 端标题栏常驻，关闭“下拉拉出标题栏”逻辑
+    if (!this._isMobile) return;
   },
 
   onControlsTouchMove(e) {
-    if (!this._isMobile || !this.data.hasImage) return;
-    const m = this._mobile;
-    const t = e && e.touches && e.touches[0] ? e.touches[0] : null;
-    if (!t || m.touchStartY == null) return;
-
-    if (this.data.headerVisible) return;
-    if (m.currentScrollTop > m.topEps) return;
-
-    const dy = t.clientY - m.touchStartY;
-    if (dy <= 0 || dy < 15) return;
-    if (m.pulledThisGesture) return;
-    m.pulledThisGesture = true;
-
-    if (!m.didScrollSinceLoad) {
-      this._showHeader();
-      m.armed = false;
-      m.armedAtGesture = -1;
-      return;
-    }
-
-    if (!m.armed) {
-      m.armed = true;
-      m.armedAtGesture = m.gestureId;
-      return;
-    }
-
-    if (m.armedAtGesture === m.gestureId) return;
-
-    this._showHeader();
-    m.armed = false;
-    m.armedAtGesture = -1;
+    // Mobile 端标题栏常驻，关闭“下拉拉出标题栏”逻辑
+    if (!this._isMobile) return;
   },
 
   onControlsTouchEnd() {
-    if (!this._isMobile || !this.data.hasImage) return;
-    this._mobile.touchStartY = null;
-    this._mobile.pulledThisGesture = false;
+    // Mobile 端标题栏常驻，关闭“下拉拉出标题栏”逻辑
+    if (!this._isMobile) return;
   },
 
   _showHeader() {
