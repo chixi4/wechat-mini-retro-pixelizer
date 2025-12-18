@@ -112,6 +112,8 @@ Page({
 
     toneX: 0,
     toneY: 0,
+    xyCursorLeftPx: 0,
+    xyCursorTopPx: 0,
 
     ditherAlgo: "atkinson",
     ditherAlgos: [
@@ -143,6 +145,11 @@ Page({
     this._sys = sys;
     this._dpr = sys.pixelRatio || 1;
     this._isMobile = (sys.windowWidth || 0) <= 768;
+    this._safeTop = (() => {
+      const safeAreaTop = sys && sys.safeArea && typeof sys.safeArea.top === "number" ? sys.safeArea.top : null;
+      const statusBarHeight = sys && typeof sys.statusBarHeight === "number" ? sys.statusBarHeight : null;
+      return Math.max(0, safeAreaTop != null ? safeAreaTop : statusBarHeight != null ? statusBarHeight : 0);
+    })();
 
     const stored = wx.getStorageSync("pixelizer_theme");
     const theme = stored === "dark" ? "dark" : "light";
@@ -182,11 +189,9 @@ Page({
     };
 
     this._grid = {
-      hitRadius: 44,
       dragging: false,
       cursorX: 0,
       cursorY: 0,
-      points: [],
       rect: null,
       lastWidth: 0,
       lastHeight: 0
@@ -209,7 +214,7 @@ Page({
     this._updatePending = false;
     this._lastRenderKey = "";
 
-    const controlsPaddingTopPx = this._isMobile ? 15 : 0;
+    const controlsPaddingTopPx = this._isMobile ? 15 + this._safeTop : 0;
     this.setData({
       themeClass: theme === "dark" ? "theme-dark" : "theme-light",
       closeIconSrc: theme === "dark" ? "/assets/icons/close-dark.svg" : "/assets/icons/close-light.svg",
@@ -219,41 +224,44 @@ Page({
   },
 
   async onReady() {
-    const [main, work, buffer, exportC, xy] = await Promise.all([
-      selectCanvas(this, "#mainCanvas"),
-      selectCanvas(this, "#workCanvas"),
-      selectCanvas(this, "#bufferCanvas"),
-      selectCanvas(this, "#exportCanvas"),
-      selectCanvas(this, "#xyGridCanvas")
-    ]);
-
-    if (!main || !work || !buffer || !exportC || !xy) {
-      wx.showToast({ title: "Canvas 初始化失败", icon: "none" });
-      return;
-    }
-
-    this._canvas = {
-      main: { node: main.node, ctx: main.node.getContext("2d") },
-      work: { node: work.node, ctx: work.node.getContext("2d") },
-      buffer: { node: buffer.node, ctx: buffer.node.getContext("2d") },
-      export: { node: exportC.node, ctx: exportC.node.getContext("2d") },
-      grid: { node: xy.node, ctx: xy.node.getContext("2d") }
-    };
-
     await this._refreshRects();
     this._updateSliderUI();
-    this._resizeXYGrid();
+    this._syncToneCursorToRect();
     this._updateLayout();
+    await this._ensureCanvases();
 
     wx.onWindowResize(async (res) => {
       this._sys = { ...this._sys, ...res };
       await sleep(50);
       await this._refreshRects();
       this._updateSliderUI();
-      this._resizeXYGrid();
+      this._syncToneCursorToRect();
       this._updateLayout();
+      await this._ensureCanvases();
       this._scheduleProcess();
     });
+  },
+
+  async _ensureCanvases() {
+    if (this._canvas) return true;
+
+    const [main, work, buffer, exportC] = await Promise.all([
+      selectCanvas(this, "#mainCanvas"),
+      selectCanvas(this, "#workCanvas"),
+      selectCanvas(this, "#bufferCanvas"),
+      selectCanvas(this, "#exportCanvas")
+    ]);
+
+    if (!main || !work || !buffer || !exportC) return false;
+
+    this._canvas = {
+      main: { node: main.node, ctx: main.node.getContext("2d") },
+      work: { node: work.node, ctx: work.node.getContext("2d") },
+      buffer: { node: buffer.node, ctx: buffer.node.getContext("2d") },
+      export: { node: exportC.node, ctx: exportC.node.getContext("2d") }
+    };
+
+    return true;
   },
 
   async _refreshRects() {
@@ -278,7 +286,7 @@ Page({
     }
 
     const headerHeightPx = this._headerRect ? this._headerRect.height || 0 : 0;
-    const basePadding = 15;
+    const basePadding = 15 + (this._safeTop || 0);
     const previewH = (this._sys.windowHeight || 0) * 0.4;
 
     let controlsPaddingTopPx = basePadding;
@@ -297,10 +305,9 @@ Page({
     }
 
     this.setData({ controlsPaddingTopPx, previewTranslateYPx }, async () => {
-      // 布局变化后，需要重新刷新rect和resize grid
       await sleep(50);
       await this._refreshRects();
-      this._resizeXYGrid();
+      this._syncToneCursorToRect();
     });
     this._updateCloseVisibility();
   },
@@ -310,36 +317,21 @@ Page({
     if (visible !== this.data.closeVisible) this.setData({ closeVisible: visible });
   },
 
-  _themeFg() {
-    return this.data.themeClass === "theme-dark" ? "#eeeeee" : "#000000";
-  },
-
-  _resizeXYGrid() {
+  _syncToneCursorToRect() {
     const rect = this._grid.rect;
-    if (!rect || !this._canvas) return;
-
-    const canvas = this._canvas.grid.node;
-    const ctx = this._canvas.grid.ctx;
-    const dpr = this._dpr;
+    if (!rect) return;
 
     const w = rect.width || 0;
     const h = rect.height || 0;
     if (w <= 0 || h <= 0) return;
 
-    canvas.width = Math.max(1, Math.floor(w * dpr));
-    canvas.height = Math.max(1, Math.floor(h * dpr));
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    // 保持当前cursor的相对位置
     const oldW = this._grid.lastWidth || w;
     const oldH = this._grid.lastHeight || h;
 
     if (this._grid.cursorX === 0 && this._grid.cursorY === 0) {
-      // 第一次初始化，设置到中心
       this._grid.cursorX = w / 2;
       this._grid.cursorY = h / 2;
     } else if (oldW > 0 && oldH > 0 && (oldW !== w || oldH !== h)) {
-      // 尺寸变化了，按比例调整cursor位置
       this._grid.cursorX = (this._grid.cursorX / oldW) * w;
       this._grid.cursorY = (this._grid.cursorY / oldH) * h;
     }
@@ -347,71 +339,10 @@ Page({
     this._grid.lastWidth = w;
     this._grid.lastHeight = h;
 
-    this._initGridPoints(w, h);
-    this._drawGrid();
-  },
+    this._grid.cursorX = Math.max(0, Math.min(w, this._grid.cursorX));
+    this._grid.cursorY = Math.max(0, Math.min(h, this._grid.cursorY));
 
-  _initGridPoints(w, h) {
-    const step = 20;
-    let cols = Math.ceil(w / step);
-    if (cols % 2 === 0) cols++;
-    let rows = Math.ceil(h / step);
-    if (rows % 2 === 0) rows++;
-
-    const totalW = (cols - 1) * step;
-    const totalH = (rows - 1) * step;
-    const offsetX = (w - totalW) / 2;
-    const offsetY = (h - totalH) / 2;
-
-    const points = [];
-    for (let y = 0; y < rows; y++) {
-      for (let x = 0; x < cols; x++) {
-        points.push({ x: offsetX + x * step, y: offsetY + y * step });
-      }
-    }
-    this._grid.points = points;
-  },
-
-  _drawGrid() {
-    if (!this._canvas || !this._grid.rect) return;
-    const ctx = this._canvas.grid.ctx;
-    const w = this._grid.rect.width || 0;
-    const h = this._grid.rect.height || 0;
-    if (w <= 0 || h <= 0) return;
-
-    ctx.clearRect(0, 0, w, h);
-    const themeFg = this._themeFg();
-    const maxDist = 40;
-    const cursorX = this._grid.cursorX;
-    const cursorY = this._grid.cursorY;
-
-    for (let i = 0; i < this._grid.points.length; i++) {
-      const p = this._grid.points[i];
-      const dx = p.x - cursorX;
-      const dy = p.y - cursorY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      let alpha = 0.15;
-      let size = 3;
-      let thickness = 0.5;
-      if (dist < maxDist) {
-        const factor = 1 - dist / maxDist;
-        alpha = 0.15 + factor * 0.85;
-        size = 3 + factor * 2;
-        thickness = 0.5 + factor * 1.5;
-      }
-
-      ctx.beginPath();
-      ctx.strokeStyle = themeFg;
-      ctx.lineWidth = thickness;
-      ctx.globalAlpha = alpha;
-      ctx.moveTo(p.x - size, p.y);
-      ctx.lineTo(p.x + size, p.y);
-      ctx.moveTo(p.x, p.y - size);
-      ctx.lineTo(p.x, p.y + size);
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
+    this.setData({ xyCursorLeftPx: this._grid.cursorX, xyCursorTopPx: this._grid.cursorY });
   },
 
   _updateSliderUI() {
@@ -465,7 +396,7 @@ Page({
 
     this._state.toneX = toneX;
     this._state.toneY = toneY;
-    this.setData({ toneX, toneY });
+    this.setData({ toneX, toneY, xyCursorLeftPx: x, xyCursorTopPx: y });
 
     this._scheduleProcess();
   },
@@ -610,27 +541,14 @@ Page({
   onToggleTheme() {
     const next = this.data.themeClass === "theme-dark" ? "light" : "dark";
     wx.setStorageSync("pixelizer_theme", next);
-    this.setData(
-      {
-        themeClass: next === "dark" ? "theme-dark" : "theme-light",
-        closeIconSrc: next === "dark" ? "/assets/icons/close-dark.svg" : "/assets/icons/close-light.svg"
-      },
-      () => {
-      this._drawGrid();
-      }
-    );
+    this.setData({
+      themeClass: next === "dark" ? "theme-dark" : "theme-light",
+      closeIconSrc: next === "dark" ? "/assets/icons/close-dark.svg" : "/assets/icons/close-light.svg"
+    });
   },
 
   async onChooseImage() {
     console.log("onChooseImage 被调用");
-
-    if (!this._canvas) {
-      console.error("Canvas 未初始化");
-      wx.showToast({ title: "页面未就绪", icon: "none" });
-      return;
-    }
-
-    console.log("Canvas 已就绪，准备选择图片");
 
     try {
       const chooseRes = await new Promise((resolve, reject) => {
@@ -652,6 +570,12 @@ Page({
       const src = chooseRes.tempFilePaths && chooseRes.tempFilePaths[0];
       if (!src) {
         console.error("未获取到图片路径");
+        return;
+      }
+
+      const ready = await this._ensureCanvases();
+      if (!ready) {
+        wx.showToast({ title: "页面未就绪", icon: "none" });
         return;
       }
 
@@ -867,7 +791,6 @@ Page({
 
     this._grid.dragging = true;
     await this._updateCursorFromClient(t.clientX, t.clientY);
-    this._drawGrid();
   },
 
   async onXYTouchMove(e) {
@@ -875,13 +798,11 @@ Page({
     const t = e && e.touches && e.touches[0] ? e.touches[0] : null;
     if (!t) return;
     await this._updateCursorFromClient(t.clientX, t.clientY);
-    this._drawGrid();
   },
 
   onXYTouchEnd() {
     if (!this._grid.dragging) return;
     this._grid.dragging = false;
-    this._drawGrid();
   },
 
   async onResetTone() {
@@ -893,8 +814,10 @@ Page({
 
     this._grid.cursorX = rect.width / 2;
     this._grid.cursorY = rect.height / 2;
-    this._drawGrid();
-    this.setData({ toneX: 0, toneY: 0 }, () => this._scheduleProcess());
+    this.setData(
+      { toneX: 0, toneY: 0, xyCursorLeftPx: this._grid.cursorX, xyCursorTopPx: this._grid.cursorY },
+      () => this._scheduleProcess()
+    );
   },
 
   onSelectDither(e) {

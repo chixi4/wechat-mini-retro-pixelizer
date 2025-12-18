@@ -202,19 +202,50 @@
   border: 2px solid #000000;
   overflow: hidden;
   margin-bottom: 8px;
-  touch-action: none;
+  background-image: url("/assets/patterns/plus-light.svg");
+  background-repeat: repeat;
+  background-size: 20px 20px;
+  background-position: center;
+  touch-action: pan-y;
 }
 
 .theme-dark .xy-pad-container {
   border-color: #666666;
   background: #111111;
+  background-image: url("/assets/patterns/plus-dark.svg");
 }
 
-.xy-grid-canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-  touch-action: none;
+.xy-cursor {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.xy-cursor-h {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: #000000;
+}
+
+.xy-cursor-v {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  margin-left: -1px;
+  background: #000000;
+}
+
+.theme-dark .xy-cursor-h,
+.theme-dark .xy-cursor-v {
+  background: #eeeeee;
 }
 
 .reset-btn {
@@ -350,11 +381,14 @@
 }
 
 .main-canvas {
-  display: none;
+  display: block;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .main.has-image .main-canvas {
-  display: block;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .empty-hint {
@@ -431,16 +465,15 @@
     height: 100vh;
     position: fixed;
     width: 100%;
-    top: env(safe-area-inset-top);
+    top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
     max-width: none;
+    overflow-x: hidden;
   }
 
   .header {
     position: fixed;
-    top: 0;
+    top: env(safe-area-inset-top);
     left: 0;
     right: 0;
     z-index: 200;
@@ -464,15 +497,19 @@
   }
 
   .preview-area {
-    display: none;
-    height: auto;
-    overflow: visible;
+    display: block;
+    position: fixed;
+    left: -9999px;
+    top: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
   }
 
   .main.has-image .preview-area {
     display: flex;
     position: fixed;
-    top: 0;
+    top: env(safe-area-inset-top);
     left: 0;
     right: 0;
     z-index: 100;
@@ -517,9 +554,10 @@
     overflow-y: auto;
     overflow-x: hidden;
     padding: 15px;
-    padding-bottom: 40px;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
     flex: 1;
     position: relative;
+    box-sizing: border-box;
   }
 
   .header.visible + .main .controls {

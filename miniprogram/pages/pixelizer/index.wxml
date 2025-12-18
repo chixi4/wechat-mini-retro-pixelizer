@@ -8,10 +8,11 @@
     <scroll-view
       class="controls"
       scroll-y
+      enable-flex
       scroll-top="{{controlsScrollTop}}"
       bindscroll="onControlsScroll"
-      catchtouchstart="onControlsTouchStart"
-      catchtouchmove="onControlsTouchMove"
+      bindtouchstart="onControlsTouchStart"
+      bindtouchmove="onControlsTouchMove"
       bindtouchend="onControlsTouchEnd"
       style="padding-top: {{controlsPaddingTopPx}}px;"
     >
@@ -53,16 +54,18 @@
             <view class="label">影调调整</view>
             <view class="reset-btn" bindtap="onResetTone">↺ 还原</view>
           </view>
-          <view class="xy-pad-container" id="xyPadContainer">
-            <canvas
-              type="2d"
-              id="xyGridCanvas"
-              class="xy-grid-canvas"
-              catchtouchstart="onXYTouchStart"
-              catchtouchmove="onXYTouchMove"
-              bindtouchend="onXYTouchEnd"
-              bindtouchcancel="onXYTouchEnd"
-            ></canvas>
+          <view
+            class="xy-pad-container"
+            id="xyPadContainer"
+            catchtouchstart="onXYTouchStart"
+            catchtouchmove="onXYTouchMove"
+            bindtouchend="onXYTouchEnd"
+            bindtouchcancel="onXYTouchEnd"
+          >
+            <view class="xy-cursor" style="left: {{xyCursorLeftPx}}px; top: {{xyCursorTopPx}}px;">
+              <view class="xy-cursor-h"></view>
+              <view class="xy-cursor-v"></view>
+            </view>
           </view>
         </view>
       </view>
