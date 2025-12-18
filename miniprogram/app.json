@@ -1,0 +1,18 @@
+{
+  "pages": [
+    "pages/pixelizer/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "Retro Pixelizer Pro",
+    "navigationStyle": "custom",
+    "backgroundColor": "#ffffff",
+    "backgroundTextStyle": "light"
+  },
+  "permission": {
+    "scope.writePhotosAlbum": {
+      "desc": "需要保存图片到相册"
+    }
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

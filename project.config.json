@@ -20,6 +20,7 @@
     "ignore": [],
     "include": []
   },
+  "miniprogramRoot": "miniprogram/",
   "appid": "touristappid",
   "editorSetting": {}
 }

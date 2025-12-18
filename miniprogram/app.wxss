@@ -1,0 +1,10 @@
+page {
+  height: 100%;
+  font-family: "Courier New", "Liberation Mono", ui-monospace, SFMono-Regular, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+view {
+  box-sizing: border-box;
+}

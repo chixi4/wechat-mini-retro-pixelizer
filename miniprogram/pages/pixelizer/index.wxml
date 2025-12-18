@@ -1,0 +1,140 @@
+<view class="page {{themeClass}}">
+  <view class="header {{headerVisible ? 'visible' : ''}}" id="headerRef">
+    <view class="title">Retro Pixelizer Pro</view>
+    <view class="theme-btn" bindtap="onToggleTheme">◐</view>
+  </view>
+
+  <view class="main {{hasImage ? 'has-image' : ''}}" id="mainContainer">
+    <scroll-view
+      class="controls"
+      scroll-y
+      scroll-top="{{controlsScrollTop}}"
+      bindscroll="onControlsScroll"
+      catchtouchstart="onControlsTouchStart"
+      catchtouchmove="onControlsTouchMove"
+      bindtouchend="onControlsTouchEnd"
+      style="padding-top: {{controlsPaddingTopPx}}px;"
+    >
+      <view class="panel">
+        <view class="panel-title">输入图像</view>
+        <view class="upload-area" bindtap="onChooseImage">
+          <view class="upload-text">点击上传图片&#10;支持 JPG, PNG</view>
+        </view>
+      </view>
+
+      <view class="panel">
+        <view class="panel-title">
+          <view>图像预处理</view>
+        </view>
+
+        <view class="form-group">
+          <view class="label-row">
+            <view class="label">图片像素</view>
+            <view class="width-display">{{targetWidth}}px</view>
+          </view>
+
+          <view
+            class="custom-slider"
+            id="widthSliderContainer"
+            bindtap="onSliderTap"
+            catchtouchstart="onSliderTouchStart"
+            catchtouchmove="onSliderTouchMove"
+            bindtouchend="onSliderTouchEnd"
+          >
+            <view class="slider-track"></view>
+            <view class="slider-thumb {{sliderDragging ? 'active' : ''}}" style="left: {{sliderThumbLeftPx}}px;">
+              <view class="slider-thumb-dot"></view>
+            </view>
+          </view>
+        </view>
+
+        <view class="form-group">
+          <view class="label-row">
+            <view class="label">影调调整</view>
+            <view class="reset-btn" bindtap="onResetTone">↺ 还原</view>
+          </view>
+          <view class="xy-pad-container" id="xyPadContainer">
+            <canvas
+              type="2d"
+              id="xyGridCanvas"
+              class="xy-grid-canvas"
+              catchtouchstart="onXYTouchStart"
+              catchtouchmove="onXYTouchMove"
+              bindtouchend="onXYTouchEnd"
+              bindtouchcancel="onXYTouchEnd"
+            ></canvas>
+          </view>
+        </view>
+      </view>
+
+      <view class="panel">
+        <view class="panel-title">抖动算法</view>
+        <view class="grid-buttons">
+          <view
+            wx:for="{{ditherAlgos}}"
+            wx:key="key"
+            class="btn-toggle {{ditherAlgo === item.key ? 'active' : ''}}"
+            data-key="{{item.key}}"
+            bindtap="onSelectDither"
+          >{{item.label}}</view>
+        </view>
+      </view>
+
+      <view class="panel palette-panel">
+        <view class="panel-title">
+          <view>调色板</view>
+        </view>
+        <scroll-view class="palette-list" scroll-y>
+          <view
+            wx:for="{{paletteList}}"
+            wx:key="key"
+            class="palette-btn {{paletteKey === item.key ? 'active' : ''}}"
+            data-key="{{item.key}}"
+            bindtap="onSelectPalette"
+          >
+            <view class="palette-name-row">
+              <view class="palette-name">{{item.name}}</view>
+              <view class="palette-count">{{item.count}}色</view>
+            </view>
+            <view class="palette-preview-dots">
+              <view
+                wx:for="{{item.colors}}"
+                wx:key="*this"
+                class="dot"
+                style="background-color: {{item}};"
+              ></view>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+
+      <view class="panel">
+        <view class="action-btn {{canDownload ? '' : 'disabled'}}" bindtap="onDownload">下载图片</view>
+      </view>
+    </scroll-view>
+
+    <view class="preview-area" style="transform: translateY({{previewTranslateYPx}}px);">
+      <view class="canvas-container" id="canvasContainer">
+        <view class="close-btn {{closeVisible ? 'visible' : ''}}" catchtap="onCloseImage">
+          <image class="close-icon" src="{{closeIconSrc}}" mode="aspectFit"></image>
+        </view>
+        <canvas
+          type="2d"
+          id="mainCanvas"
+          class="main-canvas"
+          style="width: {{mainCanvasCssW}}px; height: {{mainCanvasCssH}}px;"
+          bindtap="onOpenFullscreen"
+        ></canvas>
+        <view wx:if="{{!hasImage}}" class="empty-hint">点击左侧上传图片</view>
+      </view>
+
+      <canvas type="2d" id="workCanvas" class="hidden-canvas"></canvas>
+      <canvas type="2d" id="bufferCanvas" class="hidden-canvas"></canvas>
+      <canvas type="2d" id="exportCanvas" class="hidden-canvas"></canvas>
+    </view>
+  </view>
+
+  <view wx:if="{{fullscreenVisible}}" class="fullscreen-modal" catchtap="onCloseFullscreen">
+    <image class="fullscreen-image" src="{{fullscreenSrc}}" mode="aspectFit"></image>
+  </view>
+</view>
