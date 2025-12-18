@@ -560,25 +560,16 @@
     overflow-y: auto;
     overflow-x: hidden;
     padding: 15px;
-    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
     flex: 1;
     position: relative;
     box-sizing: border-box;
-  }
-
-  .header.visible + .main .controls {
-    padding-top: calc(15px + var(--mobile-header-h, 0px));
-  }
-
-  .main.has-image .controls {
-    padding-top: calc(40vh + 15px);
-    padding-bottom: 40px;
     transition: padding-top 0.35s cubic-bezier(0.2, 0, 0.2, 1);
     will-change: padding-top;
   }
 
-  .header.visible + .main.has-image .controls {
-    padding-top: calc(40vh + 15px + var(--mobile-header-h, 0px));
+  .controls .panel:first-child {
+    margin-top: 15px;
   }
 
   .palette-list {

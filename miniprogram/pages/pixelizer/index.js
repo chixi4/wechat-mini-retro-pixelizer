@@ -151,7 +151,7 @@ Page({
       const safeAreaTop = sys && sys.safeArea && typeof sys.safeArea.top === "number" ? sys.safeArea.top : null;
       const statusBarHeight = sys && typeof sys.statusBarHeight === "number" ? sys.statusBarHeight : null;
       const raw = Math.max(0, safeAreaTop != null ? safeAreaTop : statusBarHeight != null ? statusBarHeight : 0);
-      return Math.max(0, raw - 7);
+      return Math.max(0, raw - 9);
     })();
 
     const stored = wx.getStorageSync("pixelizer_theme");
@@ -216,6 +216,7 @@ Page({
     this._isProcessing = false;
     this._updatePending = false;
     this._lastRenderKey = "";
+    this._lockPreviewHeight = false;
 
     const safeTopPx = this._safeTop;
     const previewHeightPx = this._isMobile ? Math.floor((sys.windowHeight || 0) * 0.4) : 0;
@@ -243,7 +244,19 @@ Page({
       await this._refreshRects();
       this._updateSliderUI();
       this._syncToneCursorToRect();
-      this._updateLayout();
+
+      if (this._isMobile && this.data.hasImage && this._state && this._state.originalImage) {
+        const info = this._state.imageInfo || {};
+        const orientedW = isRotate90(info.orientation) ? info.height : info.width;
+        const orientedH = isRotate90(info.orientation) ? info.width : info.height;
+        const aspect = orientedW > 0 ? orientedH / orientedW : this._state.originalImage.height / this._state.originalImage.width;
+        const box = this._computeMobilePreviewBox(aspect);
+        this._lockPreviewHeight = true;
+        this.setData({ previewHeightPx: box.previewHeightPx }, () => this._updateLayout());
+      } else {
+        this._updateLayout();
+      }
+
       await this._ensureCanvases();
       this._scheduleProcess();
     });
@@ -294,9 +307,8 @@ Page({
 
     const headerHeightPx = this._headerRect ? this._headerRect.height || 0 : 0;
     const safeTopPx = this._safeTop || 0;
-    const gap = 0;
 
-    let controlsPaddingTopPx = safeTopPx + 15;
+    let controlsPaddingTopPx = safeTopPx;
     let previewTranslateYPx = 0;
 
     if (this.data.hasImage) {
@@ -307,9 +319,9 @@ Page({
 
       const headerOffset = this.data.headerVisible ? headerHeightPx : 0;
       previewTranslateYPx = headerOffset;
-      controlsPaddingTopPx = safeTopPx + previewHeightPx + headerOffset + gap;
+      controlsPaddingTopPx = safeTopPx + previewHeightPx + headerOffset;
     } else {
-      if (this.data.headerVisible) controlsPaddingTopPx = safeTopPx + headerHeightPx + 15;
+      if (this.data.headerVisible) controlsPaddingTopPx = safeTopPx + headerHeightPx;
     }
 
     this.setData({ controlsPaddingTopPx, previewTranslateYPx }, async () => {
@@ -431,6 +443,33 @@ Page({
         if (this._updatePending) this._scheduleProcess();
       }
     }, 0);
+  },
+
+  _computeMobilePreviewBox(aspect) {
+    const previewPadding = 8; // 同 mobile .preview-area padding
+    const previewBorder = 2; // mobile 预览区底边线
+
+    const winW = this._sys && this._sys.windowWidth ? Math.max(1, Math.floor(this._sys.windowWidth)) : 375;
+    const winH = this._sys && this._sys.windowHeight ? Math.max(1, Math.floor(this._sys.windowHeight)) : 667;
+    const maxPreviewH = Math.max(1, Math.floor(winH * 0.4));
+
+    let availW = Math.max(1, winW - previewPadding * 2);
+    let availH = Math.max(1, maxPreviewH - previewPadding * 2 - previewBorder);
+
+    const safeAspect = typeof aspect === "number" && isFinite(aspect) && aspect > 0 ? aspect : 1;
+
+    let displayW = availW;
+    let displayH = Math.round(displayW * safeAspect);
+    if (displayH > availH) {
+      displayH = availH;
+      displayW = Math.round(displayH / safeAspect);
+    }
+
+    displayW = Math.max(1, Math.floor(displayW));
+    displayH = Math.max(1, Math.floor(displayH));
+
+    const previewHeightPx = Math.max(1, displayH + previewPadding * 2 + previewBorder);
+    return { displayW, displayH, previewHeightPx };
   },
 
   _processImage() {
@@ -556,14 +595,13 @@ Page({
     displayH = Math.max(1, Math.floor(displayH));
 
     const nextData = { mainCanvasCssW: displayW, mainCanvasCssH: displayH, canDownload: true };
-    const nextPreviewHeightPx = this._isMobile
-      ? Math.max(1, displayH + previewPadding * 2 + previewBorder)
-      : this.data.previewHeightPx;
-
     let needsLayoutUpdate = false;
-    if (this._isMobile && nextPreviewHeightPx !== this.data.previewHeightPx) {
-      nextData.previewHeightPx = nextPreviewHeightPx;
-      needsLayoutUpdate = true;
+    if (this._isMobile && !this._lockPreviewHeight) {
+      const nextPreviewHeightPx = Math.max(1, displayH + previewPadding * 2 + previewBorder);
+      if (Math.abs(nextPreviewHeightPx - this.data.previewHeightPx) > 1) {
+        nextData.previewHeightPx = nextPreviewHeightPx;
+        needsLayoutUpdate = true;
+      }
     }
 
     this.setData(nextData, () => {
@@ -660,7 +698,29 @@ Page({
       this._proc.toneStats = { token: 0, w: 0, h: 0, stats: null };
       this._proc.work = { w: 0, h: 0, imageData: null };
 
+      const orientedW = isRotate90(info.orientation) ? info.height : info.width;
+      const orientedH = isRotate90(info.orientation) ? info.width : info.height;
+      const aspect = orientedW > 0 ? orientedH / orientedW : img.height / img.width;
+
+      let nextPreviewHeightPx = this.data.previewHeightPx;
+      let nextMainCanvasCssW = this.data.mainCanvasCssW;
+      let nextMainCanvasCssH = this.data.mainCanvasCssH;
+      if (this._isMobile) {
+        const box = this._computeMobilePreviewBox(aspect);
+        nextPreviewHeightPx = box.previewHeightPx;
+        nextMainCanvasCssW = box.displayW;
+        nextMainCanvasCssH = box.displayH;
+        this._lockPreviewHeight = true;
+      } else {
+        this._lockPreviewHeight = false;
+      }
+
       const headerVisible = true;
+      const headerHeightPx = this._headerRect ? this._headerRect.height || 0 : 0;
+      const safeTopPx = this._safeTop || 0;
+      const headerOffset = headerVisible ? headerHeightPx : 0;
+      const controlsPaddingTopPx = this._isMobile ? safeTopPx + nextPreviewHeightPx + headerOffset : 0;
+      const previewTranslateYPx = this._isMobile ? headerOffset : 0;
 
       console.log("设置图片状态");
 
@@ -668,7 +728,12 @@ Page({
         {
           hasImage: true,
           canDownload: false,
+          previewHeightPx: nextPreviewHeightPx,
+          mainCanvasCssW: nextMainCanvasCssW,
+          mainCanvasCssH: nextMainCanvasCssH,
           headerVisible,
+          controlsPaddingTopPx,
+          previewTranslateYPx,
           fullscreenVisible: false,
           fullscreenSrc: "",
           controlsScrollTop: 0
@@ -707,6 +772,7 @@ Page({
       clearTimeout(this._layoutRefreshTimer);
       this._layoutRefreshTimer = null;
     }
+    this._lockPreviewHeight = false;
 
     this._state.imageToken += 1;
     this._state.originalImage = null;
