@@ -497,16 +497,6 @@
   }
 
   .preview-area {
-    display: block;
-    position: fixed;
-    left: -9999px;
-    top: -9999px;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-  }
-
-  .main.has-image .preview-area {
     display: flex;
     position: fixed;
     top: env(safe-area-inset-top);
@@ -517,7 +507,15 @@
     padding: 10px;
     max-height: 40vh;
     height: 40vh;
-    transition: transform 0.3s ease-out;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.3s ease-out, opacity 0.2s ease-out;
+  }
+
+  .main.has-image .preview-area {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .theme-dark .main.has-image .preview-area {
