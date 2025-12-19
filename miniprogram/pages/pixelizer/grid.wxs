@@ -1,0 +1,48 @@
+var MAX_DIST = 40;
+var MAX_DIST_SQ = MAX_DIST * MAX_DIST;
+var INV_MAX_DIST = 1 / MAX_DIST;
+var BASE_ALPHA = 0.15;
+var BASE_SIZE = 3;
+var BASE_THICKNESS = 0.5;
+
+function pointStyle(item, cx, cy) {
+  var x = item.x;
+  var y = item.y;
+  var dx = x - cx;
+  var dy = y - cy;
+  var distSq = dx * dx + dy * dy;
+
+  var alpha = BASE_ALPHA;
+  var size = BASE_SIZE;
+  var thickness = BASE_THICKNESS;
+
+  if (distSq < MAX_DIST_SQ) {
+    var dist = Math.sqrt(distSq);
+    var factor = 1 - dist * INV_MAX_DIST;
+    alpha = BASE_ALPHA + factor * 0.85;
+    size = BASE_SIZE + factor * 2;
+    thickness = BASE_THICKNESS + factor * 1.5;
+  }
+
+  var sizePx = size * 2;
+
+  return (
+    "left:" +
+    x +
+    "px; top:" +
+    y +
+    "px; width:" +
+    sizePx +
+    "px; height:" +
+    sizePx +
+    "px; opacity:" +
+    alpha +
+    "; --t:" +
+    thickness +
+    "px;"
+  );
+}
+
+module.exports = {
+  pointStyle: pointStyle
+};

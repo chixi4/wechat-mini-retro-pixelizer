@@ -3,7 +3,7 @@
     "pages/pixelizer/index"
   ],
   "window": {
-    "navigationBarTitleText": "Retro Pixelizer Pro",
+    "navigationBarTitleText": "Retro Pixelizer",
     "navigationStyle": "custom",
     "backgroundColor": "#ffffff",
     "backgroundTextStyle": "light"
@@ -14,5 +14,6 @@
     }
   },
   "style": "v2",
+  "darkmode": true,
   "sitemapLocation": "sitemap.json"
 }

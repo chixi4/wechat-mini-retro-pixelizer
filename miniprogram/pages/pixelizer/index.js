@@ -104,9 +104,12 @@ Page({
     closeIconSrc: "/assets/icons/close-light.svg",
     headerVisible: true,
     hasImage: false,
-    closeVisible: false,
+    closeEnabled: false,
+    closeShown: false,
     safeTopPx: 0,
     safeBottomPx: 0,
+    navPadLeftPx: 20,
+    navPadRightPx: 20,
 
     targetWidth: 128,
     sliderThumbLeftPx: 0,
@@ -116,6 +119,8 @@ Page({
     toneY: 0,
 
     gridPoints: [],
+    gridCursorX: 0,
+    gridCursorY: 0,
 
     ditherAlgo: "atkinson",
     ditherAlgos: [
@@ -173,8 +178,7 @@ Page({
       return Math.max(minGap, raw);
     })();
 
-    const stored = wx.getStorageSync("pixelizer_theme");
-    const theme = stored === "dark" ? "dark" : "light";
+    const theme = this._resolveSystemTheme(sys);
     this._theme = theme;
 
     const paletteList = getSortedPalettes().map((p) => ({
@@ -217,7 +221,13 @@ Page({
       rect: null,
       lastWidth: 0,
       lastHeight: 0,
-      points: []
+      points: [],
+      pointsSynced: false,
+      frameTimer: null,
+      pendingX: null,
+      pendingY: null,
+      pendingRect: null,
+      frameMs: this._isMobile ? 16 : 24
     };
 
     this._mobile = {
@@ -237,20 +247,36 @@ Page({
     this._updatePending = false;
     this._lastRenderKey = "";
     this._lockPreviewHeight = false;
+    this._closeHintShown = false;
+    this._awaitingPreviewExit = false;
+    this._clearCloseHintTimer();
+    this._closeHintTimer = null;
+    this._imageLoadToken = 0;
 
     const safeTopPx = this._safeTop;
     const safeBottomPx = this._safeBottom;
     const previewHeightPx = this._isMobile ? Math.floor((sys.windowHeight || 0) * 0.4) : 0;
     const controlsPaddingTopPx = this._isMobile ? 15 + safeTopPx : 0;
+    const navPad = this._calcNavPadding(sys);
     this.setData({
       themeClass: theme === "dark" ? "theme-dark" : "theme-light",
       closeIconSrc: theme === "dark" ? "/assets/icons/close-dark.svg" : "/assets/icons/close-light.svg",
       paletteList,
       safeTopPx,
       safeBottomPx,
+      navPadLeftPx: navPad.left,
+      navPadRightPx: navPad.right,
       previewHeightPx,
       controlsPaddingTopPx
     });
+
+    if (wx.onThemeChange) {
+      this._themeChangeHandler = (res) => {
+        const nextTheme = this._resolveSystemTheme(res);
+        this._applyTheme(nextTheme);
+      };
+      wx.onThemeChange(this._themeChangeHandler);
+    }
   },
 
   async onReady() {
@@ -262,6 +288,8 @@ Page({
 
     wx.onWindowResize(async (res) => {
       this._sys = { ...this._sys, ...res };
+      const navPad = this._calcNavPadding(this._sys);
+      this.setData({ navPadLeftPx: navPad.left, navPadRightPx: navPad.right });
       await sleep(50);
       await this._refreshRects();
       this._updateSliderUI();
@@ -306,6 +334,68 @@ Page({
     return true;
   },
 
+  onShow() {
+    this._syncSystemTheme();
+    if (!this._awaitingPreviewExit) return;
+    this._awaitingPreviewExit = false;
+    this._showCloseHint();
+  },
+
+  onUnload() {
+    if (this._themeChangeHandler && wx.offThemeChange) {
+      wx.offThemeChange(this._themeChangeHandler);
+    }
+  },
+
+  _resolveSystemTheme(sysLike) {
+    if (sysLike && typeof sysLike.theme === "string") {
+      return sysLike.theme === "dark" ? "dark" : "light";
+    }
+    let raw = null;
+    try {
+      raw = wx.getSystemInfoSync().theme;
+    } catch (e) {
+      raw = null;
+    }
+    if (typeof raw !== "string") raw = this._sys && this._sys.theme;
+    return raw === "dark" ? "dark" : "light";
+  },
+
+  _calcNavPadding(sysLike) {
+    const baseLeft = 16;
+    const baseRight = 20;
+    const sys = sysLike || {};
+    const winW = typeof sys.windowWidth === "number" ? sys.windowWidth : 0;
+    let rightPad = baseRight;
+    if (winW && wx.getMenuButtonBoundingClientRect) {
+      let rect = null;
+      try {
+        rect = wx.getMenuButtonBoundingClientRect();
+      } catch (e) {
+        rect = null;
+      }
+      if (rect && typeof rect.left === "number" && rect.left > 0 && rect.left < winW) {
+        const rightInset = Math.max(0, Math.floor(winW - rect.left));
+        rightPad = Math.max(baseRight, rightInset);
+      }
+    }
+    return { left: baseLeft, right: rightPad };
+  },
+
+  _applyTheme(theme) {
+    const next = theme === "dark" ? "dark" : "light";
+    if (next === this._theme) return;
+    this._theme = next;
+    this.setData({
+      themeClass: next === "dark" ? "theme-dark" : "theme-light",
+      closeIconSrc: next === "dark" ? "/assets/icons/close-dark.svg" : "/assets/icons/close-light.svg"
+    });
+  },
+
+  _syncSystemTheme(sysLike) {
+    this._applyTheme(this._resolveSystemTheme(sysLike));
+  },
+
   _initGridPoints(w, h) {
     const step = 20;
     let cols = Math.ceil(w / step);
@@ -329,56 +419,61 @@ Page({
     }
 
     this._grid.points = points;
+    this._grid.pointsSynced = false;
   },
 
-  _buildGridRenderPoints() {
-    const rect = this._grid.rect;
-    const points = this._grid.points;
-    if (!rect || !points || points.length === 0) return [];
-
-    const w = rect.width || 0;
-    const h = rect.height || 0;
-    if (w <= 0 || h <= 0) return [];
-
-    const maxDist = 40;
-    const cursorX = this._grid.cursorX;
-    const cursorY = this._grid.cursorY;
-    const renderPoints = new Array(points.length);
-
-    for (let i = 0; i < points.length; i += 1) {
-      const p = points[i];
-      const dx = p.x - cursorX;
-      const dy = p.y - cursorY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      let alpha = 0.15;
-      let size = 3;
-      let thickness = 0.5;
-
-      if (dist < maxDist) {
-        const factor = 1 - dist / maxDist;
-        alpha = 0.15 + factor * 0.85;
-        size = 3 + factor * 2;
-        thickness = 0.5 + factor * 1.5;
-      }
-
-      renderPoints[i] = {
-        id: p.id,
-        x: p.x,
-        y: p.y,
-        sizePx: +(size * 2).toFixed(2),
-        thicknessPx: +thickness.toFixed(2),
-        alpha: +alpha.toFixed(3)
-      };
+  _syncGridData(options) {
+    const update = {
+      gridCursorX: this._grid.cursorX,
+      gridCursorY: this._grid.cursorY
+    };
+    const needsPoints = options && options.pointsChanged;
+    if (needsPoints) {
+      update.gridPoints = this._grid.points;
+      this._grid.pointsSynced = true;
     }
-
-    return renderPoints;
+    this.setData(update);
   },
 
-  _updateGridRender() {
-    const renderPoints = this._buildGridRenderPoints();
-    if (renderPoints.length === 0) return;
-    this.setData({ gridPoints: renderPoints });
+  _queueGridUpdate(clientX, clientY, rect) {
+    this._grid.pendingX = clientX;
+    this._grid.pendingY = clientY;
+    this._grid.pendingRect = rect || this._grid.rect;
+
+    if (this._grid.frameTimer) return;
+
+    const delay = this._grid.frameMs || 16;
+    this._grid.frameTimer = setTimeout(() => {
+      this._grid.frameTimer = null;
+      const x = this._grid.pendingX;
+      const y = this._grid.pendingY;
+      const r = this._grid.pendingRect;
+      this._grid.pendingX = null;
+      this._grid.pendingY = null;
+      this._grid.pendingRect = null;
+
+      if (typeof x === "number" && typeof y === "number") {
+        this._updateCursorFromClient(x, y, r);
+      }
+    }, delay);
+  },
+
+  _flushGridUpdate() {
+    if (!this._grid.frameTimer) return;
+
+    clearTimeout(this._grid.frameTimer);
+    this._grid.frameTimer = null;
+
+    const x = this._grid.pendingX;
+    const y = this._grid.pendingY;
+    const r = this._grid.pendingRect;
+    this._grid.pendingX = null;
+    this._grid.pendingY = null;
+    this._grid.pendingRect = null;
+
+    if (typeof x === "number" && typeof y === "number") {
+      this._updateCursorFromClient(x, y, r);
+    }
   },
 
   async _refreshRects() {
@@ -433,8 +528,41 @@ Page({
   },
 
   _updateCloseVisibility() {
-    const visible = this.data.hasImage;
-    if (visible !== this.data.closeVisible) this.setData({ closeVisible: visible });
+    const enabled = !!this.data.hasImage;
+    const pagedLayout = this._isPagedLayout();
+    const shown = enabled && (pagedLayout || this._closeHintShown);
+
+    const next = {};
+    if (enabled !== this.data.closeEnabled) next.closeEnabled = enabled;
+    if (shown !== this.data.closeShown) next.closeShown = shown;
+    if (Object.keys(next).length) this.setData(next);
+  },
+
+  _clearCloseHintTimer() {
+    if (!this._closeHintTimer) return;
+    clearTimeout(this._closeHintTimer);
+    this._closeHintTimer = null;
+  },
+
+  _showCloseHint() {
+    if (!this.data.hasImage) return;
+    this._closeHintShown = true;
+    this._updateCloseVisibility();
+
+    if (this._isPagedLayout()) return;
+
+    this._clearCloseHintTimer();
+    this._closeHintTimer = setTimeout(() => {
+      this._closeHintTimer = null;
+      this._closeHintShown = false;
+      this._updateCloseVisibility();
+    }, 2000);
+  },
+
+  _isPagedLayout() {
+    const width = this._sys && typeof this._sys.windowWidth === "number" ? this._sys.windowWidth : 0;
+    if (!width) return !this._isMobile;
+    return width > 768;
   },
 
   _syncToneCursorToRect() {
@@ -463,11 +591,13 @@ Page({
     this._grid.cursorX = Math.max(0, Math.min(w, this._grid.cursorX));
     this._grid.cursorY = Math.max(0, Math.min(h, this._grid.cursorY));
 
-    if (sizeChanged || !this._grid.points || this._grid.points.length === 0) {
+    const pointsChanged = sizeChanged || !this._grid.points || this._grid.points.length === 0;
+    if (pointsChanged) {
       this._initGridPoints(w, h);
     }
 
-    this._updateGridRender();
+    const needsPointsSync = pointsChanged || !this._grid.pointsSynced;
+    this._syncGridData({ pointsChanged: needsPointsSync });
   },
 
   _updateSliderUI() {
@@ -502,10 +632,12 @@ Page({
     }
   },
 
-  async _updateCursorFromClient(clientX, clientY) {
-    // 实时获取rect，避免滚动后位置不准
-    const rect = await selectRect(this, "#xyPadContainer");
-    if (!rect) return;
+  async _updateCursorFromClient(clientX, clientY, rectOverride) {
+    let rect = rectOverride || this._grid.rect;
+    if (!rect) {
+      rect = await selectRect(this, "#xyPadContainer");
+      if (!rect) return;
+    }
 
     let x = clientX - rect.left;
     let y = clientY - rect.top;
@@ -516,7 +648,8 @@ Page({
     this._grid.rect = rect;
 
     const sizeChanged = rect.width !== this._grid.lastWidth || rect.height !== this._grid.lastHeight;
-    if (sizeChanged || !this._grid.points || this._grid.points.length === 0) {
+    const pointsChanged = sizeChanged || !this._grid.points || this._grid.points.length === 0;
+    if (pointsChanged) {
       this._grid.lastWidth = rect.width;
       this._grid.lastHeight = rect.height;
       this._initGridPoints(rect.width, rect.height);
@@ -529,8 +662,13 @@ Page({
 
     this._state.toneX = toneX;
     this._state.toneY = toneY;
-    const gridPoints = this._buildGridRenderPoints();
-    this.setData({ toneX, toneY, gridPoints });
+    const needsPointsSync = pointsChanged || !this._grid.pointsSynced;
+    const update = { gridCursorX: x, gridCursorY: y };
+    if (needsPointsSync) {
+      update.gridPoints = this._grid.points;
+      this._grid.pointsSynced = true;
+    }
+    this.setData(update);
 
     this._scheduleProcess();
   },
@@ -729,15 +867,6 @@ Page({
     mainCtx.drawImage(this._canvas.work.node, 0, 0, displayW, displayH);
   },
 
-  onToggleTheme() {
-    const next = this.data.themeClass === "theme-dark" ? "light" : "dark";
-    wx.setStorageSync("pixelizer_theme", next);
-    this.setData({
-      themeClass: next === "dark" ? "theme-dark" : "theme-light",
-      closeIconSrc: next === "dark" ? "/assets/icons/close-dark.svg" : "/assets/icons/close-light.svg"
-    });
-  },
-
   async onChooseImage() {
     console.log("onChooseImage 被调用");
 
@@ -763,6 +892,7 @@ Page({
         console.error("未获取到图片路径");
         return;
       }
+      const loadToken = (this._imageLoadToken = (this._imageLoadToken || 0) + 1);
 
       const ready = await this._ensureCanvases();
       if (!ready) {
@@ -785,6 +915,7 @@ Page({
           }
         });
       });
+      if (loadToken !== this._imageLoadToken) return;
 
       console.log("准备加载图片到 canvas");
 
@@ -800,6 +931,7 @@ Page({
         };
         img.src = src;
       });
+      if (loadToken !== this._imageLoadToken) return;
 
       this._state.imageToken += 1;
       this._state.originalImage = img;
@@ -808,20 +940,26 @@ Page({
       this._proc.scaled = { token: 0, w: 0, h: 0, data: null };
       this._proc.toneStats = { token: 0, w: 0, h: 0, stats: null };
       this._proc.work = { w: 0, h: 0, imageData: null };
+      this._lastRenderKey = "";
 
       const orientedW = isRotate90(info.orientation) ? info.height : info.width;
       const orientedH = isRotate90(info.orientation) ? info.width : info.height;
       const aspect = orientedW > 0 ? orientedH / orientedW : img.height / img.width;
 
+      const replacingImage = this.data.hasImage;
       let nextPreviewHeightPx = this.data.previewHeightPx;
       let nextMainCanvasCssW = this.data.mainCanvasCssW;
       let nextMainCanvasCssH = this.data.mainCanvasCssH;
       if (this._isMobile) {
-        const box = this._computeMobilePreviewBox(aspect);
-        nextPreviewHeightPx = box.previewHeightPx;
-        nextMainCanvasCssW = box.displayW;
-        nextMainCanvasCssH = box.displayH;
-        this._lockPreviewHeight = true;
+        if (!replacingImage) {
+          const box = this._computeMobilePreviewBox(aspect);
+          nextPreviewHeightPx = box.previewHeightPx;
+          nextMainCanvasCssW = box.displayW;
+          nextMainCanvasCssH = box.displayH;
+          this._lockPreviewHeight = true;
+        } else {
+          this._lockPreviewHeight = false;
+        }
       } else {
         this._lockPreviewHeight = false;
       }
@@ -834,6 +972,11 @@ Page({
       const previewTranslateYPx = this._isMobile ? headerOffset : 0;
 
       console.log("设置图片状态");
+
+      this._closeHintShown = false;
+      this._awaitingPreviewExit = false;
+      this._clearCloseHintTimer();
+      this._updateCloseVisibility();
 
       this.setData(
         {
@@ -856,7 +999,7 @@ Page({
           await this.onResetTone({ skipProcess: true });
           this._updateLayout();
 
-          const delayMs = this._isMobile ? 360 : 0;
+          const delayMs = this._isMobile && !replacingImage ? 360 : 0;
           if (this._initialProcessTimer) clearTimeout(this._initialProcessTimer);
           this._initialProcessTimer = setTimeout(() => {
             this._initialProcessTimer = null;
@@ -892,6 +1035,9 @@ Page({
     this._proc.scaled = { token: 0, w: 0, h: 0, data: null };
     this._proc.toneStats = { token: 0, w: 0, h: 0, stats: null };
     this._proc.work = { w: 0, h: 0, imageData: null };
+
+    this._closeHintShown = false;
+    this._awaitingPreviewExit = false;
 
     if (this._canvas) {
       this._canvas.main.ctx.clearRect(0, 0, this._canvas.main.node.width, this._canvas.main.node.height);
@@ -966,20 +1112,25 @@ Page({
     const t = e && e.touches && e.touches[0] ? e.touches[0] : null;
     if (!t) return;
 
+    const rect = await selectRect(this, "#xyPadContainer");
+    if (!rect) return;
+
     this._grid.dragging = true;
-    await this._updateCursorFromClient(t.clientX, t.clientY);
+    this._grid.rect = rect;
+    this._updateCursorFromClient(t.clientX, t.clientY, rect);
   },
 
-  async onXYTouchMove(e) {
+  onXYTouchMove(e) {
     if (!this._grid.dragging) return;
     const t = e && e.touches && e.touches[0] ? e.touches[0] : null;
     if (!t) return;
-    await this._updateCursorFromClient(t.clientX, t.clientY);
+    this._queueGridUpdate(t.clientX, t.clientY, this._grid.rect);
   },
 
   onXYTouchEnd() {
     if (!this._grid.dragging) return;
     this._grid.dragging = false;
+    this._flushGridUpdate();
   },
 
   async onResetTone(options) {
@@ -995,14 +1146,20 @@ Page({
     this._grid.rect = rect;
 
     const sizeChanged = rect.width !== this._grid.lastWidth || rect.height !== this._grid.lastHeight;
-    if (sizeChanged || !this._grid.points || this._grid.points.length === 0) {
+    const pointsChanged = sizeChanged || !this._grid.points || this._grid.points.length === 0;
+    if (pointsChanged) {
       this._grid.lastWidth = rect.width;
       this._grid.lastHeight = rect.height;
       this._initGridPoints(rect.width, rect.height);
     }
-    const gridPoints = this._buildGridRenderPoints();
+    const needsPointsSync = pointsChanged || !this._grid.pointsSynced;
+    const update = { gridCursorX: this._grid.cursorX, gridCursorY: this._grid.cursorY };
+    if (needsPointsSync) {
+      update.gridPoints = this._grid.points;
+      this._grid.pointsSynced = true;
+    }
     this.setData(
-      { toneX: 0, toneY: 0, gridPoints },
+      update,
       () => {
         if (!skipProcess) this._scheduleProcess();
       }
@@ -1091,6 +1248,7 @@ Page({
 
   async onOpenFullscreen() {
     if (!this.data.hasImage || !this._canvas) return;
+    this.setData({ fullscreenVisible: true, fullscreenSrc: "" });
     try {
       const tmp = await new Promise((resolve, reject) => {
         wx.canvasToTempFilePath({
@@ -1101,16 +1259,17 @@ Page({
         });
       });
 
-      wx.previewImage({
-        current: tmp.tempFilePath,
-        urls: [tmp.tempFilePath]
-      });
+      this.setData({ fullscreenSrc: tmp.tempFilePath });
     } catch {
+      this.setData({ fullscreenVisible: false, fullscreenSrc: "" });
       wx.showToast({ title: "预览失败", icon: "none" });
     }
   },
 
   onCloseFullscreen() {
-    this.setData({ fullscreenVisible: false, fullscreenSrc: "" });
+    if (!this.data.fullscreenVisible) return;
+    this.setData({ fullscreenVisible: false, fullscreenSrc: "" }, () => {
+      this._showCloseHint();
+    });
   }
 });

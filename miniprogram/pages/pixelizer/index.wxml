@@ -1,7 +1,11 @@
+<wxs module="grid" src="./grid.wxs"></wxs>
 <view class="page {{themeClass}}" style="--safe-top: {{safeTopPx}}px; --safe-bottom: {{safeBottomPx}}px;">
-  <view class="header {{headerVisible ? 'visible' : ''}}" id="headerRef">
-    <view class="title">Retro Pixelizer Pro</view>
-    <view class="theme-btn" bindtap="onToggleTheme">◐</view>
+  <view
+    class="header {{headerVisible ? 'visible' : ''}}"
+    id="headerRef"
+    style="--nav-pad-left: {{navPadLeftPx}}px; --nav-pad-right: {{navPadRightPx}}px;"
+  >
+    <view class="title">Retro Pixelizer</view>
   </view>
 
   <view class="main {{hasImage ? 'has-image' : ''}}" id="mainContainer">
@@ -67,10 +71,10 @@
                 wx:for="{{gridPoints}}"
                 wx:key="id"
                 class="grid-point"
-                style="left: {{item.x}}px; top: {{item.y}}px; width: {{item.sizePx}}px; height: {{item.sizePx}}px; opacity: {{item.alpha}};"
+                style="{{grid.pointStyle(item, gridCursorX, gridCursorY)}}"
               >
-                <view class="grid-point-h" style="height: {{item.thicknessPx}}px;"></view>
-                <view class="grid-point-v" style="width: {{item.thicknessPx}}px;"></view>
+                <view class="grid-point-h"></view>
+                <view class="grid-point-v"></view>
               </view>
             </view>
           </view>
@@ -126,20 +130,23 @@
     </scroll-view>
 
     <view
-      class="preview-area"
+      class="preview-area {{fullscreenVisible ? 'is-hidden' : ''}}"
       style="--preview-h: {{previewHeightPx}}px; transform: translateY({{previewTranslateYPx}}px);"
     >
       <view class="canvas-container" id="canvasContainer">
-        <cover-view class="close-btn {{closeVisible ? 'visible' : ''}}" bindtap="onCloseImage">
-          <cover-image class="close-icon" src="{{closeIconSrc}}" mode="aspectFit"></cover-image>
-        </cover-view>
         <canvas
           type="2d"
           id="mainCanvas"
-          class="main-canvas"
+          class="main-canvas {{fullscreenVisible ? 'is-hidden' : ''}}"
           style="width: {{mainCanvasCssW}}px; height: {{mainCanvasCssH}}px;"
           bindtap="onOpenFullscreen"
         ></canvas>
+        <cover-view
+          class="close-btn {{closeEnabled ? 'enabled' : ''}} {{closeShown ? 'shown' : ''}} {{fullscreenVisible ? 'is-hidden' : ''}}"
+          catchtap="onCloseImage"
+        >
+          <cover-image class="close-icon" src="{{closeIconSrc}}" mode="aspectFit"></cover-image>
+        </cover-view>
         <view wx:if="{{!hasImage}}" class="empty-hint">点击左侧上传图片</view>
       </view>
 
