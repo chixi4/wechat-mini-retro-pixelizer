@@ -62,9 +62,16 @@
             bindtouchend="onXYTouchEnd"
             bindtouchcancel="onXYTouchEnd"
           >
-            <view class="xy-cursor" style="left: {{xyCursorLeftPx}}px; top: {{xyCursorTopPx}}px;">
-              <view class="xy-cursor-h"></view>
-              <view class="xy-cursor-v"></view>
+            <view class="xy-grid">
+              <view
+                wx:for="{{gridPoints}}"
+                wx:key="id"
+                class="grid-point"
+                style="left: {{item.x}}px; top: {{item.y}}px; width: {{item.sizePx}}px; height: {{item.sizePx}}px; opacity: {{item.alpha}};"
+              >
+                <view class="grid-point-h" style="height: {{item.thicknessPx}}px;"></view>
+                <view class="grid-point-v" style="width: {{item.thicknessPx}}px;"></view>
+              </view>
             </view>
           </view>
         </view>

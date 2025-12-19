@@ -207,49 +207,51 @@
   border: 2px solid #000000;
   overflow: hidden;
   margin-bottom: 8px;
-  background-image: url("/assets/patterns/plus-light.svg");
-  background-repeat: repeat;
-  background-size: 20px 20px;
-  background-position: center;
   touch-action: pan-y;
 }
 
 .theme-dark .xy-pad-container {
   border-color: #666666;
   background: #111111;
-  background-image: url("/assets/patterns/plus-dark.svg");
 }
 
-.xy-cursor {
+.xy-grid {
   position: absolute;
-  width: 22px;
-  height: 22px;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.grid-point {
+  position: absolute;
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
 
-.xy-cursor-h {
+.grid-point-h,
+.grid-point-v {
   position: absolute;
+  background: #000000;
+}
+
+.grid-point-h {
   left: 0;
   right: 0;
   top: 50%;
-  height: 2px;
-  margin-top: -1px;
-  background: #000000;
+  transform: translateY(-50%);
 }
 
-.xy-cursor-v {
-  position: absolute;
+.grid-point-v {
   top: 0;
   bottom: 0;
   left: 50%;
-  width: 2px;
-  margin-left: -1px;
-  background: #000000;
+  transform: translateX(-50%);
 }
 
-.theme-dark .xy-cursor-h,
-.theme-dark .xy-cursor-v {
+.theme-dark .grid-point-h,
+.theme-dark .grid-point-v {
   background: #eeeeee;
 }
 

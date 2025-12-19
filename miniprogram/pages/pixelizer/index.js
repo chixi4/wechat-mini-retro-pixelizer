@@ -114,8 +114,8 @@ Page({
 
     toneX: 0,
     toneY: 0,
-    xyCursorLeftPx: 0,
-    xyCursorTopPx: 0,
+
+    gridPoints: [],
 
     ditherAlgo: "atkinson",
     ditherAlgos: [
@@ -216,7 +216,8 @@ Page({
       cursorY: 0,
       rect: null,
       lastWidth: 0,
-      lastHeight: 0
+      lastHeight: 0,
+      points: []
     };
 
     this._mobile = {
@@ -305,6 +306,81 @@ Page({
     return true;
   },
 
+  _initGridPoints(w, h) {
+    const step = 20;
+    let cols = Math.ceil(w / step);
+    if (cols % 2 === 0) cols += 1;
+
+    let rows = Math.ceil(h / step);
+    if (rows % 2 === 0) rows += 1;
+
+    const totalW = (cols - 1) * step;
+    const totalH = (rows - 1) * step;
+    const offsetX = (w - totalW) / 2;
+    const offsetY = (h - totalH) / 2;
+
+    const points = [];
+    let id = 0;
+    for (let y = 0; y < rows; y += 1) {
+      for (let x = 0; x < cols; x += 1) {
+        points.push({ id, x: offsetX + x * step, y: offsetY + y * step });
+        id += 1;
+      }
+    }
+
+    this._grid.points = points;
+  },
+
+  _buildGridRenderPoints() {
+    const rect = this._grid.rect;
+    const points = this._grid.points;
+    if (!rect || !points || points.length === 0) return [];
+
+    const w = rect.width || 0;
+    const h = rect.height || 0;
+    if (w <= 0 || h <= 0) return [];
+
+    const maxDist = 40;
+    const cursorX = this._grid.cursorX;
+    const cursorY = this._grid.cursorY;
+    const renderPoints = new Array(points.length);
+
+    for (let i = 0; i < points.length; i += 1) {
+      const p = points[i];
+      const dx = p.x - cursorX;
+      const dy = p.y - cursorY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      let alpha = 0.15;
+      let size = 3;
+      let thickness = 0.5;
+
+      if (dist < maxDist) {
+        const factor = 1 - dist / maxDist;
+        alpha = 0.15 + factor * 0.85;
+        size = 3 + factor * 2;
+        thickness = 0.5 + factor * 1.5;
+      }
+
+      renderPoints[i] = {
+        id: p.id,
+        x: p.x,
+        y: p.y,
+        sizePx: +(size * 2).toFixed(2),
+        thicknessPx: +thickness.toFixed(2),
+        alpha: +alpha.toFixed(3)
+      };
+    }
+
+    return renderPoints;
+  },
+
+  _updateGridRender() {
+    const renderPoints = this._buildGridRenderPoints();
+    if (renderPoints.length === 0) return;
+    this.setData({ gridPoints: renderPoints });
+  },
+
   async _refreshRects() {
     const [headerRect, sliderRect, xyRect, canvasContainerRect] = await Promise.all([
       selectRect(this, "#headerRef"),
@@ -371,11 +447,12 @@ Page({
 
     const oldW = this._grid.lastWidth || w;
     const oldH = this._grid.lastHeight || h;
+    const sizeChanged = oldW !== w || oldH !== h;
 
     if (this._grid.cursorX === 0 && this._grid.cursorY === 0) {
       this._grid.cursorX = w / 2;
       this._grid.cursorY = h / 2;
-    } else if (oldW > 0 && oldH > 0 && (oldW !== w || oldH !== h)) {
+    } else if (oldW > 0 && oldH > 0 && sizeChanged) {
       this._grid.cursorX = (this._grid.cursorX / oldW) * w;
       this._grid.cursorY = (this._grid.cursorY / oldH) * h;
     }
@@ -386,7 +463,11 @@ Page({
     this._grid.cursorX = Math.max(0, Math.min(w, this._grid.cursorX));
     this._grid.cursorY = Math.max(0, Math.min(h, this._grid.cursorY));
 
-    this.setData({ xyCursorLeftPx: this._grid.cursorX, xyCursorTopPx: this._grid.cursorY });
+    if (sizeChanged || !this._grid.points || this._grid.points.length === 0) {
+      this._initGridPoints(w, h);
+    }
+
+    this._updateGridRender();
   },
 
   _updateSliderUI() {
@@ -432,6 +513,14 @@ Page({
     y = Math.max(0, Math.min(rect.height, y));
     this._grid.cursorX = x;
     this._grid.cursorY = y;
+    this._grid.rect = rect;
+
+    const sizeChanged = rect.width !== this._grid.lastWidth || rect.height !== this._grid.lastHeight;
+    if (sizeChanged || !this._grid.points || this._grid.points.length === 0) {
+      this._grid.lastWidth = rect.width;
+      this._grid.lastHeight = rect.height;
+      this._initGridPoints(rect.width, rect.height);
+    }
 
     const nx = rect.width > 0 ? x / rect.width : 0.5;
     const ny = rect.height > 0 ? y / rect.height : 0.5;
@@ -440,7 +529,8 @@ Page({
 
     this._state.toneX = toneX;
     this._state.toneY = toneY;
-    this.setData({ toneX, toneY, xyCursorLeftPx: x, xyCursorTopPx: y });
+    const gridPoints = this._buildGridRenderPoints();
+    this.setData({ toneX, toneY, gridPoints });
 
     this._scheduleProcess();
   },
@@ -902,8 +992,17 @@ Page({
 
     this._grid.cursorX = rect.width / 2;
     this._grid.cursorY = rect.height / 2;
+    this._grid.rect = rect;
+
+    const sizeChanged = rect.width !== this._grid.lastWidth || rect.height !== this._grid.lastHeight;
+    if (sizeChanged || !this._grid.points || this._grid.points.length === 0) {
+      this._grid.lastWidth = rect.width;
+      this._grid.lastHeight = rect.height;
+      this._initGridPoints(rect.width, rect.height);
+    }
+    const gridPoints = this._buildGridRenderPoints();
     this.setData(
-      { toneX: 0, toneY: 0, xyCursorLeftPx: this._grid.cursorX, xyCursorTopPx: this._grid.cursorY },
+      { toneX: 0, toneY: 0, gridPoints },
       () => {
         if (!skipProcess) this._scheduleProcess();
       }
