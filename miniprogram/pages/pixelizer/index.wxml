@@ -23,7 +23,8 @@
       <view class="panel">
         <view class="panel-title">输入图像</view>
         <view class="upload-area" bindtap="onChooseImage">
-          <view class="upload-text">点击上传图片&#10;支持 JPG, PNG</view>
+          <view class="upload-text">点击上传图片
+支持 JPG, PNG</view>
         </view>
       </view>
 
@@ -131,7 +132,7 @@
 
     <view
       class="preview-area {{fullscreenVisible ? 'is-hidden' : ''}}"
-      style="--preview-h: {{previewHeightPx}}px; transform: translateY({{previewTranslateYPx}}px);"
+      style="--preview-h: {{previewHeightPx}}px; --preview-shift: {{previewTranslateYPx}}px;"
     >
       <view class="canvas-container" id="canvasContainer">
         <canvas
@@ -141,22 +142,33 @@
           style="width: {{mainCanvasCssW}}px; height: {{mainCanvasCssH}}px;"
           bindtap="onOpenFullscreen"
         ></canvas>
-        <cover-view
-          class="close-btn {{closeEnabled ? 'enabled' : ''}} {{closeShown ? 'shown' : ''}} {{fullscreenVisible ? 'is-hidden' : ''}}"
-          catchtap="onCloseImage"
-        >
-          <cover-image class="close-icon" src="{{closeIconSrc}}" mode="aspectFit"></cover-image>
-        </cover-view>
         <view wx:if="{{!hasImage}}" class="empty-hint">点击左侧上传图片</view>
       </view>
+
+      <cover-view
+        class="close-btn {{closeEnabled ? 'enabled' : ''}} {{closeShown ? 'shown' : ''}} {{fullscreenVisible ? 'is-hidden' : ''}}"
+        catchtap="onCloseImage"
+      >
+        <cover-image class="close-icon" src="{{closeIconSrc}}" mode="aspectFit"></cover-image>
+      </cover-view>
 
       <canvas type="2d" id="workCanvas" class="hidden-canvas"></canvas>
       <canvas type="2d" id="bufferCanvas" class="hidden-canvas"></canvas>
       <canvas type="2d" id="exportCanvas" class="hidden-canvas"></canvas>
     </view>
+
   </view>
 
   <view wx:if="{{fullscreenVisible}}" class="fullscreen-modal" catchtap="onCloseFullscreen">
-    <image class="fullscreen-image" src="{{fullscreenSrc}}" mode="aspectFit"></image>
+    <image
+      class="fullscreen-image"
+      src="{{fullscreenSrc}}"
+      mode="aspectFit"
+      catchtouchmove="onFullscreenTouchMove"
+      catchtouchstart="onFullscreenTouchStart"
+      catchtouchend="onFullscreenTouchEnd"
+      style="transform: scale({{fullscreenScale}}) translate({{fullscreenTranslateX}}px, {{fullscreenTranslateY}}px);"
+    ></image>
   </view>
+
 </view>

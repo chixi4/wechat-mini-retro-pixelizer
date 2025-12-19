@@ -138,6 +138,9 @@ Page({
     canDownload: false,
     fullscreenVisible: false,
     fullscreenSrc: "",
+    fullscreenScale: 1,
+    fullscreenTranslateX: 0,
+    fullscreenTranslateY: 0,
 
     controlsScrollTop: 0,
     controlsPaddingTopPx: 15,
@@ -537,6 +540,7 @@ Page({
     if (shown !== this.data.closeShown) next.closeShown = shown;
     if (Object.keys(next).length) this.setData(next);
   },
+
 
   _clearCloseHintTimer() {
     if (!this._closeHintTimer) return;
@@ -1248,11 +1252,29 @@ Page({
 
   async onOpenFullscreen() {
     if (!this.data.hasImage || !this._canvas) return;
-    this.setData({ fullscreenVisible: true, fullscreenSrc: "" });
+
+    this.setData({
+      fullscreenVisible: true,
+      fullscreenSrc: "",
+      fullscreenScale: 1,
+      fullscreenTranslateX: 0,
+      fullscreenTranslateY: 0
+    });
+
+    this._fullscreenTouch = {
+      lastDistance: 0,
+      lastCenter: { x: 0, y: 0 },
+      initialScale: 1,
+      startY: 0,
+      startTime: 0,
+      hasMoved: false,
+      touchCount: 0
+    };
+
     try {
       const tmp = await new Promise((resolve, reject) => {
         wx.canvasToTempFilePath({
-          canvas: this._canvas.main.node,
+          canvas: this._canvas.work.node,
           fileType: "png",
           success: resolve,
           fail: reject
@@ -1266,9 +1288,81 @@ Page({
     }
   },
 
+  onFullscreenTouchStart(e) {
+    const touches = e.touches;
+    this._fullscreenTouch.touchCount = touches.length;
+    this._fullscreenTouch.hasMoved = false;
+
+    if (touches.length === 1) {
+      this._fullscreenTouch.startY = touches[0].clientY;
+      this._fullscreenTouch.startTime = Date.now();
+    } else if (touches.length === 2) {
+      const dx = touches[1].clientX - touches[0].clientX;
+      const dy = touches[1].clientY - touches[0].clientY;
+      this._fullscreenTouch.lastDistance = Math.sqrt(dx * dx + dy * dy);
+      this._fullscreenTouch.lastCenter = {
+        x: (touches[0].clientX + touches[1].clientX) / 2,
+        y: (touches[0].clientY + touches[1].clientY) / 2
+      };
+      this._fullscreenTouch.initialScale = this.data.fullscreenScale;
+    }
+  },
+
+  onFullscreenTouchMove(e) {
+    const touches = e.touches;
+    this._fullscreenTouch.hasMoved = true;
+
+    if (touches.length === 2) {
+      const dx = touches[1].clientX - touches[0].clientX;
+      const dy = touches[1].clientY - touches[0].clientY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (this._fullscreenTouch.lastDistance > 0) {
+        const scale = (distance / this._fullscreenTouch.lastDistance) * this._fullscreenTouch.initialScale;
+        const clampedScale = Math.max(1, Math.min(5, scale));
+
+        this.setData({
+          fullscreenScale: clampedScale
+        });
+      }
+    } else if (touches.length === 1 && this._fullscreenTouch.touchCount === 1) {
+      const deltaY = touches[0].clientY - this._fullscreenTouch.startY;
+
+      if (deltaY > 100 && this.data.fullscreenScale === 1) {
+        this.onCloseFullscreen();
+      }
+    }
+  },
+
+  onFullscreenTouchEnd(e) {
+    const touches = e.touches;
+
+    if (touches.length < 2) {
+      this._fullscreenTouch.lastDistance = 0;
+    }
+
+    if (touches.length === 0) {
+      const duration = Date.now() - this._fullscreenTouch.startTime;
+      const wasTap = !this._fullscreenTouch.hasMoved && duration < 300 && this._fullscreenTouch.touchCount === 1;
+
+      if (wasTap) {
+        this.onCloseFullscreen();
+      }
+
+      this._fullscreenTouch.hasMoved = false;
+      this._fullscreenTouch.touchCount = 0;
+    }
+  },
+
   onCloseFullscreen() {
     if (!this.data.fullscreenVisible) return;
-    this.setData({ fullscreenVisible: false, fullscreenSrc: "" }, () => {
+    this.setData({
+      fullscreenVisible: false,
+      fullscreenSrc: "",
+      fullscreenScale: 1,
+      fullscreenTranslateX: 0,
+      fullscreenTranslateY: 0
+    }, () => {
       this._showCloseHint();
     });
   }
