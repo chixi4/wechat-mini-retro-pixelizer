@@ -877,11 +877,15 @@ Page({
       availH = Math.max(1, maxPreviewH - previewPadding * 2 - previewBorder);
     }
 
-    const baseScale = Math.max(1, Math.floor(1000 / targetWidth));
-    const fitScale = Math.floor(Math.min(availW / targetWidth, availH / targetHeight));
-    const displayScale = fitScale > 0 ? Math.min(baseScale, fitScale) : baseScale;
-    const displayW = Math.max(1, Math.floor(targetWidth * displayScale));
-    const displayH = Math.max(1, Math.floor(targetHeight * displayScale));
+    // 预览尺寸只由容器与图片纵横比决定，避免拖动“像素尺寸”时预览大小跳变
+    let displayW = availW;
+    let displayH = Math.round(displayW * aspect);
+    if (displayH > availH) {
+      displayH = availH;
+      displayW = Math.round(displayH / aspect);
+    }
+    displayW = Math.max(1, Math.floor(displayW));
+    displayH = Math.max(1, Math.floor(displayH));
 
     const nextData = {};
     if (displayW !== this.data.mainCanvasCssW) nextData.mainCanvasCssW = displayW;
@@ -893,10 +897,11 @@ Page({
       this.setData(nextData);
     }
 
-    this._canvas.main.node.width = Math.max(1, displayW);
-    this._canvas.main.node.height = Math.max(1, displayH);
+    const dpr = this._dpr;
+    this._canvas.main.node.width = Math.max(1, Math.floor(displayW * dpr));
+    this._canvas.main.node.height = Math.max(1, Math.floor(displayH * dpr));
     const mainCtx = this._canvas.main.ctx;
-    mainCtx.setTransform(1, 0, 0, 1, 0, 0);
+    mainCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     mainCtx.imageSmoothingEnabled = false;
     if (typeof mainCtx.imageSmoothingQuality === "string") {
       mainCtx.imageSmoothingQuality = "low";
