@@ -403,11 +403,12 @@
   display: block;
   opacity: 0;
   pointer-events: none;
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+  position: relative;
   z-index: 1;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
   image-rendering: pixelated;
   image-rendering: -moz-crisp-edges;
   image-rendering: crisp-edges;
@@ -416,11 +417,6 @@
 .main.has-image .main-canvas {
   opacity: 1;
   pointer-events: auto;
-}
-
-.main-canvas.use-preview {
-  opacity: 0;
-  pointer-events: none;
 }
 
 .main-canvas.is-hidden {
@@ -509,22 +505,6 @@
   image-rendering: crisp-edges;
   transition: transform 0.1s ease-out;
   transform-origin: center center;
-}
-
-.preview-image {
-  display: block;
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 2;
-  image-rendering: pixelated;
-  image-rendering: -moz-crisp-edges;
-  image-rendering: crisp-edges;
-}
-
-.preview-image.is-hidden {
-  display: none;
 }
 
 .hidden-canvas {
@@ -619,8 +599,10 @@
   }
 
   .main.has-image .main-canvas {
+    max-width: 100%;
     max-height: 100%;
-    width: 100%;
+    width: auto;
+    height: auto;
   }
 
   .close-btn.enabled {

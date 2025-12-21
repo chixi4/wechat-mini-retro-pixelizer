@@ -177,8 +177,7 @@ Page({
     previewHeightPx: 0,
 
     mainCanvasCssW: 1,
-    mainCanvasCssH: 1,
-    previewSrc: ""
+    mainCanvasCssH: 1
   },
 
   onLoad() {
@@ -237,13 +236,6 @@ Page({
       scaled: { token: 0, w: 0, h: 0, data: null },
       toneStats: { token: 0, w: 0, h: 0, stats: null },
       work: { w: 0, h: 0, imageData: null }
-    };
-
-    this._preview = {
-      renderKey: "",
-      pendingKey: "",
-      busy: false,
-      token: 0
     };
 
     this._slider = {
@@ -667,8 +659,11 @@ Page({
     val = Math.max(min, Math.min(max, val));
 
     if (val !== this.data.targetWidth) {
-      this.setData({ targetWidth: val });
-      this._updateSliderUI();
+      const availW = rect.width || 0;
+      const valuePercent = (val - min) / (max - min);
+      const leftPos = valuePercent * availW;
+      const clampedPos = Math.max(0, Math.min(availW, leftPos));
+      this.setData({ targetWidth: val, sliderThumbLeftPx: clampedPos });
       this._scheduleProcess();
     }
   },
@@ -725,54 +720,19 @@ Page({
     this._isProcessing = true;
     this._updatePending = false;
 
-    setTimeout(() => {
-      try {
-        this._processImage();
-      } finally {
-        this._isProcessing = false;
-        if (this._updatePending) this._scheduleProcess();
-      }
-    }, 0);
-  },
+    const scheduleFrame =
+      typeof requestAnimationFrame === "function" ? requestAnimationFrame : (cb) => setTimeout(cb, 16);
 
-  _queuePreviewCapture(renderKey) {
-    if (!this.data.hasImage || !this._canvas) return;
-    if (renderKey === this._preview.renderKey && this.data.previewSrc) return;
-
-    this._preview.pendingKey = renderKey;
-    if (this._preview.busy) return;
-    this._flushPreviewCapture();
-  },
-
-  async _flushPreviewCapture() {
-    if (!this._preview.pendingKey || !this._canvas) return;
-
-    const renderKey = this._preview.pendingKey;
-    this._preview.pendingKey = "";
-    this._preview.busy = true;
-    const token = (this._preview.token += 1);
-
-    try {
-      const tmp = await new Promise((resolve, reject) => {
-        wx.canvasToTempFilePath({
-          canvas: this._canvas.work.node,
-          fileType: "png",
-          success: resolve,
-          fail: reject
-        });
-      });
-
-      if (token !== this._preview.token) return;
-      this._preview.renderKey = renderKey;
-      this.setData({ previewSrc: tmp.tempFilePath });
-    } catch (e) {
-      // Ignore preview capture failures and keep the last image.
-    } finally {
-      this._preview.busy = false;
-      if (this._preview.pendingKey && this._preview.pendingKey !== this._preview.renderKey) {
-        this._flushPreviewCapture();
-      }
-    }
+    scheduleFrame(() => {
+      setTimeout(() => {
+        try {
+          this._processImage();
+        } finally {
+          this._isProcessing = false;
+          if (this._updatePending) this._scheduleProcess();
+        }
+      }, 0);
+    });
   },
 
   _computeMobilePreviewBox(aspect) {
@@ -833,6 +793,9 @@ Page({
       buffer.node.width = targetWidth;
       buffer.node.height = targetHeight;
       buffer.ctx.imageSmoothingEnabled = true;
+      if (typeof buffer.ctx.imageSmoothingQuality === "string") {
+        buffer.ctx.imageSmoothingQuality = "high";
+      }
       drawImageWithOrientation(buffer.ctx, img, info.orientation, targetWidth, targetHeight);
 
       const baseImageData = buffer.ctx.getImageData(0, 0, targetWidth, targetHeight);
@@ -914,43 +877,32 @@ Page({
       availH = Math.max(1, maxPreviewH - previewPadding * 2 - previewBorder);
     }
 
-    // 预览尺寸只由容器与图片纵横比决定，避免拖动“像素尺寸”时预览大小跳变
-    let displayW = availW;
-    let displayH = Math.round(displayW * aspect);
-    if (displayH > availH) {
-      displayH = availH;
-      displayW = Math.round(displayH / aspect);
-    }
-    displayW = Math.max(1, Math.floor(displayW));
-    displayH = Math.max(1, Math.floor(displayH));
+    const baseScale = Math.max(1, Math.floor(1000 / targetWidth));
+    const fitScale = Math.floor(Math.min(availW / targetWidth, availH / targetHeight));
+    const displayScale = fitScale > 0 ? Math.min(baseScale, fitScale) : baseScale;
+    const displayW = Math.max(1, Math.floor(targetWidth * displayScale));
+    const displayH = Math.max(1, Math.floor(targetHeight * displayScale));
 
-    const nextData = { mainCanvasCssW: displayW, mainCanvasCssH: displayH, canDownload: true };
-    let needsLayoutUpdate = false;
-    if (this._isMobile && !this._lockPreviewHeight) {
-      const nextPreviewHeightPx = Math.max(1, displayH + previewPadding * 2 + previewBorder);
-      if (Math.abs(nextPreviewHeightPx - this.data.previewHeightPx) > 1) {
-        nextData.previewHeightPx = nextPreviewHeightPx;
-        needsLayoutUpdate = true;
-      }
+    const nextData = {};
+    if (displayW !== this.data.mainCanvasCssW) nextData.mainCanvasCssW = displayW;
+    if (displayH !== this.data.mainCanvasCssH) nextData.mainCanvasCssH = displayH;
+    if (!this.data.canDownload) nextData.canDownload = true;
+
+    const hasNextData = Object.keys(nextData).length > 0;
+    if (hasNextData) {
+      this.setData(nextData);
     }
 
-    this.setData(nextData, () => {
-      if (needsLayoutUpdate) this._updateLayout();
-    });
-
-    const dpr = this._dpr;
-    this._canvas.main.node.width = Math.max(1, Math.floor(displayW * dpr));
-    this._canvas.main.node.height = Math.max(1, Math.floor(displayH * dpr));
+    this._canvas.main.node.width = Math.max(1, displayW);
+    this._canvas.main.node.height = Math.max(1, displayH);
     const mainCtx = this._canvas.main.ctx;
-    mainCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    mainCtx.setTransform(1, 0, 0, 1, 0, 0);
     mainCtx.imageSmoothingEnabled = false;
     if (typeof mainCtx.imageSmoothingQuality === "string") {
       mainCtx.imageSmoothingQuality = "low";
     }
     mainCtx.clearRect(0, 0, displayW, displayH);
     mainCtx.drawImage(this._canvas.work.node, 0, 0, displayW, displayH);
-
-    this._queuePreviewCapture(renderKey);
   },
 
   async onChooseImage() {
@@ -1076,7 +1028,6 @@ Page({
           previewTranslateYPx,
           fullscreenVisible: false,
           fullscreenSrc: "",
-          previewSrc: "",
           controlsScrollTop: 0
         },
         async () => {
@@ -1125,13 +1076,6 @@ Page({
 
     this._closeHintShown = false;
     this._awaitingPreviewExit = false;
-    if (this._preview) {
-      this._preview.renderKey = "";
-      this._preview.pendingKey = "";
-      this._preview.busy = false;
-      this._preview.token += 1;
-    }
-
     if (this._canvas) {
       this._canvas.main.ctx.clearRect(0, 0, this._canvas.main.node.width, this._canvas.main.node.height);
       this._canvas.work.ctx.clearRect(0, 0, this._canvas.work.node.width, this._canvas.work.node.height);
@@ -1144,8 +1088,7 @@ Page({
       canDownload: false,
       headerVisible,
       fullscreenVisible: false,
-      fullscreenSrc: "",
-      previewSrc: ""
+      fullscreenSrc: ""
     });
     this._updateLayout();
 

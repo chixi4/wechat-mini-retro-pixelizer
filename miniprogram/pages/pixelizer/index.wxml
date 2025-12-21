@@ -138,18 +138,10 @@
         <canvas
           type="2d"
           id="mainCanvas"
-          class="main-canvas {{fullscreenVisible ? 'is-hidden' : ''}} {{previewSrc ? 'use-preview' : ''}}"
+          class="main-canvas {{fullscreenVisible ? 'is-hidden' : ''}}"
           style="width: {{mainCanvasCssW}}px; height: {{mainCanvasCssH}}px;"
           bindtap="onOpenFullscreen"
         ></canvas>
-        <image
-          wx:if="{{previewSrc}}"
-          class="preview-image {{fullscreenVisible ? 'is-hidden' : ''}}"
-          src="{{previewSrc}}"
-          mode="aspectFit"
-          style="width: {{mainCanvasCssW}}px; height: {{mainCanvasCssH}}px;"
-          bindtap="onOpenFullscreen"
-        ></image>
         <view wx:if="{{!hasImage}}" class="empty-hint">点击左侧上传图片</view>
       </view>
 
