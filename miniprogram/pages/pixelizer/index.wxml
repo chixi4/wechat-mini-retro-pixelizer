@@ -21,9 +21,9 @@
       style="padding-top: {{controlsPaddingTopPx}}px;"
     >
       <view class="panel">
-        <view class="panel-title">输入图像</view>
+        <view class="panel-title">上传图片</view>
         <view class="upload-area" bindtap="onChooseImage">
-          <view class="upload-text">点击上传图片
+          <view class="upload-text">点击或拖拽上传
 支持 JPG, PNG</view>
         </view>
       </view>
@@ -56,8 +56,8 @@
 
         <view class="form-group">
           <view class="label-row">
-            <view class="label">影调调整</view>
-            <view class="reset-btn" bindtap="onResetTone">↺ 还原</view>
+            <view class="label">影调调色台</view>
+            <view class="reset-btn" bindtap="onResetTone">↺ 重置</view>
           </view>
           <view
             class="xy-pad-container"
@@ -83,7 +83,7 @@
       </view>
 
       <view class="panel">
-        <view class="panel-title">抖动算法</view>
+        <view class="panel-title">纹理风格</view>
         <view class="grid-buttons">
           <view
             wx:for="{{ditherAlgos}}"
@@ -138,10 +138,18 @@
         <canvas
           type="2d"
           id="mainCanvas"
-          class="main-canvas {{fullscreenVisible ? 'is-hidden' : ''}}"
+          class="main-canvas {{fullscreenVisible ? 'is-hidden' : ''}} {{previewSrc ? 'use-preview' : ''}}"
           style="width: {{mainCanvasCssW}}px; height: {{mainCanvasCssH}}px;"
           bindtap="onOpenFullscreen"
         ></canvas>
+        <image
+          wx:if="{{previewSrc}}"
+          class="preview-image {{fullscreenVisible ? 'is-hidden' : ''}}"
+          src="{{previewSrc}}"
+          mode="aspectFit"
+          style="width: {{mainCanvasCssW}}px; height: {{mainCanvasCssH}}px;"
+          bindtap="onOpenFullscreen"
+        ></image>
         <view wx:if="{{!hasImage}}" class="empty-hint">点击左侧上传图片</view>
       </view>
 

@@ -98,6 +98,35 @@ function drawImageWithOrientation(ctx, img, orientation, destW, destH) {
   ctx.restore();
 }
 
+function scaleImageDataNearest(srcData, srcW, srcH, scale, destData) {
+  const destW = srcW * scale;
+  const srcRowStride = srcW * 4;
+  const destRowStride = destW * 4;
+
+  for (let y = 0; y < srcH; y += 1) {
+    const srcRow = y * srcRowStride;
+    const destRowBase = y * scale * destRowStride;
+    for (let x = 0; x < srcW; x += 1) {
+      const srcIdx = srcRow + x * 4;
+      const r = srcData[srcIdx];
+      const g = srcData[srcIdx + 1];
+      const b = srcData[srcIdx + 2];
+      const a = srcData[srcIdx + 3];
+      const destX = x * scale * 4;
+      for (let sy = 0; sy < scale; sy += 1) {
+        let destIdx = destRowBase + sy * destRowStride + destX;
+        for (let sx = 0; sx < scale; sx += 1) {
+          destData[destIdx] = r;
+          destData[destIdx + 1] = g;
+          destData[destIdx + 2] = b;
+          destData[destIdx + 3] = a;
+          destIdx += 4;
+        }
+      }
+    }
+  }
+}
+
 Page({
   data: {
     themeClass: "theme-light",
@@ -148,7 +177,8 @@ Page({
     previewHeightPx: 0,
 
     mainCanvasCssW: 1,
-    mainCanvasCssH: 1
+    mainCanvasCssH: 1,
+    previewSrc: ""
   },
 
   onLoad() {
@@ -207,6 +237,13 @@ Page({
       scaled: { token: 0, w: 0, h: 0, data: null },
       toneStats: { token: 0, w: 0, h: 0, stats: null },
       work: { w: 0, h: 0, imageData: null }
+    };
+
+    this._preview = {
+      renderKey: "",
+      pendingKey: "",
+      busy: false,
+      token: 0
     };
 
     this._slider = {
@@ -698,6 +735,46 @@ Page({
     }, 0);
   },
 
+  _queuePreviewCapture(renderKey) {
+    if (!this.data.hasImage || !this._canvas) return;
+    if (renderKey === this._preview.renderKey && this.data.previewSrc) return;
+
+    this._preview.pendingKey = renderKey;
+    if (this._preview.busy) return;
+    this._flushPreviewCapture();
+  },
+
+  async _flushPreviewCapture() {
+    if (!this._preview.pendingKey || !this._canvas) return;
+
+    const renderKey = this._preview.pendingKey;
+    this._preview.pendingKey = "";
+    this._preview.busy = true;
+    const token = (this._preview.token += 1);
+
+    try {
+      const tmp = await new Promise((resolve, reject) => {
+        wx.canvasToTempFilePath({
+          canvas: this._canvas.work.node,
+          fileType: "png",
+          success: resolve,
+          fail: reject
+        });
+      });
+
+      if (token !== this._preview.token) return;
+      this._preview.renderKey = renderKey;
+      this.setData({ previewSrc: tmp.tempFilePath });
+    } catch (e) {
+      // Ignore preview capture failures and keep the last image.
+    } finally {
+      this._preview.busy = false;
+      if (this._preview.pendingKey && this._preview.pendingKey !== this._preview.renderKey) {
+        this._flushPreviewCapture();
+      }
+    }
+  },
+
   _computeMobilePreviewBox(aspect) {
     const previewPadding = 8; // 同 mobile .preview-area padding
     const previewBorder = 2; // mobile 预览区底边线
@@ -867,8 +944,13 @@ Page({
     const mainCtx = this._canvas.main.ctx;
     mainCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     mainCtx.imageSmoothingEnabled = false;
+    if (typeof mainCtx.imageSmoothingQuality === "string") {
+      mainCtx.imageSmoothingQuality = "low";
+    }
     mainCtx.clearRect(0, 0, displayW, displayH);
     mainCtx.drawImage(this._canvas.work.node, 0, 0, displayW, displayH);
+
+    this._queuePreviewCapture(renderKey);
   },
 
   async onChooseImage() {
@@ -994,6 +1076,7 @@ Page({
           previewTranslateYPx,
           fullscreenVisible: false,
           fullscreenSrc: "",
+          previewSrc: "",
           controlsScrollTop: 0
         },
         async () => {
@@ -1042,6 +1125,12 @@ Page({
 
     this._closeHintShown = false;
     this._awaitingPreviewExit = false;
+    if (this._preview) {
+      this._preview.renderKey = "";
+      this._preview.pendingKey = "";
+      this._preview.busy = false;
+      this._preview.token += 1;
+    }
 
     if (this._canvas) {
       this._canvas.main.ctx.clearRect(0, 0, this._canvas.main.node.width, this._canvas.main.node.height);
@@ -1050,7 +1139,14 @@ Page({
     }
 
     const headerVisible = this._isMobile ? true : this.data.headerVisible;
-    this.setData({ hasImage: false, canDownload: false, headerVisible, fullscreenVisible: false, fullscreenSrc: "" });
+    this.setData({
+      hasImage: false,
+      canDownload: false,
+      headerVisible,
+      fullscreenVisible: false,
+      fullscreenSrc: "",
+      previewSrc: ""
+    });
     this._updateLayout();
 
     const scrollReset = () => this.setData({ controlsScrollTop: 0 });
@@ -1209,10 +1305,24 @@ Page({
     const exportCanvas = this._canvas.export;
     exportCanvas.node.width = exportW;
     exportCanvas.node.height = exportH;
-    exportCanvas.ctx.setTransform(1, 0, 0, 1, 0, 0);
-    exportCanvas.ctx.imageSmoothingEnabled = false;
-    exportCanvas.ctx.clearRect(0, 0, exportW, exportH);
-    exportCanvas.ctx.drawImage(this._canvas.work.node, 0, 0, exportW, exportH);
+    const exportCtx = exportCanvas.ctx;
+    exportCtx.setTransform(1, 0, 0, 1, 0, 0);
+    exportCtx.imageSmoothingEnabled = false;
+    if (typeof exportCtx.imageSmoothingQuality === "string") {
+      exportCtx.imageSmoothingQuality = "low";
+    }
+    exportCtx.clearRect(0, 0, exportW, exportH);
+
+    const workImageData = this._proc.work.imageData;
+    if (workImageData && workImageData.data && scale > 1 && exportCtx.createImageData) {
+      const scaledData = exportCtx.createImageData(exportW, exportH);
+      scaleImageDataNearest(workImageData.data, w, h, scale, scaledData.data);
+      exportCtx.putImageData(scaledData, 0, 0);
+    } else if (workImageData && workImageData.data && scale === 1) {
+      exportCtx.putImageData(workImageData, 0, 0);
+    } else {
+      exportCtx.drawImage(this._canvas.work.node, 0, 0, exportW, exportH);
+    }
 
     try {
       const tmp = await new Promise((resolve, reject) => {

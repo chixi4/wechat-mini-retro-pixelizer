@@ -403,13 +403,24 @@
   display: block;
   opacity: 0;
   pointer-events: none;
-  position: relative;
-  z-index: auto;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
 }
 
 .main.has-image .main-canvas {
   opacity: 1;
   pointer-events: auto;
+}
+
+.main-canvas.use-preview {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .main-canvas.is-hidden {
@@ -498,6 +509,22 @@
   image-rendering: crisp-edges;
   transition: transform 0.1s ease-out;
   transform-origin: center center;
+}
+
+.preview-image {
+  display: block;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+.preview-image.is-hidden {
+  display: none;
 }
 
 .hidden-canvas {
