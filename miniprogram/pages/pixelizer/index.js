@@ -276,6 +276,7 @@ Page({
     };
 
     this._isProcessing = false;
+    this._processRunning = false;
     this._updatePending = false;
     this._lastRenderKey = "";
     this._lockPreviewHeight = false;
@@ -713,11 +714,12 @@ Page({
     if (!this.data.hasImage || !this._state.palette || !this._canvas) return;
 
     if (this._isProcessing) {
-      this._updatePending = true;
+      if (this._processRunning) this._updatePending = true;
       return;
     }
 
     this._isProcessing = true;
+    this._processRunning = false;
     this._updatePending = false;
 
     const scheduleFrame =
@@ -725,9 +727,12 @@ Page({
 
     scheduleFrame(() => {
       setTimeout(() => {
+        this._processRunning = true;
+        this._updatePending = false;
         try {
           this._processImage();
         } finally {
+          this._processRunning = false;
           this._isProcessing = false;
           if (this._updatePending) this._scheduleProcess();
         }
