@@ -288,6 +288,7 @@ Page({
     this._workerBaseKey = "";
     this._workerRenderJob = null;
     this._lastRenderKey = "";
+    this._forceMainThreadToken = null;
     this._lockPreviewHeight = false;
     this._closeHintShown = false;
     this._awaitingPreviewExit = false;
@@ -994,11 +995,13 @@ Page({
     const proc = this._proc;
     const buffer = this._canvas.buffer;
 
+    const expectedLen = targetWidth * targetHeight * 4;
     if (
       proc.scaled.token !== this._state.imageToken ||
       proc.scaled.w !== targetWidth ||
       proc.scaled.h !== targetHeight ||
-      !proc.scaled.data
+      !proc.scaled.data ||
+      proc.scaled.data.length !== expectedLen
     ) {
       buffer.node.width = targetWidth;
       buffer.node.height = targetHeight;
@@ -1031,18 +1034,20 @@ Page({
     }
 
     const workImageData = proc.work.imageData;
-    const worker = this._worker;
+    const forceMainThread = this._forceMainThreadToken === this._state.imageToken;
+    const worker = forceMainThread ? null : this._worker;
     const baseKey = `${this._state.imageToken}:${info.orientation || 1}:${targetWidth}x${targetHeight}`;
 
     if (worker) {
       let workerFrameReady = false;
       if (baseKey !== this._workerBaseKey) {
+        const baseCopy = new Uint8ClampedArray(baseData);
         const ok = this._postWorkerMessage({
           type: "setBase",
           baseKey,
           w: targetWidth,
           h: targetHeight,
-          buffer: baseData.buffer
+          buffer: baseCopy.buffer
         });
         if (ok) {
           this._workerBaseKey = baseKey;
@@ -1145,6 +1150,10 @@ Page({
 
         if (!this.data.canDownload) {
           this.setData({ canDownload: true });
+        }
+
+        if (this._forceMainThreadToken === this._state.imageToken) {
+          this._forceMainThreadToken = null;
         }
 
         this._lastRenderKey = renderKey;
@@ -1254,6 +1263,10 @@ Page({
       this.setData({ canDownload: true });
     }
 
+    if (this._forceMainThreadToken === this._state.imageToken) {
+      this._forceMainThreadToken = null;
+    }
+
     this._lastRenderKey = renderKey;
   },
 
@@ -1326,6 +1339,7 @@ Page({
       this._state.imageToken += 1;
       this._state.originalImage = img;
       this._state.imageInfo = info;
+      this._forceMainThreadToken = this._state.imageToken;
 
       this._proc.scaled = { token: 0, w: 0, h: 0, data: null };
       this._proc.toneStats = { token: 0, w: 0, h: 0, stats: null };
@@ -1392,7 +1406,7 @@ Page({
           if (this._initialProcessTimer) clearTimeout(this._initialProcessTimer);
           this._initialProcessTimer = setTimeout(() => {
             this._initialProcessTimer = null;
-            this._scheduleProcess();
+            this._scheduleProcess({ immediate: true });
           }, 0);
         }
       );
@@ -1433,6 +1447,7 @@ Page({
     this._state.imageToken += 1;
     this._state.originalImage = null;
     this._state.imageInfo = null;
+    this._forceMainThreadToken = null;
 
     this._proc.scaled = { token: 0, w: 0, h: 0, data: null };
     this._proc.toneStats = { token: 0, w: 0, h: 0, stats: null };
