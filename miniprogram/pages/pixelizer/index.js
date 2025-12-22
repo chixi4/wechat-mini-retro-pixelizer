@@ -1613,7 +1613,7 @@ Page({
   onSelectDither(e) {
     const key = e && e.currentTarget && e.currentTarget.dataset ? e.currentTarget.dataset.key : null;
     if (!key || key === this.data.ditherAlgo) return;
-    this.setData({ ditherAlgo: key }, () => this._scheduleProcess());
+    this.setData({ ditherAlgo: key }, () => this._scheduleProcess({ immediate: true }));
   },
 
   onSelectPalette(e) {
@@ -1625,7 +1625,7 @@ Page({
     this._state.paletteKey = key;
     this._state.palette = hexToRgb(paletteEntry.colors);
     ensurePaletteFast(this._state.palette);
-    this.setData({ paletteKey: key }, () => this._scheduleProcess());
+    this.setData({ paletteKey: key }, () => this._scheduleProcess({ immediate: true }));
   },
 
   async onDownload() {
