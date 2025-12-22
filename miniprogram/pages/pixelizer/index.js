@@ -323,6 +323,11 @@ Page({
     this._fullscreenUser = { scale: 1, x: 0, y: 0 };
     this._fullscreenPreviewRect = null;
     this._layoutAnimTimer = null;
+    this._layoutCommitTimer = null;
+    this._layoutCommitToken = 0;
+    this._layoutOpening = false;
+    this._layoutOpeningTargetPaddingTopPx = 0;
+    this._layoutOpeningTargetPreviewTranslateYPx = 0;
     this._layoutAnimReadyTimer = null;
     this._layoutAnimAllowed = false;
     this._lastHasImage = false;
@@ -609,6 +614,10 @@ Page({
       clearTimeout(this._layoutAnimTimer);
       this._layoutAnimTimer = null;
     }
+    if (this._layoutCommitTimer) {
+      clearTimeout(this._layoutCommitTimer);
+      this._layoutCommitTimer = null;
+    }
     if (this._layoutAnimReadyTimer) {
       clearTimeout(this._layoutAnimReadyTimer);
       this._layoutAnimReadyTimer = null;
@@ -801,6 +810,7 @@ Page({
     const wasImage = !!this._lastHasImage;
     const hasImage = !!this.data.hasImage;
     const isImageTransition = hasImage !== wasImage;
+    const isOpening = isImageTransition && hasImage;
 
     const headerHeightPx = this._headerRect ? this._headerRect.height || 0 : 0;
     const safeTopPx = this._safeTop || 0;
@@ -819,6 +829,20 @@ Page({
       controlsPaddingTopPx = safeTopPx + previewHeightPx + headerOffset;
     } else {
       if (this.data.headerVisible) controlsPaddingTopPx = safeTopPx + headerHeightPx;
+    }
+
+    // If we are in the middle of the "open preview" transition, ignore redundant layout recalcs
+    // until we commit the final padding (otherwise we'll start a competing FLIP animation).
+    if (
+      this._layoutOpening &&
+      hasImage &&
+      !isImageTransition &&
+      controlsPaddingTopPx === this._layoutOpeningTargetPaddingTopPx &&
+      previewTranslateYPx === this._layoutOpeningTargetPreviewTranslateYPx
+    ) {
+      this._updateCloseVisibility();
+      this._lastHasImage = hasImage;
+      return;
     }
 
     const prevControlsPadding =
@@ -847,8 +871,89 @@ Page({
         clearTimeout(this._layoutAnimTimer);
         this._layoutAnimTimer = null;
       }
+      if (this._layoutCommitTimer) {
+        clearTimeout(this._layoutCommitTimer);
+        this._layoutCommitTimer = null;
+      }
+      this._layoutCommitToken = (this._layoutCommitToken || 0) + 1;
+      this._layoutOpening = false;
 
-      if (shouldAnimate) {
+      // Opening the mobile preview uses a different sequencing:
+      // keep the old padding during the roll-down so we don't expose a big blank area.
+      if (isOpening && this._layoutAnimAllowed && controlsPaddingTopPx !== prevControlsPadding) {
+        const fromPadding = prevControlsPadding;
+        const toPadding = controlsPaddingTopPx;
+        const pushDelta = toPadding - fromPadding;
+        const startPreviewShift = fromPadding - toPadding; // negative => preview starts "rolled up"
+        const animMs = 350; // match WXSS transition duration
+
+        const start = () => {
+          this._layoutOpening = true;
+          this._layoutOpeningTargetPaddingTopPx = toPadding;
+          this._layoutOpeningTargetPreviewTranslateYPx = previewTranslateYPx;
+
+          scheduleRefresh();
+          if (!this._layoutAnimAllowed) {
+            this._layoutOpening = false;
+            this.setData({
+              controlsPaddingTopPx: toPadding,
+              previewTranslateYPx,
+              controlsShiftPx: 0,
+              previewShiftPx: 0,
+              layoutAnimEnabled: false
+            });
+            return;
+          }
+
+          this.setData(
+            {
+              // Keep old padding while animating transforms.
+              controlsPaddingTopPx: fromPadding,
+              previewTranslateYPx,
+              controlsShiftPx: 0,
+              previewShiftPx: startPreviewShift,
+              layoutAnimEnabled: false
+            },
+            () => {
+              this._layoutAnimTimer = setTimeout(() => {
+                this._layoutAnimTimer = null;
+                if (!this._layoutAnimAllowed) {
+                  this._layoutOpening = false;
+                  this.setData({ controlsShiftPx: 0, previewShiftPx: 0 });
+                  return;
+                }
+
+                // Animate: preview rolls down, controls content gets pushed down.
+                this.setData({ controlsShiftPx: pushDelta, previewShiftPx: 0, layoutAnimEnabled: true });
+
+                // Commit layout after the animation ends (no transition), then re-enable transitions.
+                const commitToken = (this._layoutCommitToken = (this._layoutCommitToken || 0) + 1);
+                if (this._layoutCommitTimer) clearTimeout(this._layoutCommitTimer);
+                this._layoutCommitTimer = setTimeout(() => {
+                  if (commitToken !== this._layoutCommitToken) return;
+                  this._layoutCommitTimer = null;
+                  this.setData(
+                    {
+                      controlsPaddingTopPx: toPadding,
+                      previewTranslateYPx,
+                      controlsShiftPx: 0,
+                      previewShiftPx: 0,
+                      layoutAnimEnabled: false
+                    },
+                    () => {
+                      this._layoutOpening = false;
+                      if (!this._layoutAnimAllowed) return;
+                      setTimeout(() => this.setData({ layoutAnimEnabled: true }), 16);
+                    }
+                  );
+                }, animMs + 20);
+              }, 16);
+            }
+          );
+        };
+
+        start();
+      } else if (shouldAnimate) {
         this.setData(
           {
             controlsPaddingTopPx,
@@ -1575,24 +1680,22 @@ Page({
       }
 
       const headerVisible = true;
-      let initialLayout = null;
+      const openingLayout = {};
       if (this._isMobile && !replacingImage) {
         const headerHeightPx = this._headerRect ? this._headerRect.height || 0 : 0;
         const safeTopPx = this._safeTop || 0;
         const headerOffset = headerVisible ? headerHeightPx : 0;
-        const controlsPaddingTopPx = safeTopPx + nextPreviewHeightPx + headerOffset;
-        const previewTranslateYPx = headerOffset;
-        const prevControlsPadding =
+        const toPaddingTopPx = safeTopPx + nextPreviewHeightPx + headerOffset;
+        const fromPaddingTopPx =
           typeof this.data.controlsPaddingTopPx === "number" ? this.data.controlsPaddingTopPx : 0;
-        const deltaControls = prevControlsPadding - controlsPaddingTopPx;
-        const previewShiftPx = deltaControls;
-        initialLayout = {
-          controlsPaddingTopPx,
-          previewTranslateYPx,
-          controlsShiftPx: deltaControls,
-          previewShiftPx,
-          layoutAnimEnabled: false
-        };
+        const previewTranslateYPx = headerOffset;
+        const previewShiftPx = fromPaddingTopPx - toPaddingTopPx; // start "rolled up"
+
+        openingLayout.controlsPaddingTopPx = fromPaddingTopPx;
+        openingLayout.previewTranslateYPx = previewTranslateYPx;
+        openingLayout.controlsShiftPx = 0;
+        openingLayout.previewShiftPx = previewShiftPx;
+        openingLayout.layoutAnimEnabled = false;
       }
 
       console.log("设置图片状态");
@@ -1616,29 +1719,14 @@ Page({
           fullscreenAnimating: false,
           fullscreenSrc: "",
           controlsScrollTop: 0,
-          ...(initialLayout || {})
+          ...openingLayout
         },
         async () => {
           console.log("开始处理图片");
           this._updateLayout();
-          if (initialLayout) {
-            if (this._layoutAnimTimer) {
-              clearTimeout(this._layoutAnimTimer);
-              this._layoutAnimTimer = null;
-            }
-            this._layoutAnimTimer = setTimeout(() => {
-              this._layoutAnimTimer = null;
-              if (!this._layoutAnimAllowed) {
-                this.setData({ controlsShiftPx: 0, previewShiftPx: 0 });
-                return;
-              }
-              this.setData({ controlsShiftPx: 0, previewShiftPx: 0, layoutAnimEnabled: true });
-            }, 16);
-          }
           await sleep(50);
           await this._refreshRects();
           await this.onResetTone({ skipProcess: true });
-          this._updateLayout();
 
           if (this._initialProcessTimer) clearTimeout(this._initialProcessTimer);
           this._initialProcessTimer = setTimeout(() => {
@@ -1666,6 +1754,16 @@ Page({
       clearTimeout(this._layoutRefreshTimer);
       this._layoutRefreshTimer = null;
     }
+    if (this._layoutAnimTimer) {
+      clearTimeout(this._layoutAnimTimer);
+      this._layoutAnimTimer = null;
+    }
+    if (this._layoutCommitTimer) {
+      clearTimeout(this._layoutCommitTimer);
+      this._layoutCommitTimer = null;
+    }
+    this._layoutCommitToken = (this._layoutCommitToken || 0) + 1;
+    this._layoutOpening = false;
     if (this._fullscreenCloseTimer) {
       clearTimeout(this._fullscreenCloseTimer);
       this._fullscreenCloseTimer = null;
