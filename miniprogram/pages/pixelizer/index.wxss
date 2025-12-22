@@ -38,6 +38,10 @@
   top: 1px;
 }
 
+.safe-top-mask {
+  display: none;
+}
+
 
 .main {
   display: grid;
@@ -565,6 +569,22 @@
     left: 0;
     max-width: none;
     overflow-x: hidden;
+  }
+
+  .safe-top-mask {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--safe-top, env(safe-area-inset-top));
+    background: #ffffff;
+    z-index: 150;
+    pointer-events: none;
+  }
+
+  .theme-dark .safe-top-mask {
+    background: #111111;
   }
 
   .header {

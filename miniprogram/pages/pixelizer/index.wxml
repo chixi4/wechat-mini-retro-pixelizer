@@ -1,5 +1,6 @@
 <wxs module="grid" src="./grid.wxs"></wxs>
 <view class="page {{themeClass}}" style="--safe-top: {{safeTopPx}}px; --safe-bottom: {{safeBottomPx}}px;">
+  <view class="safe-top-mask"></view>
   <view
     class="header {{headerVisible ? 'visible' : ''}}"
     id="headerRef"
