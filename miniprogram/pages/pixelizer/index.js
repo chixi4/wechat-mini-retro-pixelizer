@@ -1567,11 +1567,6 @@ Page({
       }
 
       const headerVisible = true;
-      const headerHeightPx = this._headerRect ? this._headerRect.height || 0 : 0;
-      const safeTopPx = this._safeTop || 0;
-      const headerOffset = headerVisible ? headerHeightPx : 0;
-      const controlsPaddingTopPx = this._isMobile ? safeTopPx + nextPreviewHeightPx + headerOffset : 0;
-      const previewTranslateYPx = this._isMobile ? headerOffset : 0;
 
       console.log("设置图片状态");
 
@@ -1588,8 +1583,6 @@ Page({
           mainCanvasCssW: nextMainCanvasCssW,
           mainCanvasCssH: nextMainCanvasCssH,
           headerVisible,
-          controlsPaddingTopPx,
-          previewTranslateYPx,
           fullscreenVisible: false,
           fullscreenActive: false,
           fullscreenClosing: false,
@@ -1599,6 +1592,7 @@ Page({
         },
         async () => {
           console.log("开始处理图片");
+          this._updateLayout();
           await sleep(50);
           await this._refreshRects();
           await this.onResetTone({ skipProcess: true });
