@@ -117,35 +117,41 @@ function applyDynamicToneMapping(imageData, x, y, toneStats) {
   const bBase = ySat * bMax * brightnessRangeScale;
   const yWeightPow = 1.05;
 
-  const invLogitLp = invLogit(lp);
-  const b = bBase * Math.pow(1.0 - Math.abs(invLogitLp - 0.5) * 2.0, yWeightPow);
-
-  const lumaLut = new Uint8ClampedArray(256);
+  const lumaLut = new Float32Array(256);
 
   for (let i = 0; i < 256; i++) {
-    let v = i / 255.0;
-    v = clamp(v, lo, hi);
-    const t = logit(v);
+    const v = clamp(i / 255.0, lo, hi);
+    let t = (logit(v) - lp) * c + lp;
 
-    const w = v < pivotSafe ? smoothstep(lo, pivotSafe, v) : smoothstep(hi, pivotSafe, v);
-    const t2 = lp + (t - lp) * c + b * w;
+    if (bBase !== 0) {
+      const vc = invLogit(t);
+      const w = bBase > 0 ? Math.pow(1.0 - vc, yWeightPow) : Math.pow(vc, yWeightPow);
+      t += bBase * w;
+    }
 
-    v = invLogit(t2);
-    v = clamp(v, lo, hi);
-
-    lumaLut[i] = (v * 255) | 0;
+    const out = clamp(invLogit(t), lo, hi);
+    lumaLut[i] = out * 255.0;
   }
 
   const satLut = new Float32Array(256);
 
-  const edgeW = 0.8;
-  const edgeT = 0.3 + 0.25 * strength;
-  const deltaK = 0.016 + 0.018 * strength;
-  const mid = 128;
+  const edgeWidth = 0.3;
+  const satEdgeStrength = 0.78;
+  const minSat = 1.0 - satEdgeStrength * strength;
+  const deltaK = 0.9 + 2.2 * strength;
 
   for (let i = 0; i < 256; i++) {
-    const dL = Math.abs(i - mid);
-    const satEdge = 1.0 - edgeT * smoothstep(70, 140, dL);
+    const nl = lumaLut[i];
+    const nl01 = nl / 255.0;
+    const dEdge = Math.min(nl01, 1.0 - nl01);
+
+    let t = dEdge / edgeWidth;
+    t = clamp01(t);
+    const edgeW = t * t * (3 - 2 * t);
+
+    const satEdge = minSat + (1.0 - minSat) * edgeW;
+
+    const dL = Math.abs(nl - i) / 255.0;
     const satDelta = Math.exp(-dL * deltaK);
     const satDeltaEdge = edgeW + (1.0 - edgeW) * satDelta;
 
