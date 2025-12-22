@@ -33,6 +33,19 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const GRID_BORDER_PX = 2;
+
+function getGridInnerRect(rect) {
+  const safeRect = rect || {};
+  const rawW = typeof safeRect.width === "number" ? safeRect.width : 0;
+  const rawH = typeof safeRect.height === "number" ? safeRect.height : 0;
+  const innerWidth = Math.max(0, rawW - GRID_BORDER_PX * 2);
+  const innerHeight = Math.max(0, rawH - GRID_BORDER_PX * 2);
+  const innerLeft = (typeof safeRect.left === "number" ? safeRect.left : 0) + GRID_BORDER_PX;
+  const innerTop = (typeof safeRect.top === "number" ? safeRect.top : 0) + GRID_BORDER_PX;
+  return { innerWidth, innerHeight, innerLeft, innerTop };
+}
+
 function isRotate90(orientation) {
   return (
     orientation === "left" ||
@@ -676,16 +689,19 @@ Page({
 
   _initGridPoints(w, h) {
     const step = 20;
-    let cols = Math.ceil(w / step);
+    const safeW = Math.max(1, Math.floor(w));
+    const safeH = Math.max(1, Math.floor(h));
+
+    let cols = Math.ceil(safeW / step);
     if (cols % 2 === 0) cols += 1;
 
-    let rows = Math.ceil(h / step);
+    let rows = Math.ceil(safeH / step);
     if (rows % 2 === 0) rows += 1;
 
     const totalW = (cols - 1) * step;
     const totalH = (rows - 1) * step;
-    const offsetX = (w - totalW) / 2;
-    const offsetY = (h - totalH) / 2;
+    const offsetX = (safeW - totalW) / 2;
+    const offsetY = (safeH - totalH) / 2;
 
     const points = [];
     let id = 0;
@@ -1033,31 +1049,30 @@ Page({
     const rect = this._grid.rect;
     if (!rect) return;
 
-    const w = rect.width || 0;
-    const h = rect.height || 0;
-    if (w <= 0 || h <= 0) return;
+    const { innerWidth, innerHeight } = getGridInnerRect(rect);
+    if (innerWidth <= 0 || innerHeight <= 0) return;
 
-    const oldW = this._grid.lastWidth || w;
-    const oldH = this._grid.lastHeight || h;
-    const sizeChanged = oldW !== w || oldH !== h;
+    const oldW = this._grid.lastWidth || innerWidth;
+    const oldH = this._grid.lastHeight || innerHeight;
+    const sizeChanged = oldW !== innerWidth || oldH !== innerHeight;
 
     if (this._grid.cursorX === 0 && this._grid.cursorY === 0) {
-      this._grid.cursorX = w / 2;
-      this._grid.cursorY = h / 2;
+      this._grid.cursorX = innerWidth / 2;
+      this._grid.cursorY = innerHeight / 2;
     } else if (oldW > 0 && oldH > 0 && sizeChanged) {
-      this._grid.cursorX = (this._grid.cursorX / oldW) * w;
-      this._grid.cursorY = (this._grid.cursorY / oldH) * h;
+      this._grid.cursorX = (this._grid.cursorX / oldW) * innerWidth;
+      this._grid.cursorY = (this._grid.cursorY / oldH) * innerHeight;
     }
 
-    this._grid.lastWidth = w;
-    this._grid.lastHeight = h;
+    this._grid.lastWidth = innerWidth;
+    this._grid.lastHeight = innerHeight;
 
-    this._grid.cursorX = Math.max(0, Math.min(w, this._grid.cursorX));
-    this._grid.cursorY = Math.max(0, Math.min(h, this._grid.cursorY));
+    this._grid.cursorX = Math.max(0, Math.min(innerWidth, this._grid.cursorX));
+    this._grid.cursorY = Math.max(0, Math.min(innerHeight, this._grid.cursorY));
 
     const pointsChanged = sizeChanged || !this._grid.points || this._grid.points.length === 0;
     if (pointsChanged) {
-      this._initGridPoints(w, h);
+      this._initGridPoints(innerWidth, innerHeight);
     }
 
     const needsPointsSync = pointsChanged || !this._grid.pointsSynced;
@@ -1148,24 +1163,26 @@ Page({
       if (!rect) return;
     }
 
-    let x = clientX - rect.left;
-    let y = clientY - rect.top;
-    x = Math.max(0, Math.min(rect.width, x));
-    y = Math.max(0, Math.min(rect.height, y));
+    const { innerWidth, innerHeight, innerLeft, innerTop } = getGridInnerRect(rect);
+    if (innerWidth <= 0 || innerHeight <= 0) return;
+    let x = clientX - innerLeft;
+    let y = clientY - innerTop;
+    x = Math.max(0, Math.min(innerWidth, x));
+    y = Math.max(0, Math.min(innerHeight, y));
     this._grid.cursorX = x;
     this._grid.cursorY = y;
     this._grid.rect = rect;
 
-    const sizeChanged = rect.width !== this._grid.lastWidth || rect.height !== this._grid.lastHeight;
+    const sizeChanged = innerWidth !== this._grid.lastWidth || innerHeight !== this._grid.lastHeight;
     const pointsChanged = sizeChanged || !this._grid.points || this._grid.points.length === 0;
     if (pointsChanged) {
-      this._grid.lastWidth = rect.width;
-      this._grid.lastHeight = rect.height;
-      this._initGridPoints(rect.width, rect.height);
+      this._grid.lastWidth = innerWidth;
+      this._grid.lastHeight = innerHeight;
+      this._initGridPoints(innerWidth, innerHeight);
     }
 
-    const nx = rect.width > 0 ? x / rect.width : 0.5;
-    const ny = rect.height > 0 ? y / rect.height : 0.5;
+    const nx = innerWidth > 0 ? x / innerWidth : 0.5;
+    const ny = innerHeight > 0 ? y / innerHeight : 0.5;
     const toneX = nx * 2 - 1;
     const toneY = 1 - ny * 2;
 
@@ -1917,20 +1934,22 @@ Page({
     const skipProcess = options && options.skipProcess;
     const rect = await selectRect(this, "#xyPadContainer");
     if (!rect) return;
+    const { innerWidth, innerHeight } = getGridInnerRect(rect);
+    if (innerWidth <= 0 || innerHeight <= 0) return;
 
     this._state.toneX = 0;
     this._state.toneY = 0;
 
-    this._grid.cursorX = rect.width / 2;
-    this._grid.cursorY = rect.height / 2;
+    this._grid.cursorX = innerWidth / 2;
+    this._grid.cursorY = innerHeight / 2;
     this._grid.rect = rect;
 
-    const sizeChanged = rect.width !== this._grid.lastWidth || rect.height !== this._grid.lastHeight;
+    const sizeChanged = innerWidth !== this._grid.lastWidth || innerHeight !== this._grid.lastHeight;
     const pointsChanged = sizeChanged || !this._grid.points || this._grid.points.length === 0;
     if (pointsChanged) {
-      this._grid.lastWidth = rect.width;
-      this._grid.lastHeight = rect.height;
-      this._initGridPoints(rect.width, rect.height);
+      this._grid.lastWidth = innerWidth;
+      this._grid.lastHeight = innerHeight;
+      this._initGridPoints(innerWidth, innerHeight);
     }
     const needsPointsSync = pointsChanged || !this._grid.pointsSynced;
     const update = { gridCursorX: this._grid.cursorX, gridCursorY: this._grid.cursorY };
