@@ -738,7 +738,7 @@ Page({
       const leftPos = valuePercent * availW;
       const clampedPos = Math.max(0, Math.min(availW, leftPos));
       this.setData({ targetWidth: val, sliderThumbLeftPx: clampedPos });
-      this._scheduleProcess();
+      this._scheduleProcess({ immediate: this.data.sliderDragging });
     }
   },
 
@@ -780,11 +780,13 @@ Page({
     }
     this.setData(update);
 
-    this._scheduleProcess();
+    this._scheduleProcess({ immediate: this._grid.dragging });
   },
 
-  _scheduleProcess() {
+  _scheduleProcess(options) {
     if (!this.data.hasImage || !this._state.palette || !this._canvas) return;
+
+    const immediate = !!(options && options.immediate);
 
     if (this._isProcessing) {
       if (this._processRunning) {
@@ -800,22 +802,27 @@ Page({
     this._processRunning = false;
     this._updatePending = false;
 
+    const run = () => {
+      this._processRunning = true;
+      this._updatePending = false;
+      try {
+        this._processImage(processToken);
+      } finally {
+        this._processRunning = false;
+        this._isProcessing = false;
+        if (this._updatePending) this._scheduleProcess(options);
+      }
+    };
+
     const scheduleFrame =
       typeof requestAnimationFrame === "function" ? requestAnimationFrame : (cb) => setTimeout(cb, 16);
 
-    scheduleFrame(() => {
-      setTimeout(() => {
-        this._processRunning = true;
-        this._updatePending = false;
-        try {
-          this._processImage(processToken);
-        } finally {
-          this._processRunning = false;
-          this._isProcessing = false;
-          if (this._updatePending) this._scheduleProcess();
-        }
-      }, 0);
-    });
+    if (immediate) {
+      setTimeout(run, 0);
+      return;
+    }
+
+    scheduleFrame(() => setTimeout(run, 0));
   },
 
   _computeMobilePreviewBox(aspect) {
@@ -918,7 +925,7 @@ Page({
         toneStats = computeToneStats({ data: baseData, width: targetWidth, height: targetHeight });
         proc.toneStats = { token: this._state.imageToken, w: targetWidth, h: targetHeight, stats: toneStats };
       }
-      applyDynamicToneMapping(workImageData, toneX, toneY, toneStats);
+      applyDynamicToneMapping(workImageData, toneX, toneY, toneStats, isAborted);
     }
 
     if (isAborted()) return;
@@ -990,8 +997,9 @@ Page({
     // Draw at native pixel size; CSS scaling keeps the preview crisp like fullscreen.
     const mainW = Math.max(1, targetWidth);
     const mainH = Math.max(1, targetHeight);
-    this._canvas.main.node.width = mainW;
-    this._canvas.main.node.height = mainH;
+    const mainNode = this._canvas.main.node;
+    if (mainNode.width !== mainW) mainNode.width = mainW;
+    if (mainNode.height !== mainH) mainNode.height = mainH;
     const mainCtx = this._canvas.main.ctx;
     mainCtx.setTransform(1, 0, 0, 1, 0, 0);
     mainCtx.imageSmoothingEnabled = false;

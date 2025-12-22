@@ -6,6 +6,9 @@ const smoothstep = (edge0, edge1, x) => {
   return t * t * (3 - 2 * t);
 };
 
+const LUMA_LUT = new Float32Array(256);
+const SAT_LUT = new Float32Array(256);
+
 function computeToneStats(imageData) {
   const data = imageData.data;
   const hist = new Uint32Array(256);
@@ -49,9 +52,11 @@ function computeToneStats(imageData) {
   return { pivot, p5, p50, p95, range };
 }
 
-function applyDynamicToneMapping(imageData, x, y, toneStats) {
+function applyDynamicToneMapping(imageData, x, y, toneStats, shouldAbort) {
   const data = imageData.data;
   const len = data.length;
+  const shouldCheckAbort = typeof shouldAbort === "function";
+  let abortCounter = 0;
 
   const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
 
@@ -117,7 +122,7 @@ function applyDynamicToneMapping(imageData, x, y, toneStats) {
   const bBase = ySat * bMax * brightnessRangeScale;
   const yWeightPow = 1.05;
 
-  const lumaLut = new Float32Array(256);
+  const lumaLut = LUMA_LUT;
 
   for (let i = 0; i < 256; i++) {
     const v = clamp(i / 255.0, lo, hi);
@@ -133,7 +138,7 @@ function applyDynamicToneMapping(imageData, x, y, toneStats) {
     lumaLut[i] = out * 255.0;
   }
 
-  const satLut = new Float32Array(256);
+  const satLut = SAT_LUT;
 
   const edgeWidth = 0.3;
   const satEdgeStrength = 0.78;
@@ -161,32 +166,38 @@ function applyDynamicToneMapping(imageData, x, y, toneStats) {
   const lower = guard;
   const upper = 255 - guard;
 
+  const satLutRef = satLut;
+  const lumaLutRef = lumaLut;
+  const lowerRef = lower;
+  const upperRef = upper;
+
   for (let idx = 0; idx < len; idx += 4) {
+    if (shouldCheckAbort && (abortCounter++ & 2047) === 0 && shouldAbort()) return;
     const r0 = data[idx];
     const g0 = data[idx + 1];
     const b0 = data[idx + 2];
 
     const l = (77 * r0 + 150 * g0 + 29 * b0) >> 8;
-    const nl = lumaLut[l];
+    const nl = lumaLutRef[l];
 
     const dr = r0 - l;
     const dg = g0 - l;
     const db = b0 - l;
 
     let sat = 1.0;
-    if (dr > 0) sat = Math.min(sat, (upper - nl) / dr);
-    else if (dr < 0) sat = Math.min(sat, (lower - nl) / dr);
+    if (dr > 0) sat = Math.min(sat, (upperRef - nl) / dr);
+    else if (dr < 0) sat = Math.min(sat, (lowerRef - nl) / dr);
 
-    if (dg > 0) sat = Math.min(sat, (upper - nl) / dg);
-    else if (dg < 0) sat = Math.min(sat, (lower - nl) / dg);
+    if (dg > 0) sat = Math.min(sat, (upperRef - nl) / dg);
+    else if (dg < 0) sat = Math.min(sat, (lowerRef - nl) / dg);
 
-    if (db > 0) sat = Math.min(sat, (upper - nl) / db);
-    else if (db < 0) sat = Math.min(sat, (lower - nl) / db);
+    if (db > 0) sat = Math.min(sat, (upperRef - nl) / db);
+    else if (db < 0) sat = Math.min(sat, (lowerRef - nl) / db);
 
-    sat = clamp01(sat);
-    if (!Number.isFinite(sat)) sat = 0.0;
+    if (!(sat > 0)) sat = 0.0;
+    else if (sat > 1.0) sat = 1.0;
 
-    sat *= satLut[l];
+    sat *= satLutRef[l];
 
     const rAdj = nl + dr * sat;
     const gAdj = nl + dg * sat;
