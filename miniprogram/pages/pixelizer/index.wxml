@@ -147,7 +147,7 @@
       </view>
 
       <cover-view
-        wx:if="{{!fullscreenVisible}}"
+        wx:if="{{!fullscreenVisible && hasImage}}"
         class="close-btn {{closeEnabled ? 'enabled' : ''}} {{closeShown ? 'shown' : ''}}"
         catchtap="onCloseImage"
       >×</cover-view>

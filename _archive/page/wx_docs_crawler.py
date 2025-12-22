@@ -21,7 +21,7 @@ from urllib.robotparser import RobotFileParser
 
 import httpx
 from bs4 import BeautifulSoup, FeatureNotFound
-from markdownify import MarkdownConverter
+import markdownify
 
 LOG = logging.getLogger("wx_docs_crawler")
 
@@ -99,27 +99,6 @@ class RateLimiter:
             await asyncio.sleep(delay)
 
 
-class FencedConverter(MarkdownConverter):
-    def convert_pre(self, el, text, convert_as_inline):
-        code = el.find("code")
-        lang = ""
-        if code:
-            for cls in code.get("class") or []:
-                m = re.match(r"language-(\w+)", str(cls))
-                if m:
-                    lang = m.group(1)
-                    break
-            content = code.get_text()
-        else:
-            content = el.get_text()
-        return f"\n```{lang}\n{content.rstrip()}\n```\n"
-
-    def convert_code(self, el, text, convert_as_inline):
-        if getattr(el, "parent", None) and getattr(el.parent, "name", None) == "pre":
-            return text
-        return f"`{text}`"
-
-
 def soup(html: str) -> BeautifulSoup:
     try:
         return BeautifulSoup(html, "lxml")
@@ -149,6 +128,17 @@ def pick_container(s: BeautifulSoup) -> Any:
     return s.body or s
 
 
+def clean_container(container: Any):
+    for tag in container.find_all(["script", "style", "noscript", "footer", "nav"]):
+        tag.decompose()
+    for el in container.find_all(class_=re.compile(r"(footer|copyright|sidebar|nav-)", re.I)):
+        el.decompose()
+    for el in container.find_all(string=re.compile(r"Copyright.*Tencent", re.I)):
+        parent = el.find_parent()
+        if parent:
+            parent.decompose()
+
+
 def rewrite_links(container: Any, page_url: str, out: Path):
     current = url_to_path(page_url, out)
     for a in container.find_all("a", href=True):
@@ -165,7 +155,7 @@ def rewrite_links(container: Any, page_url: str, out: Path):
 
 
 def to_markdown(html_frag: str) -> str:
-    md = FencedConverter(heading_style="ATX").convert(html_frag)
+    md = markdownify.markdownify(html_frag, heading_style="ATX", code_language_callback=lambda el: "")
     return re.sub(r"\n{3,}", "\n\n", md).strip() + "\n"
 
 
@@ -270,9 +260,7 @@ class Crawler:
         html = resp.text
         s = soup(html)
         container = pick_container(s)
-
-        for tag in container.find_all(["script", "style", "noscript"]):
-            tag.decompose()
+        clean_container(container)
 
         rewrite_links(container, final_url, self.cfg.out)
 
