@@ -2104,9 +2104,6 @@ Page({
     });
 
     this._fullscreenTouch = {
-      lastDistance: 0,
-      lastCenter: { x: 0, y: 0 },
-      initialScale: 1,
       startX: 0,
       startY: 0,
       startTime: 0,
@@ -2172,22 +2169,12 @@ Page({
     if (!this.data.fullscreenActive || this.data.fullscreenClosing) return;
     const touches = e.touches || [];
     this._fullscreenTouch.touchCount = touches.length;
-    this._fullscreenTouch.hasMoved = false;
+    this._fullscreenTouch.hasMoved = touches.length !== 1;
 
     if (touches.length === 1) {
       this._fullscreenTouch.startX = touches[0].clientX;
       this._fullscreenTouch.startY = touches[0].clientY;
       this._fullscreenTouch.startTime = Date.now();
-    } else if (touches.length === 2) {
-      this._fullscreenTouch.hasMoved = true;
-      const dx = touches[1].clientX - touches[0].clientX;
-      const dy = touches[1].clientY - touches[0].clientY;
-      this._fullscreenTouch.lastDistance = Math.sqrt(dx * dx + dy * dy);
-      this._fullscreenTouch.lastCenter = {
-        x: (touches[0].clientX + touches[1].clientX) / 2,
-        y: (touches[0].clientY + touches[1].clientY) / 2
-      };
-      this._fullscreenTouch.initialScale = this._fullscreenUser ? this._fullscreenUser.scale : 1;
     }
   },
 
@@ -2196,21 +2183,7 @@ Page({
     const touches = e.touches;
     if (!touches || !touches.length) return;
 
-    if (touches.length === 2) {
-      this._fullscreenTouch.hasMoved = true;
-      const dx = touches[1].clientX - touches[0].clientX;
-      const dy = touches[1].clientY - touches[0].clientY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-
-      if (this._fullscreenTouch.lastDistance > 0) {
-        const scale = (distance / this._fullscreenTouch.lastDistance) * this._fullscreenTouch.initialScale;
-        const clampedScale = Math.max(1, Math.min(5, scale));
-
-        this._fullscreenUser = this._fullscreenUser || { scale: 1, x: 0, y: 0 };
-        this._fullscreenUser.scale = clampedScale;
-        this._applyFullscreenTransform();
-      }
-    } else if (touches.length === 1 && this._fullscreenTouch.touchCount === 1) {
+    if (touches.length === 1 && this._fullscreenTouch.touchCount === 1) {
       const deltaX = touches[0].clientX - this._fullscreenTouch.startX;
       const deltaY = touches[0].clientY - this._fullscreenTouch.startY;
       const threshold = this._fullscreenTouch.moveThreshold || 6;
@@ -2219,20 +2192,12 @@ Page({
         this._fullscreenTouch.hasMoved = true;
       }
 
-      const userScale = this._fullscreenUser ? this._fullscreenUser.scale : 1;
-      if (deltaY > 100 && userScale === 1 && !this.data.fullscreenAnimating) {
-        this.onCloseFullscreen();
-      }
     }
   },
 
   onFullscreenTouchEnd(e) {
     if (!this.data.fullscreenActive || this.data.fullscreenClosing) return;
     const touches = e.touches;
-
-    if (touches.length < 2) {
-      this._fullscreenTouch.lastDistance = 0;
-    }
 
     if (touches.length === 0) {
       const duration = Date.now() - this._fullscreenTouch.startTime;
