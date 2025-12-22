@@ -130,15 +130,12 @@
       <view class="bottom-spacer" style="height: {{safeBottomPx}}px;"></view>
     </scroll-view>
 
-    <view
-      class="preview-area {{(fullscreenActive || fullscreenClosing) ? 'is-hidden' : ''}}"
-      style="--preview-h: {{previewHeightPx}}px; --preview-shift: {{previewTranslateYPx}}px;"
-    >
+    <view class="preview-area" style="--preview-h: {{previewHeightPx}}px; --preview-shift: {{previewTranslateYPx}}px;">
       <view class="canvas-container" id="canvasContainer">
         <canvas
           type="2d"
           id="mainCanvas"
-          class="main-canvas {{(fullscreenActive || fullscreenClosing) ? 'is-hidden' : ''}}"
+          class="main-canvas {{fullscreenVisible ? 'is-hidden' : ''}}"
           style="width: {{mainCanvasCssW}}px; height: {{mainCanvasCssH}}px;"
           bindtap="onOpenFullscreen"
         ></canvas>
@@ -146,8 +143,7 @@
       </view>
 
       <cover-view
-        wx:if="{{!fullscreenActive && !fullscreenClosing}}"
-        class="close-btn {{closeEnabled ? 'enabled' : ''}} {{closeShown ? 'shown' : ''}}"
+        class="close-btn {{closeEnabled ? 'enabled' : ''}} {{closeShown ? 'shown' : ''}} {{fullscreenVisible ? 'is-hidden' : ''}}"
         catchtap="onCloseImage"
       >×</cover-view>
 
