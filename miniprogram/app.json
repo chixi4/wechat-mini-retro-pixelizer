@@ -2,6 +2,7 @@
   "pages": [
     "pages/pixelizer/index"
   ],
+  "workers": "workers",
   "window": {
     "navigationBarTitleText": "Retro Pixelizer",
     "navigationStyle": "custom",

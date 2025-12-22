@@ -284,6 +284,9 @@ Page({
     this._processRunning = false;
     this._processToken = 0;
     this._updatePending = false;
+    this._worker = null;
+    this._workerBaseKey = "";
+    this._workerRenderJob = null;
     this._lastRenderKey = "";
     this._lockPreviewHeight = false;
     this._closeHintShown = false;
@@ -316,6 +319,8 @@ Page({
       };
       wx.onThemeChange(this._themeChangeHandler);
     }
+
+    this._initWorker();
   },
 
   async onReady() {
@@ -373,6 +378,104 @@ Page({
     return true;
   },
 
+  _initWorker() {
+    if (this._worker) return true;
+    if (!wx.createWorker) return false;
+
+    try {
+      const worker = wx.createWorker("workers/pixelizer/index.js");
+      worker.onMessage((res) => this._onWorkerMessage(res));
+      this._worker = worker;
+      this._workerBaseKey = "";
+      this._workerRenderJob = null;
+      return true;
+    } catch (e) {
+      this._worker = null;
+      this._workerBaseKey = "";
+      this._workerRenderJob = null;
+      return false;
+    }
+  },
+
+  _disposeWorker() {
+    if (!this._worker) return;
+    try {
+      this._worker.terminate();
+    } catch (e) {
+      // ignore
+    }
+    this._worker = null;
+    this._workerBaseKey = "";
+
+    if (this._workerRenderJob && typeof this._workerRenderJob.resolve === "function") {
+      if (this._workerRenderJob.timer) {
+        clearTimeout(this._workerRenderJob.timer);
+      }
+      try {
+        this._workerRenderJob.resolve(null);
+      } catch (e) {
+        // ignore
+      }
+    }
+    this._workerRenderJob = null;
+  },
+
+  _onWorkerMessage(res) {
+    const data = res || {};
+    if (data.type === "rendered") {
+      const job = this._workerRenderJob;
+      if (!job || data.token !== job.token) return;
+      if (job.timer) clearTimeout(job.timer);
+      this._workerRenderJob = null;
+      job.resolve(data);
+      return;
+    }
+
+    if (data.type === "baseSet") {
+      // no-op, mainly for debugging/health checks
+      return;
+    }
+  },
+
+  _postWorkerMessage(payload) {
+    if (!this._worker) return false;
+    try {
+      this._worker.postMessage(payload);
+      return true;
+    } catch (e) {
+      this._disposeWorker();
+      return false;
+    }
+  },
+
+  _renderInWorker(processToken, payload) {
+    if (!this._worker) return Promise.resolve(null);
+
+    if (this._workerRenderJob) {
+      // Only 1 render in-flight; coalesce by letting the current one finish.
+      return Promise.resolve(null);
+    }
+
+    return new Promise((resolve) => {
+      const timeoutMs = 8000;
+      const timer = setTimeout(() => {
+        const job = this._workerRenderJob;
+        if (!job || job.token !== processToken) return;
+        this._workerRenderJob = null;
+        resolve(null);
+        this._disposeWorker();
+      }, timeoutMs);
+
+      this._workerRenderJob = { token: processToken, resolve, timer };
+      const ok = this._postWorkerMessage({ ...payload, type: "render", token: processToken });
+      if (!ok) {
+        clearTimeout(timer);
+        this._workerRenderJob = null;
+        resolve(null);
+      }
+    });
+  },
+
   onShow() {
     this._syncSystemTheme();
     if (!this._awaitingPreviewExit) return;
@@ -384,6 +487,7 @@ Page({
     if (this._themeChangeHandler && wx.offThemeChange) {
       wx.offThemeChange(this._themeChangeHandler);
     }
+    this._disposeWorker();
   },
 
   _resolveSystemTheme(sysLike) {
@@ -802,15 +906,31 @@ Page({
     this._processRunning = false;
     this._updatePending = false;
 
+    const finish = () => {
+      this._processRunning = false;
+      this._isProcessing = false;
+      if (this._updatePending) this._scheduleProcess(options);
+    };
+
     const run = () => {
       this._processRunning = true;
       this._updatePending = false;
+      let result;
       try {
-        this._processImage(processToken);
-      } finally {
-        this._processRunning = false;
-        this._isProcessing = false;
-        if (this._updatePending) this._scheduleProcess(options);
+        result = this._processImage(processToken);
+      } catch (e) {
+        console.error("processImage error", e);
+        finish();
+        return;
+      }
+
+      if (result && typeof result.then === "function") {
+        result.then(finish, (err) => {
+          console.error("processImage async error", err);
+          finish();
+        });
+      } else {
+        finish();
       }
     };
 
@@ -852,7 +972,7 @@ Page({
     return { displayW, displayH, previewHeightPx };
   },
 
-  _processImage(processToken) {
+  async _processImage(processToken) {
     const isAborted = () => typeof processToken === "number" && processToken !== this._processToken;
     const img = this._state.originalImage;
     const palette = this._state.palette;
@@ -870,7 +990,6 @@ Page({
 
     const renderKey = `${this._state.imageToken}:${targetWidth}x${targetHeight}:${ditherAlgo}:${this.data.paletteKey}:${toneX.toFixed(4)}:${toneY.toFixed(4)}`;
     if (renderKey === this._lastRenderKey) return;
-    this._lastRenderKey = renderKey;
 
     const proc = this._proc;
     const buffer = this._canvas.buffer;
@@ -912,6 +1031,122 @@ Page({
     }
 
     const workImageData = proc.work.imageData;
+    const worker = this._worker;
+    const baseKey = `${this._state.imageToken}:${info.orientation || 1}:${targetWidth}x${targetHeight}`;
+
+    if (worker) {
+      let workerFrameReady = false;
+      if (baseKey !== this._workerBaseKey) {
+        const ok = this._postWorkerMessage({
+          type: "setBase",
+          baseKey,
+          w: targetWidth,
+          h: targetHeight,
+          buffer: baseData.buffer
+        });
+        if (ok) {
+          this._workerBaseKey = baseKey;
+        } else {
+          this._workerBaseKey = "";
+        }
+      }
+
+      const rendered = await this._renderInWorker(processToken, {
+        toneX,
+        toneY,
+        paletteKey: this.data.paletteKey,
+        ditherAlgo,
+        serpentine: this._state.isSerpentine
+      });
+
+      if (isAborted()) return;
+
+      if (rendered && rendered.ok && rendered.buffer) {
+        try {
+          if (rendered.w !== targetWidth || rendered.h !== targetHeight) {
+            throw new Error(`worker dim mismatch (${rendered.w}x${rendered.h} != ${targetWidth}x${targetHeight})`);
+          }
+          const expected = targetWidth * targetHeight * 4;
+          if (rendered.buffer.byteLength !== expected) {
+            throw new Error(`worker buffer size mismatch (${rendered.buffer.byteLength} != ${expected})`);
+          }
+          workImageData.data.set(new Uint8ClampedArray(rendered.buffer));
+          workerFrameReady = true;
+        } catch (e) {
+          console.warn("worker render apply failed; fallback to main thread", e);
+          this._disposeWorker();
+        }
+      } else if (rendered && rendered.ok === false) {
+        console.warn("worker render error; fallback to main thread", rendered.error);
+        this._disposeWorker();
+      }
+
+      if (isAborted()) return;
+
+      if (workerFrameReady) {
+        this._canvas.work.ctx.putImageData(workImageData, 0, 0);
+
+        const container = this._canvasContainerRect;
+        const containerW = container && container.width ? Math.max(1, Math.floor(container.width)) : 1000;
+        const containerH = container && container.height ? Math.max(1, Math.floor(container.height)) : 600;
+
+        const previewPadding = 8; // 同 mobile .preview-area padding
+        const previewBorder = 2; // mobile 预览区底边线
+
+        let availW = Math.max(1, containerW - 44);
+        let availH = Math.max(1, containerH - 44);
+
+        if (this._isMobile) {
+          const winW =
+            this._sys && this._sys.windowWidth ? Math.max(1, Math.floor(this._sys.windowWidth)) : containerW;
+          const winH =
+            this._sys && this._sys.windowHeight ? Math.max(1, Math.floor(this._sys.windowHeight)) : containerH;
+          const maxPreviewH = Math.max(1, Math.floor(winH * 0.4));
+
+          availW = Math.max(1, winW - previewPadding * 2);
+          availH = Math.max(1, maxPreviewH - previewPadding * 2 - previewBorder);
+        }
+
+        // 预览尺寸只由容器与图片纵横比决定，避免拖动“像素尺寸”时预览大小跳变
+        let displayW = availW;
+        let displayH = Math.round(displayW * aspect);
+        if (displayH > availH) {
+          displayH = availH;
+          displayW = Math.round(displayH / aspect);
+        }
+        displayW = Math.max(1, Math.floor(displayW));
+        displayH = Math.max(1, Math.floor(displayH));
+
+        const nextData = {};
+        if (displayW !== this.data.mainCanvasCssW) nextData.mainCanvasCssW = displayW;
+        if (displayH !== this.data.mainCanvasCssH) nextData.mainCanvasCssH = displayH;
+        if (!this.data.canDownload) nextData.canDownload = true;
+
+        const hasNextData = Object.keys(nextData).length > 0;
+        if (hasNextData) {
+          this.setData(nextData);
+        }
+
+        // Draw at native pixel size; CSS scaling keeps the preview crisp like fullscreen.
+        const mainW = Math.max(1, targetWidth);
+        const mainH = Math.max(1, targetHeight);
+        const mainNode = this._canvas.main.node;
+        if (mainNode.width !== mainW) mainNode.width = mainW;
+        if (mainNode.height !== mainH) mainNode.height = mainH;
+        const mainCtx = this._canvas.main.ctx;
+        mainCtx.setTransform(1, 0, 0, 1, 0, 0);
+        mainCtx.imageSmoothingEnabled = false;
+        if (typeof mainCtx.imageSmoothingQuality === "string") {
+          mainCtx.imageSmoothingQuality = "low";
+        }
+        mainCtx.clearRect(0, 0, mainW, mainH);
+        mainCtx.drawImage(this._canvas.work.node, 0, 0, mainW, mainH);
+
+        this._lastRenderKey = renderKey;
+        return;
+      }
+    }
+
     workImageData.data.set(baseData);
 
     if (toneX !== 0 || toneY !== 0) {
@@ -1008,6 +1243,8 @@ Page({
     }
     mainCtx.clearRect(0, 0, mainW, mainH);
     mainCtx.drawImage(this._canvas.work.node, 0, 0, mainW, mainH);
+
+    this._lastRenderKey = renderKey;
   },
 
   async onChooseImage() {
@@ -1170,6 +1407,19 @@ Page({
       this._layoutRefreshTimer = null;
     }
     this._lockPreviewHeight = false;
+
+    this._processToken += 1;
+
+    if (this._workerRenderJob && typeof this._workerRenderJob.resolve === "function") {
+      if (this._workerRenderJob.timer) clearTimeout(this._workerRenderJob.timer);
+      try {
+        this._workerRenderJob.resolve(null);
+      } catch (e) {
+        // ignore
+      }
+      this._workerRenderJob = null;
+    }
+    this._workerBaseKey = "";
 
     this._state.imageToken += 1;
     this._state.originalImage = null;
