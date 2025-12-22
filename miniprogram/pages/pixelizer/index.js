@@ -897,17 +897,19 @@ Page({
       this.setData(nextData);
     }
 
-    const dpr = this._dpr;
-    this._canvas.main.node.width = Math.max(1, Math.floor(displayW * dpr));
-    this._canvas.main.node.height = Math.max(1, Math.floor(displayH * dpr));
+    // Draw at native pixel size; CSS scaling keeps the preview crisp like fullscreen.
+    const mainW = Math.max(1, targetWidth);
+    const mainH = Math.max(1, targetHeight);
+    this._canvas.main.node.width = mainW;
+    this._canvas.main.node.height = mainH;
     const mainCtx = this._canvas.main.ctx;
-    mainCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    mainCtx.setTransform(1, 0, 0, 1, 0, 0);
     mainCtx.imageSmoothingEnabled = false;
     if (typeof mainCtx.imageSmoothingQuality === "string") {
       mainCtx.imageSmoothingQuality = "low";
     }
-    mainCtx.clearRect(0, 0, displayW, displayH);
-    mainCtx.drawImage(this._canvas.work.node, 0, 0, displayW, displayH);
+    mainCtx.clearRect(0, 0, mainW, mainH);
+    mainCtx.drawImage(this._canvas.work.node, 0, 0, mainW, mainH);
   },
 
   async onChooseImage() {
