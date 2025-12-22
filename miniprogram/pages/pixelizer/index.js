@@ -1837,6 +1837,9 @@ Page({
       clearTimeout(this._fullscreenAnimTimer);
       this._fullscreenAnimTimer = null;
     }
+    this._clearCloseHintTimer();
+    this._closeHintShown = false;
+    this._updateCloseVisibility();
 
     const previewRect = await selectRect(this, "#mainCanvas");
     const targetRect = this._getFullscreenTargetRect();
@@ -1881,14 +1884,23 @@ Page({
 
       this.setData({ fullscreenActive: true, fullscreenAnimating: true }, () => {
         if (this._fullscreenAnimToken !== animToken) return;
-        this._fullscreenBase = { scale: 1, x: 0, y: 0 };
-        this._applyFullscreenTransform();
-
-        this._fullscreenAnimTimer = setTimeout(() => {
+        const applyTransform = () => {
           if (this._fullscreenAnimToken !== animToken) return;
-          this.setData({ fullscreenAnimating: false });
-          this._fullscreenAnimTimer = null;
-        }, 260);
+          this._fullscreenBase = { scale: 1, x: 0, y: 0 };
+          this._applyFullscreenTransform();
+
+          this._fullscreenAnimTimer = setTimeout(() => {
+            if (this._fullscreenAnimToken !== animToken) return;
+            this.setData({ fullscreenAnimating: false });
+            this._fullscreenAnimTimer = null;
+          }, 260);
+        };
+
+        if (typeof requestAnimationFrame === "function") {
+          requestAnimationFrame(() => requestAnimationFrame(applyTransform));
+        } else {
+          setTimeout(applyTransform, 32);
+        }
       });
     };
 
