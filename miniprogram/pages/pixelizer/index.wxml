@@ -10,7 +10,7 @@
 
   <view class="main {{hasImage ? 'has-image' : ''}}" id="mainContainer">
     <scroll-view
-      class="controls {{layoutAnimEnabled ? 'layout-anim' : ''}}"
+      class="controls"
       scroll-y
       enable-flex
       scroll-with-animation="false"
@@ -19,116 +19,118 @@
       bindtouchstart="onControlsTouchStart"
       bindtouchmove="onControlsTouchMove"
       bindtouchend="onControlsTouchEnd"
-      style="padding-top: {{controlsPaddingTopPx}}px; transform: translateY({{controlsShiftPx}}px);"
+      style="padding-top: {{controlsPaddingTopPx}}px;"
     >
-      <view class="panel">
-        <view class="panel-title">上传图片</view>
-        <view class="upload-area" bindtap="onChooseImage">
-          <view class="upload-text">点击或拖拽上传
+      <view class="controls-inner {{layoutAnimEnabled ? 'layout-anim' : ''}}" style="transform: translateY({{controlsShiftPx}}px);">
+        <view class="panel">
+          <view class="panel-title">上传图片</view>
+          <view class="upload-area" bindtap="onChooseImage">
+            <view class="upload-text">点击或拖拽上传
 支持 JPG, PNG</view>
-        </view>
-      </view>
-
-      <view class="panel">
-        <view class="panel-title">
-          <view>图像预处理</view>
+          </view>
         </view>
 
-        <view class="form-group">
-          <view class="label-row">
-            <view class="label">图片像素</view>
-            <view class="width-display">{{targetWidth}}px</view>
+        <view class="panel">
+          <view class="panel-title">
+            <view>图像预处理</view>
           </view>
 
-          <view
-            class="custom-slider"
-            id="widthSliderContainer"
-            bindtap="onSliderTap"
-            catchtouchstart="onSliderTouchStart"
-            catchtouchmove="onSliderTouchMove"
-            bindtouchend="onSliderTouchEnd"
-          >
-            <view class="slider-track"></view>
-            <view class="slider-thumb {{sliderDragging ? 'active' : ''}}" style="left: {{sliderThumbLeftPx}}px;">
-              <view class="slider-thumb-dot"></view>
+          <view class="form-group">
+            <view class="label-row">
+              <view class="label">图片像素</view>
+              <view class="width-display">{{targetWidth}}px</view>
+            </view>
+
+            <view
+              class="custom-slider"
+              id="widthSliderContainer"
+              bindtap="onSliderTap"
+              catchtouchstart="onSliderTouchStart"
+              catchtouchmove="onSliderTouchMove"
+              bindtouchend="onSliderTouchEnd"
+            >
+              <view class="slider-track"></view>
+              <view class="slider-thumb {{sliderDragging ? 'active' : ''}}" style="left: {{sliderThumbLeftPx}}px;">
+                <view class="slider-thumb-dot"></view>
+              </view>
             </view>
           </view>
-        </view>
 
-        <view class="form-group">
-          <view class="label-row">
-            <view class="label">影调调色台</view>
-            <view class="reset-btn" bindtap="onResetTone">↺ 重置</view>
-          </view>
-          <view
-            class="xy-pad-container"
-            id="xyPadContainer"
-            catchtouchstart="onXYTouchStart"
-            catchtouchmove="onXYTouchMove"
-            bindtouchend="onXYTouchEnd"
-            bindtouchcancel="onXYTouchEnd"
-          >
-            <view class="xy-grid">
-              <view
-                wx:for="{{gridPoints}}"
-                wx:key="id"
-                class="grid-point"
-                style="{{grid.pointStyle(item, gridCursorX, gridCursorY)}}"
-              >
-                <view class="grid-point-h"></view>
-                <view class="grid-point-v"></view>
+          <view class="form-group">
+            <view class="label-row">
+              <view class="label">影调调色台</view>
+              <view class="reset-btn" bindtap="onResetTone">↺ 重置</view>
+            </view>
+            <view
+              class="xy-pad-container"
+              id="xyPadContainer"
+              catchtouchstart="onXYTouchStart"
+              catchtouchmove="onXYTouchMove"
+              bindtouchend="onXYTouchEnd"
+              bindtouchcancel="onXYTouchEnd"
+            >
+              <view class="xy-grid">
+                <view
+                  wx:for="{{gridPoints}}"
+                  wx:key="id"
+                  class="grid-point"
+                  style="{{grid.pointStyle(item, gridCursorX, gridCursorY)}}"
+                >
+                  <view class="grid-point-h"></view>
+                  <view class="grid-point-v"></view>
+                </view>
               </view>
             </view>
           </view>
         </view>
-      </view>
 
-      <view class="panel">
-        <view class="panel-title">纹理风格</view>
-        <view class="grid-buttons">
-          <view
-            wx:for="{{ditherAlgos}}"
-            wx:key="key"
-            class="btn-toggle {{ditherAlgo === item.key ? 'active' : ''}}"
-            data-key="{{item.key}}"
-            bindtap="onSelectDither"
-          >{{item.label}}</view>
-        </view>
-      </view>
-
-      <view class="panel palette-panel">
-        <view class="panel-title">
-          <view>调色板</view>
-        </view>
-        <scroll-view class="palette-list" scroll-y>
-          <view
-            wx:for="{{paletteList}}"
-            wx:key="key"
-            class="palette-btn {{paletteKey === item.key ? 'active' : ''}}"
-            data-key="{{item.key}}"
-            bindtap="onSelectPalette"
-          >
-            <view class="palette-name-row">
-              <view class="palette-name">{{item.name}}</view>
-              <view class="palette-count">{{item.count}}色</view>
-            </view>
-            <view class="palette-preview-dots">
-              <view
-                wx:for="{{item.colors}}"
-                wx:key="*this"
-                class="dot"
-                style="background-color: {{item}};"
-              ></view>
-            </view>
+        <view class="panel">
+          <view class="panel-title">纹理风格</view>
+          <view class="grid-buttons">
+            <view
+              wx:for="{{ditherAlgos}}"
+              wx:key="key"
+              class="btn-toggle {{ditherAlgo === item.key ? 'active' : ''}}"
+              data-key="{{item.key}}"
+              bindtap="onSelectDither"
+            >{{item.label}}</view>
           </view>
-        </scroll-view>
-      </view>
+        </view>
 
-      <view class="panel">
-        <view class="action-btn {{canDownload ? '' : 'disabled'}}" bindtap="onDownload">下载图片</view>
-      </view>
+        <view class="panel palette-panel">
+          <view class="panel-title">
+            <view>调色板</view>
+          </view>
+          <scroll-view class="palette-list" scroll-y>
+            <view
+              wx:for="{{paletteList}}"
+              wx:key="key"
+              class="palette-btn {{paletteKey === item.key ? 'active' : ''}}"
+              data-key="{{item.key}}"
+              bindtap="onSelectPalette"
+            >
+              <view class="palette-name-row">
+                <view class="palette-name">{{item.name}}</view>
+                <view class="palette-count">{{item.count}}色</view>
+              </view>
+              <view class="palette-preview-dots">
+                <view
+                  wx:for="{{item.colors}}"
+                  wx:key="*this"
+                  class="dot"
+                  style="background-color: {{item}};"
+                ></view>
+              </view>
+            </view>
+          </scroll-view>
+        </view>
 
-      <view class="bottom-spacer" style="height: {{safeBottomPx}}px;"></view>
+        <view class="panel">
+          <view class="action-btn {{canDownload ? '' : 'disabled'}}" bindtap="onDownload">下载图片</view>
+        </view>
+
+        <view class="bottom-spacer" style="height: {{safeBottomPx}}px;"></view>
+      </view>
     </scroll-view>
 
     <view class="preview-area {{layoutAnimEnabled ? 'layout-anim' : ''}}" style="--preview-h: {{previewHeightPx}}px; --preview-shift: {{previewTranslateYPx}}px; transform: translateY({{previewShiftPx}}px);">

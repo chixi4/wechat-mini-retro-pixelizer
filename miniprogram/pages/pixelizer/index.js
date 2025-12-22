@@ -1580,6 +1580,26 @@ Page({
       }
 
       const headerVisible = true;
+      let initialLayout = null;
+      if (this._isMobile && !replacingImage) {
+        const headerHeightPx = this._headerRect ? this._headerRect.height || 0 : 0;
+        const safeTopPx = this._safeTop || 0;
+        const headerOffset = headerVisible ? headerHeightPx : 0;
+        const controlsPaddingTopPx = safeTopPx + nextPreviewHeightPx + headerOffset;
+        const previewTranslateYPx = headerOffset;
+        const prevControlsPadding =
+          typeof this.data.controlsPaddingTopPx === "number" ? this.data.controlsPaddingTopPx : 0;
+        const deltaControls = prevControlsPadding - controlsPaddingTopPx;
+        const shiftBase = Math.max(headerHeightPx, Math.min(Math.round(nextPreviewHeightPx * 0.5), 180));
+        const previewShiftPx = isFinite(shiftBase) && shiftBase > 0 ? -shiftBase : 0;
+        initialLayout = {
+          controlsPaddingTopPx,
+          previewTranslateYPx,
+          controlsShiftPx: deltaControls,
+          previewShiftPx,
+          layoutAnimEnabled: false
+        };
+      }
 
       console.log("设置图片状态");
 
@@ -1601,11 +1621,26 @@ Page({
           fullscreenClosing: false,
           fullscreenAnimating: false,
           fullscreenSrc: "",
-          controlsScrollTop: 0
+          controlsScrollTop: 0,
+          ...(initialLayout || {})
         },
         async () => {
           console.log("开始处理图片");
           this._updateLayout();
+          if (initialLayout) {
+            if (this._layoutAnimTimer) {
+              clearTimeout(this._layoutAnimTimer);
+              this._layoutAnimTimer = null;
+            }
+            this._layoutAnimTimer = setTimeout(() => {
+              this._layoutAnimTimer = null;
+              if (!this._layoutAnimAllowed) {
+                this.setData({ controlsShiftPx: 0, previewShiftPx: 0 });
+                return;
+              }
+              this.setData({ controlsShiftPx: 0, previewShiftPx: 0, layoutAnimEnabled: true });
+            }, 16);
+          }
           await sleep(50);
           await this._refreshRects();
           await this.onResetTone({ skipProcess: true });

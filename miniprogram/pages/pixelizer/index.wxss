@@ -50,11 +50,15 @@
 }
 
 .controls {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.controls-inner {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  height: 100%;
-  overflow-y: auto;
+  min-height: 100%;
 }
 
 .preview-area {
@@ -664,7 +668,7 @@
     transition: none;
   }
 
-  .controls.layout-anim {
+  .controls-inner.layout-anim {
     transition: transform 0.35s cubic-bezier(0.2, 0, 0.2, 1);
     will-change: transform;
   }
