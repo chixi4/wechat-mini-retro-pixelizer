@@ -13,6 +13,7 @@
       class="controls"
       scroll-y
       enable-flex
+      scroll-with-animation="false"
       scroll-top="{{controlsScrollTop}}"
       bindscroll="onControlsScroll"
       bindtouchstart="onControlsTouchStart"

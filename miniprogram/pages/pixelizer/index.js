@@ -787,14 +787,19 @@ Page({
       if (this.data.headerVisible) controlsPaddingTopPx = safeTopPx + headerHeightPx;
     }
 
-    this.setData({ controlsPaddingTopPx, previewTranslateYPx }, async () => {
-      const delayMs = this._isMobile && this.data.hasImage ? 360 : 0;
-      if (this._layoutRefreshTimer) clearTimeout(this._layoutRefreshTimer);
-      this._layoutRefreshTimer = setTimeout(async () => {
-        await this._refreshRects();
-        this._syncToneCursorToRect();
-      }, delayMs);
-    });
+    const needsUpdate =
+      controlsPaddingTopPx !== this.data.controlsPaddingTopPx || previewTranslateYPx !== this.data.previewTranslateYPx;
+
+    if (needsUpdate) {
+      this.setData({ controlsPaddingTopPx, previewTranslateYPx }, async () => {
+        const delayMs = this._isMobile && this.data.hasImage ? 360 : 0;
+        if (this._layoutRefreshTimer) clearTimeout(this._layoutRefreshTimer);
+        this._layoutRefreshTimer = setTimeout(async () => {
+          await this._refreshRects();
+          this._syncToneCursorToRect();
+        }, delayMs);
+      });
+    }
     this._updateCloseVisibility();
   },
 
@@ -1610,13 +1615,18 @@ Page({
     });
     this._updateLayout();
 
-    const scrollReset = () => this.setData({ controlsScrollTop: 0 });
-    this.setData({ controlsScrollTop: 1 }, scrollReset);
+    const currentScroll =
+      this._mobile && typeof this._mobile.currentScrollTop === "number" ? this._mobile.currentScrollTop : 0;
+    if (currentScroll > 1) {
+      this.setData({ controlsScrollTop: 0 });
+    }
   },
 
   onControlsScroll(e) {
     // Mobile 端标题栏常驻，不再跟随滚动隐藏/下拉显示
     if (!this._isMobile) return;
+    const scrollTop = e && e.detail && typeof e.detail.scrollTop === "number" ? e.detail.scrollTop : null;
+    if (scrollTop != null) this._mobile.currentScrollTop = scrollTop;
   },
 
   onControlsTouchStart(e) {
