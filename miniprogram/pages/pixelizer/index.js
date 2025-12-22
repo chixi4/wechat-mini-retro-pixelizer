@@ -42,6 +42,16 @@ function isRotate90(orientation) {
   );
 }
 
+function getOrientedSize(img, info) {
+  const rawW = (img && img.width) || (info && info.width) || 0;
+  const rawH = (img && img.height) || (info && info.height) || 0;
+  if (!rawW || !rawH) return { width: rawW, height: rawH };
+  if (isRotate90(info && info.orientation)) {
+    return { width: rawH, height: rawW };
+  }
+  return { width: rawW, height: rawH };
+}
+
 function drawImageWithOrientation(ctx, img, orientation, destW, destH) {
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -344,9 +354,8 @@ Page({
 
       if (this._isMobile && this.data.hasImage && this._state && this._state.originalImage) {
         const info = this._state.imageInfo || {};
-        const orientedW = isRotate90(info.orientation) ? info.height : info.width;
-        const orientedH = isRotate90(info.orientation) ? info.width : info.height;
-        const aspect = orientedW > 0 ? orientedH / orientedW : this._state.originalImage.height / this._state.originalImage.width;
+        const oriented = getOrientedSize(this._state.originalImage, info);
+        const aspect = oriented.width > 0 ? oriented.height / oriented.width : 1;
         const box = this._computeMobilePreviewBox(aspect);
         this._lockPreviewHeight = true;
         this.setData({ previewHeightPx: box.previewHeightPx }, () => this._updateLayout());
@@ -1004,9 +1013,8 @@ Page({
     const toneY = this._state.toneY;
 
     const info = this._state.imageInfo || {};
-    const orientedW = isRotate90(info.orientation) ? info.height : info.width;
-    const orientedH = isRotate90(info.orientation) ? info.width : info.height;
-    const aspect = orientedW > 0 ? orientedH / orientedW : img.height / img.width;
+    const oriented = getOrientedSize(img, info);
+    const aspect = oriented.width > 0 ? oriented.height / oriented.width : 1;
     const targetHeight = Math.max(1, Math.round(targetWidth * aspect));
 
     const renderKey = `${this._state.imageToken}:${targetWidth}x${targetHeight}:${ditherAlgo}:${this.data.paletteKey}:${toneX.toFixed(4)}:${toneY.toFixed(4)}`;
@@ -1367,9 +1375,8 @@ Page({
       this._proc.work = { w: 0, h: 0, imageData: null };
       this._lastRenderKey = "";
 
-      const orientedW = isRotate90(info.orientation) ? info.height : info.width;
-      const orientedH = isRotate90(info.orientation) ? info.width : info.height;
-      const aspect = orientedW > 0 ? orientedH / orientedW : img.height / img.width;
+      const oriented = getOrientedSize(img, info);
+      const aspect = oriented.width > 0 ? oriented.height / oriented.width : 1;
 
       const replacingImage = this.data.hasImage;
       let nextPreviewHeightPx = this.data.previewHeightPx;
