@@ -607,6 +607,11 @@
     will-change: opacity;
   }
 
+  .preview-area.layout-anim {
+    transition: opacity 0.16s ease-out, transform 0.35s cubic-bezier(0.2, 0, 0.2, 1);
+    will-change: transform, opacity;
+  }
+
   .main.has-image .preview-area {
     opacity: 1;
     pointer-events: auto;
@@ -657,6 +662,11 @@
     position: relative;
     box-sizing: border-box;
     transition: none;
+  }
+
+  .controls.layout-anim {
+    transition: transform 0.35s cubic-bezier(0.2, 0, 0.2, 1);
+    will-change: transform;
   }
 
   .controls .panel:first-child {

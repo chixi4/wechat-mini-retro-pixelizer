@@ -192,6 +192,9 @@ Page({
     controlsPaddingTopPx: 15,
     previewTranslateYPx: 0,
     previewHeightPx: 0,
+    layoutAnimEnabled: false,
+    controlsShiftPx: 0,
+    previewShiftPx: 0,
 
     mainCanvasCssW: 1,
     mainCanvasCssH: 1
@@ -318,6 +321,10 @@ Page({
     this._fullscreenAnimTimer = null;
     this._fullscreenBase = { scale: 1, x: 0, y: 0 };
     this._fullscreenUser = { scale: 1, x: 0, y: 0 };
+    this._fullscreenPreviewRect = null;
+    this._layoutAnimTimer = null;
+    this._layoutAnimReadyTimer = null;
+    this._layoutAnimAllowed = false;
 
     const safeTopPx = this._safeTop;
     const safeBottomPx = this._safeBottom;
@@ -353,6 +360,13 @@ Page({
     this._syncToneCursorToRect();
     this._updateLayout();
     await this._ensureCanvases();
+
+    if (this._layoutAnimReadyTimer) clearTimeout(this._layoutAnimReadyTimer);
+    this._layoutAnimReadyTimer = setTimeout(() => {
+      this._layoutAnimReadyTimer = null;
+      this._layoutAnimAllowed = true;
+      this.setData({ layoutAnimEnabled: true });
+    }, 120);
 
     wx.onWindowResize(async (res) => {
       this._sys = { ...this._sys, ...res };
@@ -590,6 +604,14 @@ Page({
       clearTimeout(this._fullscreenAnimTimer);
       this._fullscreenAnimTimer = null;
     }
+    if (this._layoutAnimTimer) {
+      clearTimeout(this._layoutAnimTimer);
+      this._layoutAnimTimer = null;
+    }
+    if (this._layoutAnimReadyTimer) {
+      clearTimeout(this._layoutAnimReadyTimer);
+      this._layoutAnimReadyTimer = null;
+    }
     this._disposeWorker();
   },
 
@@ -763,7 +785,13 @@ Page({
 
   _updateLayout() {
     if (!this._isMobile) {
-      this.setData({ previewTranslateYPx: 0, controlsPaddingTopPx: 0 });
+      this.setData({
+        previewTranslateYPx: 0,
+        controlsPaddingTopPx: 0,
+        controlsShiftPx: 0,
+        previewShiftPx: 0,
+        layoutAnimEnabled: false
+      });
       this._updateCloseVisibility();
       return;
     }
@@ -787,18 +815,64 @@ Page({
       if (this.data.headerVisible) controlsPaddingTopPx = safeTopPx + headerHeightPx;
     }
 
-    const needsUpdate =
-      controlsPaddingTopPx !== this.data.controlsPaddingTopPx || previewTranslateYPx !== this.data.previewTranslateYPx;
+    const prevControlsPadding =
+      typeof this.data.controlsPaddingTopPx === "number" ? this.data.controlsPaddingTopPx : 0;
+    const prevPreviewShift =
+      typeof this.data.previewTranslateYPx === "number" ? this.data.previewTranslateYPx : 0;
+
+    const needsUpdate = controlsPaddingTopPx !== prevControlsPadding || previewTranslateYPx !== prevPreviewShift;
 
     if (needsUpdate) {
-      this.setData({ controlsPaddingTopPx, previewTranslateYPx }, async () => {
+      const deltaControls = prevControlsPadding - controlsPaddingTopPx;
+      const deltaPreview = prevPreviewShift - previewTranslateYPx;
+      const shouldAnimate = this._layoutAnimAllowed && (deltaControls !== 0 || deltaPreview !== 0);
+
+      const scheduleRefresh = () => {
         const delayMs = this._isMobile && this.data.hasImage ? 360 : 0;
         if (this._layoutRefreshTimer) clearTimeout(this._layoutRefreshTimer);
         this._layoutRefreshTimer = setTimeout(async () => {
           await this._refreshRects();
           this._syncToneCursorToRect();
         }, delayMs);
-      });
+      };
+
+      if (this._layoutAnimTimer) {
+        clearTimeout(this._layoutAnimTimer);
+        this._layoutAnimTimer = null;
+      }
+
+      if (shouldAnimate) {
+        this.setData(
+          {
+            controlsPaddingTopPx,
+            previewTranslateYPx,
+            controlsShiftPx: deltaControls,
+            previewShiftPx: deltaPreview,
+            layoutAnimEnabled: false
+          },
+          () => {
+            scheduleRefresh();
+            this._layoutAnimTimer = setTimeout(() => {
+              this._layoutAnimTimer = null;
+              if (!this._layoutAnimAllowed) {
+                this.setData({ controlsShiftPx: 0, previewShiftPx: 0 });
+                return;
+              }
+              this.setData({ controlsShiftPx: 0, previewShiftPx: 0, layoutAnimEnabled: true });
+            }, 16);
+          }
+        );
+      } else {
+        const next = {
+          controlsPaddingTopPx,
+          previewTranslateYPx,
+          controlsShiftPx: 0,
+          previewShiftPx: 0
+        };
+        const nextAnimEnabled = !!this._layoutAnimAllowed;
+        if (nextAnimEnabled !== this.data.layoutAnimEnabled) next.layoutAnimEnabled = nextAnimEnabled;
+        this.setData(next, scheduleRefresh);
+      }
     }
     this._updateCloseVisibility();
   },
