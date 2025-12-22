@@ -1084,8 +1084,6 @@ Page({
       if (isAborted()) return;
 
       if (workerFrameReady) {
-        this._canvas.work.ctx.putImageData(workImageData, 0, 0);
-
         const container = this._canvasContainerRect;
         const containerW = container && container.width ? Math.max(1, Math.floor(container.width)) : 1000;
         const containerH = container && container.height ? Math.max(1, Math.floor(container.height)) : 600;
@@ -1124,8 +1122,12 @@ Page({
 
         const hasNextData = Object.keys(nextData).length > 0;
         if (hasNextData) {
-          this.setData(nextData);
+          await new Promise((resolve) => this.setData(nextData, resolve));
         }
+
+        if (isAborted()) return;
+
+        this._canvas.work.ctx.putImageData(workImageData, 0, 0);
 
         // Draw at native pixel size; CSS scaling keeps the preview crisp like fullscreen.
         const mainW = Math.max(1, targetWidth);
@@ -1188,8 +1190,6 @@ Page({
 
     if (isAborted()) return;
 
-    this._canvas.work.ctx.putImageData(workImageData, 0, 0);
-
     const container = this._canvasContainerRect;
     const containerW = container && container.width ? Math.max(1, Math.floor(container.width)) : 1000;
     const containerH = container && container.height ? Math.max(1, Math.floor(container.height)) : 600;
@@ -1226,8 +1226,12 @@ Page({
 
     const hasNextData = Object.keys(nextData).length > 0;
     if (hasNextData) {
-      this.setData(nextData);
+      await new Promise((resolve) => this.setData(nextData, resolve));
     }
+
+    if (isAborted()) return;
+
+    this._canvas.work.ctx.putImageData(workImageData, 0, 0);
 
     // Draw at native pixel size; CSS scaling keeps the preview crisp like fullscreen.
     const mainW = Math.max(1, targetWidth);
@@ -1661,6 +1665,10 @@ Page({
 
   async onOpenFullscreen() {
     if (!this.data.hasImage || !this._canvas) return;
+    if (!this.data.canDownload || !this._proc || !this._proc.work || !this._proc.work.w) {
+      wx.showToast({ title: "正在渲染，请稍候", icon: "none" });
+      return;
+    }
 
     this.setData({
       fullscreenVisible: true,

@@ -146,10 +146,11 @@
       </view>
 
       <cover-view
-        class="close-btn {{closeEnabled ? 'enabled' : ''}} {{closeShown ? 'shown' : ''}} {{fullscreenVisible ? 'is-hidden' : ''}}"
+        wx:if="{{!fullscreenVisible}}"
+        class="close-btn {{closeEnabled ? 'enabled' : ''}} {{closeShown ? 'shown' : ''}}"
         catchtap="onCloseImage"
       >
-        <cover-image class="close-icon" src="{{closeIconSrc}}" mode="aspectFit"></cover-image>
+        <cover-view class="close-icon-text">×</cover-view>
       </cover-view>
 
       <canvas type="2d" id="workCanvas" class="hidden-canvas"></canvas>

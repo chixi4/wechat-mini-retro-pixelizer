@@ -475,10 +475,19 @@
   pointer-events: none;
 }
 
-.close-icon {
-  width: 18px;
-  height: 18px;
+.close-icon-text {
+  width: 100%;
+  height: 100%;
+  line-height: 32px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 900;
+  color: #000000;
   display: block;
+}
+
+.theme-dark .close-icon-text {
+  color: #eeeeee;
 }
 
 .fullscreen-modal {
