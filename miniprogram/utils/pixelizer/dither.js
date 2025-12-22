@@ -133,13 +133,16 @@ const BAYER_FACTOR8 = (() => {
   return t;
 })();
 
-function ditherNearest(imgData, palette) {
+function ditherNearest(imgData, palette, shouldAbort) {
   const pf = ensurePaletteFast(palette);
   const pr = pf.r;
   const pg = pf.g;
   const pb = pf.b;
   const d = imgData.data;
+  const shouldCheckAbort = typeof shouldAbort === "function";
+  let abortCounter = 0;
   for (let i = 0; i < d.length; i += 4) {
+    if (shouldCheckAbort && (abortCounter++ & 1023) === 0 && shouldAbort()) return;
     const idx = nearestPaletteIndex(d[i], d[i + 1], d[i + 2], pf);
     d[i] = pr[idx];
     d[i + 1] = pg[idx];
@@ -147,13 +150,16 @@ function ditherNearest(imgData, palette) {
   }
 }
 
-function ditherRandom(imgData, palette) {
+function ditherRandom(imgData, palette, shouldAbort) {
   const pf = ensurePaletteFast(palette);
   const pr = pf.r;
   const pg = pf.g;
   const pb = pf.b;
   const d = imgData.data;
+  const shouldCheckAbort = typeof shouldAbort === "function";
+  let abortCounter = 0;
   for (let i = 0; i < d.length; i += 4) {
+    if (shouldCheckAbort && (abortCounter++ & 1023) === 0 && shouldAbort()) return;
     const noise = ((Math.random() * 31) | 0) - 15;
     let r = d[i] + noise;
     let g = d[i + 1] + noise;
@@ -173,11 +179,12 @@ function ditherRandom(imgData, palette) {
   }
 }
 
-function ditherErrorDiffusion(imgData, palette, type, serpentine) {
+function ditherErrorDiffusion(imgData, palette, type, serpentine, shouldAbort) {
   const pf = ensurePaletteFast(palette);
   const pr = pf.r;
   const pg = pf.g;
   const pb = pf.b;
+  const shouldCheckAbort = typeof shouldAbort === "function";
 
   const w = imgData.width | 0;
   const h = imgData.height | 0;
@@ -187,6 +194,7 @@ function ditherErrorDiffusion(imgData, palette, type, serpentine) {
   const kernelRev = kernelPair.rev;
 
   for (let y = 0; y < h; y++) {
+    if (shouldCheckAbort && shouldAbort()) return;
     const reverse = serpentine && ((y & 1) === 1);
     const kernel = reverse ? kernelRev : kernelFwd;
 
@@ -232,11 +240,12 @@ function ditherErrorDiffusion(imgData, palette, type, serpentine) {
   }
 }
 
-function ditherBayer(imgData, palette, mapSize) {
+function ditherBayer(imgData, palette, mapSize, shouldAbort) {
   const pf = ensurePaletteFast(palette);
   const pr = pf.r;
   const pg = pf.g;
   const pb = pf.b;
+  const shouldCheckAbort = typeof shouldAbort === "function";
 
   const currentMap = mapSize === 8 ? BAYER_MAP8 : BAYER_MAP4;
   const factorTable = mapSize === 8 ? BAYER_FACTOR8 : BAYER_FACTOR4;
@@ -245,6 +254,7 @@ function ditherBayer(imgData, palette, mapSize) {
   const d = imgData.data;
 
   for (let y = 0; y < h; y++) {
+    if (shouldCheckAbort && shouldAbort()) return;
     const mapRow = currentMap[y % mapSize];
     const rowOffset = (y * w) << 2;
     for (let x = 0; x < w; x++) {
@@ -283,4 +293,3 @@ module.exports = {
   ditherErrorDiffusion,
   ditherBayer
 };
-

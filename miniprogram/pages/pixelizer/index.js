@@ -243,7 +243,11 @@ Page({
       max: 640,
       step: 4,
       dragging: false,
-      rect: null
+      rect: null,
+      frameTimer: null,
+      frameTimerType: null,
+      pendingX: null,
+      frameMs: this._isMobile ? 16 : 24
     };
 
     this._grid = {
@@ -256,6 +260,7 @@ Page({
       points: [],
       pointsSynced: false,
       frameTimer: null,
+      frameTimerType: null,
       pendingX: null,
       pendingY: null,
       pendingRect: null,
@@ -277,6 +282,7 @@ Page({
 
     this._isProcessing = false;
     this._processRunning = false;
+    this._processToken = 0;
     this._updatePending = false;
     this._lastRenderKey = "";
     this._lockPreviewHeight = false;
@@ -476,26 +482,51 @@ Page({
     if (this._grid.frameTimer) return;
 
     const delay = this._grid.frameMs || 16;
-    this._grid.frameTimer = setTimeout(() => {
-      this._grid.frameTimer = null;
-      const x = this._grid.pendingX;
-      const y = this._grid.pendingY;
-      const r = this._grid.pendingRect;
-      this._grid.pendingX = null;
-      this._grid.pendingY = null;
-      this._grid.pendingRect = null;
+    if (typeof requestAnimationFrame === "function") {
+      this._grid.frameTimerType = "raf";
+      this._grid.frameTimer = requestAnimationFrame(() => {
+        this._grid.frameTimer = null;
+        this._grid.frameTimerType = null;
+        const x = this._grid.pendingX;
+        const y = this._grid.pendingY;
+        const r = this._grid.pendingRect;
+        this._grid.pendingX = null;
+        this._grid.pendingY = null;
+        this._grid.pendingRect = null;
 
-      if (typeof x === "number" && typeof y === "number") {
-        this._updateCursorFromClient(x, y, r);
-      }
-    }, delay);
+        if (typeof x === "number" && typeof y === "number") {
+          this._updateCursorFromClient(x, y, r);
+        }
+      });
+    } else {
+      this._grid.frameTimerType = "timeout";
+      this._grid.frameTimer = setTimeout(() => {
+        this._grid.frameTimer = null;
+        this._grid.frameTimerType = null;
+        const x = this._grid.pendingX;
+        const y = this._grid.pendingY;
+        const r = this._grid.pendingRect;
+        this._grid.pendingX = null;
+        this._grid.pendingY = null;
+        this._grid.pendingRect = null;
+
+        if (typeof x === "number" && typeof y === "number") {
+          this._updateCursorFromClient(x, y, r);
+        }
+      }, delay);
+    }
   },
 
   _flushGridUpdate() {
     if (!this._grid.frameTimer) return;
 
-    clearTimeout(this._grid.frameTimer);
+    if (this._grid.frameTimerType === "raf" && typeof cancelAnimationFrame === "function") {
+      cancelAnimationFrame(this._grid.frameTimer);
+    } else {
+      clearTimeout(this._grid.frameTimer);
+    }
     this._grid.frameTimer = null;
+    this._grid.frameTimerType = null;
 
     const x = this._grid.pendingX;
     const y = this._grid.pendingY;
@@ -646,6 +677,48 @@ Page({
     this.setData({ sliderThumbLeftPx: clampedPos });
   },
 
+  _queueSliderUpdate(clientX) {
+    this._slider.pendingX = clientX;
+    if (this._slider.frameTimer) return;
+
+    const delay = this._slider.frameMs || 16;
+    if (typeof requestAnimationFrame === "function") {
+      this._slider.frameTimerType = "raf";
+      this._slider.frameTimer = requestAnimationFrame(() => {
+        this._slider.frameTimer = null;
+        this._slider.frameTimerType = null;
+        const x = this._slider.pendingX;
+        this._slider.pendingX = null;
+        if (typeof x === "number") this._updateValueFromClientX(x);
+      });
+    } else {
+      this._slider.frameTimerType = "timeout";
+      this._slider.frameTimer = setTimeout(() => {
+        this._slider.frameTimer = null;
+        this._slider.frameTimerType = null;
+        const x = this._slider.pendingX;
+        this._slider.pendingX = null;
+        if (typeof x === "number") this._updateValueFromClientX(x);
+      }, delay);
+    }
+  },
+
+  _flushSliderUpdate() {
+    if (!this._slider.frameTimer) return;
+
+    if (this._slider.frameTimerType === "raf" && typeof cancelAnimationFrame === "function") {
+      cancelAnimationFrame(this._slider.frameTimer);
+    } else {
+      clearTimeout(this._slider.frameTimer);
+    }
+    this._slider.frameTimer = null;
+    this._slider.frameTimerType = null;
+
+    const x = this._slider.pendingX;
+    this._slider.pendingX = null;
+    if (typeof x === "number") this._updateValueFromClientX(x);
+  },
+
   _updateValueFromClientX(clientX) {
     const rect = this._slider.rect;
     if (!rect) return;
@@ -714,10 +787,15 @@ Page({
     if (!this.data.hasImage || !this._state.palette || !this._canvas) return;
 
     if (this._isProcessing) {
-      if (this._processRunning) this._updatePending = true;
+      if (this._processRunning) {
+        this._processToken += 1;
+        this._updatePending = true;
+      }
       return;
     }
 
+    this._processToken += 1;
+    const processToken = this._processToken;
     this._isProcessing = true;
     this._processRunning = false;
     this._updatePending = false;
@@ -730,7 +808,7 @@ Page({
         this._processRunning = true;
         this._updatePending = false;
         try {
-          this._processImage();
+          this._processImage(processToken);
         } finally {
           this._processRunning = false;
           this._isProcessing = false;
@@ -767,7 +845,8 @@ Page({
     return { displayW, displayH, previewHeightPx };
   },
 
-  _processImage() {
+  _processImage(processToken) {
+    const isAborted = () => typeof processToken === "number" && processToken !== this._processToken;
     const img = this._state.originalImage;
     const palette = this._state.palette;
     if (!img || !palette) return;
@@ -813,6 +892,8 @@ Page({
       proc.toneStats = { token: 0, w: 0, h: 0, stats: null };
     }
 
+    if (isAborted()) return;
+
     const baseData = proc.scaled.data;
 
     if (!proc.work.imageData || proc.work.w !== targetWidth || proc.work.h !== targetHeight) {
@@ -840,26 +921,30 @@ Page({
       applyDynamicToneMapping(workImageData, toneX, toneY, toneStats);
     }
 
+    if (isAborted()) return;
+
     switch (ditherAlgo) {
       case "floyd-steinberg":
-        ditherErrorDiffusion(workImageData, palette, "floyd", this._state.isSerpentine);
+        ditherErrorDiffusion(workImageData, palette, "floyd", this._state.isSerpentine, isAborted);
         break;
       case "atkinson":
-        ditherErrorDiffusion(workImageData, palette, "atkinson", this._state.isSerpentine);
+        ditherErrorDiffusion(workImageData, palette, "atkinson", this._state.isSerpentine, isAborted);
         break;
       case "bayer-4x4":
-        ditherBayer(workImageData, palette, 4);
+        ditherBayer(workImageData, palette, 4, isAborted);
         break;
       case "bayer-8x8":
-        ditherBayer(workImageData, palette, 8);
+        ditherBayer(workImageData, palette, 8, isAborted);
         break;
       case "random":
-        ditherRandom(workImageData, palette);
+        ditherRandom(workImageData, palette, isAborted);
         break;
       default:
-        ditherNearest(workImageData, palette);
+        ditherNearest(workImageData, palette, isAborted);
         break;
     }
+
+    if (isAborted()) return;
 
     this._canvas.work.ctx.putImageData(workImageData, 0, 0);
 
@@ -1155,11 +1240,12 @@ Page({
     if (!this.data.sliderDragging) return;
     const t = e && e.touches && e.touches[0] ? e.touches[0] : null;
     if (!t) return;
-    this._updateValueFromClientX(t.clientX);
+    this._queueSliderUpdate(t.clientX);
   },
 
   onSliderTouchEnd() {
     if (!this.data.sliderDragging) return;
+    this._flushSliderUpdate();
     this.setData({ sliderDragging: false });
   },
 
