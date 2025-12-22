@@ -284,6 +284,8 @@ Page({
     this._processRunning = false;
     this._processToken = 0;
     this._updatePending = false;
+    this._processImmediate = false;
+    this._pendingProcessOptions = null;
     this._worker = null;
     this._workerBaseKey = "";
     this._workerRenderJob = null;
@@ -891,14 +893,22 @@ Page({
   _scheduleProcess(options) {
     if (!this.data.hasImage || !this._state.palette || !this._canvas) return;
 
-    const immediate = !!(options && options.immediate);
+    const immediateRequested = !!(options && options.immediate);
+    this._pendingProcessOptions = options || null;
 
     if (this._isProcessing) {
       if (this._processRunning) {
         this._processToken += 1;
         this._updatePending = true;
+        if (this._workerRenderJob) {
+          this._disposeWorker();
+        }
       }
       return;
+    }
+
+    if (!immediateRequested && !this._worker) {
+      this._initWorker();
     }
 
     this._processToken += 1;
@@ -910,12 +920,22 @@ Page({
     const finish = () => {
       this._processRunning = false;
       this._isProcessing = false;
-      if (this._updatePending) this._scheduleProcess(options);
+      const nextOptions = this._pendingProcessOptions;
+      const shouldUpdate = this._updatePending;
+      this._updatePending = false;
+      if (shouldUpdate) this._scheduleProcess(nextOptions);
     };
 
     const run = () => {
+      const currentOptions = this._pendingProcessOptions || options;
+      this._pendingProcessOptions = null;
+      const immediate = !!(currentOptions && currentOptions.immediate);
+      this._processImmediate = immediate;
       this._processRunning = true;
       this._updatePending = false;
+      if (!immediate && !this._worker) {
+        this._initWorker();
+      }
       let result;
       try {
         result = this._processImage(processToken);
@@ -938,7 +958,7 @@ Page({
     const scheduleFrame =
       typeof requestAnimationFrame === "function" ? requestAnimationFrame : (cb) => setTimeout(cb, 16);
 
-    if (immediate) {
+    if (immediateRequested) {
       setTimeout(run, 0);
       return;
     }
@@ -1034,7 +1054,8 @@ Page({
     }
 
     const workImageData = proc.work.imageData;
-    const forceMainThread = this._forceMainThreadToken === this._state.imageToken;
+    const forceMainThread =
+      this._forceMainThreadToken === this._state.imageToken || this._processImmediate;
     const worker = forceMainThread ? null : this._worker;
     const baseKey = `${this._state.imageToken}:${info.orientation || 1}:${targetWidth}x${targetHeight}`;
 
@@ -1146,7 +1167,7 @@ Page({
           mainCtx.imageSmoothingQuality = "low";
         }
         mainCtx.clearRect(0, 0, mainW, mainH);
-        mainCtx.putImageData(workImageData, 0, 0);
+        mainCtx.drawImage(this._canvas.work.node, 0, 0, mainW, mainH);
 
         if (!this.data.canDownload) {
           this.setData({ canDownload: true });
@@ -1257,7 +1278,7 @@ Page({
       mainCtx.imageSmoothingQuality = "low";
     }
     mainCtx.clearRect(0, 0, mainW, mainH);
-    mainCtx.putImageData(workImageData, 0, 0);
+    mainCtx.drawImage(this._canvas.work.node, 0, 0, mainW, mainH);
 
     if (!this.data.canDownload) {
       this.setData({ canDownload: true });
