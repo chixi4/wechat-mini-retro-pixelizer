@@ -325,6 +325,7 @@ Page({
     this._layoutAnimTimer = null;
     this._layoutAnimReadyTimer = null;
     this._layoutAnimAllowed = false;
+    this._lastHasImage = false;
 
     const safeTopPx = this._safeTop;
     const safeBottomPx = this._safeBottom;
@@ -793,8 +794,13 @@ Page({
         layoutAnimEnabled: false
       });
       this._updateCloseVisibility();
+      this._lastHasImage = !!this.data.hasImage;
       return;
     }
+
+    const wasImage = !!this._lastHasImage;
+    const hasImage = !!this.data.hasImage;
+    const isAppearing = hasImage && !wasImage;
 
     const headerHeightPx = this._headerRect ? this._headerRect.height || 0 : 0;
     const safeTopPx = this._safeTop || 0;
@@ -824,7 +830,13 @@ Page({
 
     if (needsUpdate) {
       const deltaControls = prevControlsPadding - controlsPaddingTopPx;
-      const deltaPreview = prevPreviewShift - previewTranslateYPx;
+      let deltaPreview = prevPreviewShift - previewTranslateYPx;
+      if (isAppearing) {
+        const previewHeight =
+          typeof this.data.previewHeightPx === "number" ? this.data.previewHeightPx : 0;
+        const shiftBase = Math.max(headerHeightPx, Math.min(Math.round(previewHeight * 0.5), 180));
+        if (isFinite(shiftBase) && shiftBase > 0) deltaPreview = -shiftBase;
+      }
       const shouldAnimate = this._layoutAnimAllowed && (deltaControls !== 0 || deltaPreview !== 0);
 
       const scheduleRefresh = () => {
@@ -875,6 +887,7 @@ Page({
       }
     }
     this._updateCloseVisibility();
+    this._lastHasImage = hasImage;
   },
 
   _updateCloseVisibility() {
