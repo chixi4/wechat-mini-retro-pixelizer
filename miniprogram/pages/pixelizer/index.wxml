@@ -149,9 +149,7 @@
         wx:if="{{!fullscreenVisible}}"
         class="close-btn {{closeEnabled ? 'enabled' : ''}} {{closeShown ? 'shown' : ''}}"
         catchtap="onCloseImage"
-      >
-        <cover-view class="close-icon-text">×</cover-view>
-      </cover-view>
+      >×</cover-view>
 
       <canvas type="2d" id="workCanvas" class="hidden-canvas"></canvas>
       <canvas type="2d" id="bufferCanvas" class="hidden-canvas"></canvas>

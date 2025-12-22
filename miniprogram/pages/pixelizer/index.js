@@ -1118,7 +1118,6 @@ Page({
         const nextData = {};
         if (displayW !== this.data.mainCanvasCssW) nextData.mainCanvasCssW = displayW;
         if (displayH !== this.data.mainCanvasCssH) nextData.mainCanvasCssH = displayH;
-        if (!this.data.canDownload) nextData.canDownload = true;
 
         const hasNextData = Object.keys(nextData).length > 0;
         if (hasNextData) {
@@ -1142,7 +1141,11 @@ Page({
           mainCtx.imageSmoothingQuality = "low";
         }
         mainCtx.clearRect(0, 0, mainW, mainH);
-        mainCtx.drawImage(this._canvas.work.node, 0, 0, mainW, mainH);
+        mainCtx.putImageData(workImageData, 0, 0);
+
+        if (!this.data.canDownload) {
+          this.setData({ canDownload: true });
+        }
 
         this._lastRenderKey = renderKey;
         return;
@@ -1222,7 +1225,6 @@ Page({
     const nextData = {};
     if (displayW !== this.data.mainCanvasCssW) nextData.mainCanvasCssW = displayW;
     if (displayH !== this.data.mainCanvasCssH) nextData.mainCanvasCssH = displayH;
-    if (!this.data.canDownload) nextData.canDownload = true;
 
     const hasNextData = Object.keys(nextData).length > 0;
     if (hasNextData) {
@@ -1246,7 +1248,11 @@ Page({
       mainCtx.imageSmoothingQuality = "low";
     }
     mainCtx.clearRect(0, 0, mainW, mainH);
-    mainCtx.drawImage(this._canvas.work.node, 0, 0, mainW, mainH);
+    mainCtx.putImageData(workImageData, 0, 0);
+
+    if (!this.data.canDownload) {
+      this.setData({ canDownload: true });
+    }
 
     this._lastRenderKey = renderKey;
   },
@@ -1383,12 +1389,11 @@ Page({
           await this.onResetTone({ skipProcess: true });
           this._updateLayout();
 
-          const delayMs = this._isMobile && !replacingImage ? 360 : 0;
           if (this._initialProcessTimer) clearTimeout(this._initialProcessTimer);
           this._initialProcessTimer = setTimeout(() => {
             this._initialProcessTimer = null;
             this._scheduleProcess();
-          }, delayMs);
+          }, 0);
         }
       );
     } catch (e) {
