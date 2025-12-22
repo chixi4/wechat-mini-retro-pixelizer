@@ -419,16 +419,11 @@
   pointer-events: auto;
 }
 
-.main-canvas.is-hidden {
-  display: none;
-  opacity: 0;
-  pointer-events: none;
-}
-
+.main-canvas.is-hidden,
 .main.has-image .main-canvas.is-hidden {
-  display: none;
   opacity: 0;
   pointer-events: none;
+  visibility: hidden;
 }
 
 .empty-hint {
@@ -481,28 +476,68 @@
 
 .fullscreen-modal {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: #000000;
+  inset: 0;
   z-index: 10000;
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 0;
   overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+  transition: visibility 0s linear 260ms;
+  cursor: zoom-out;
+}
+
+.fullscreen-modal.active,
+.fullscreen-modal.closing {
+  visibility: visible;
+  pointer-events: auto;
+  transition: visibility 0s linear 0s;
+}
+
+.fullscreen-backdrop {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  opacity: 0;
+  will-change: opacity, backdrop-filter;
+  transition: opacity 260ms ease-out;
+}
+
+.fullscreen-modal.active .fullscreen-backdrop {
+  opacity: 1;
+}
+
+.fullscreen-modal.closing .fullscreen-backdrop {
+  opacity: 0;
+}
+
+.fullscreen-stage {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
 }
 
 .fullscreen-image {
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
   object-fit: contain;
   display: block;
   image-rendering: pixelated;
   image-rendering: -moz-crisp-edges;
   image-rendering: crisp-edges;
-  transition: transform 0.1s ease-out;
-  transform-origin: center center;
+  transform-origin: top left;
+  transition: transform 90ms ease-out;
+  will-change: transform;
+}
+
+.fullscreen-modal.animating .fullscreen-image {
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .hidden-canvas {

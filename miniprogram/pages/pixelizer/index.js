@@ -176,10 +176,17 @@ Page({
 
     canDownload: false,
     fullscreenVisible: false,
+    fullscreenActive: false,
+    fullscreenClosing: false,
+    fullscreenAnimating: false,
     fullscreenSrc: "",
     fullscreenScale: 1,
     fullscreenTranslateX: 0,
     fullscreenTranslateY: 0,
+    fullscreenImageLeft: 0,
+    fullscreenImageTop: 0,
+    fullscreenImageW: 1,
+    fullscreenImageH: 1,
 
     controlsScrollTop: 0,
     controlsPaddingTopPx: 15,
@@ -307,6 +314,10 @@ Page({
     this._clearCloseHintTimer();
     this._closeHintTimer = null;
     this._imageLoadToken = 0;
+    this._fullscreenCloseTimer = null;
+    this._fullscreenAnimTimer = null;
+    this._fullscreenBase = { scale: 1, x: 0, y: 0 };
+    this._fullscreenUser = { scale: 1, x: 0, y: 0 };
 
     const safeTopPx = this._safeTop;
     const safeBottomPx = this._safeBottom;
@@ -488,6 +499,78 @@ Page({
     });
   },
 
+  _getFullscreenTargetRect() {
+    const sys = this._sys || {};
+    const vw = typeof sys.windowWidth === "number" ? sys.windowWidth : 0;
+    const vh = typeof sys.windowHeight === "number" ? sys.windowHeight : 0;
+
+    const fallbackW = this._proc && this._proc.work && this._proc.work.w ? this._proc.work.w : 0;
+    const fallbackH = this._proc && this._proc.work && this._proc.work.h ? this._proc.work.h : 0;
+
+    if (!vw || !vh) {
+      const width = fallbackW || 1;
+      const height = fallbackH || 1;
+      return { left: 0, top: 0, width, height };
+    }
+
+    const imgW =
+      fallbackW ||
+      (this._canvas && this._canvas.main && this._canvas.main.node ? this._canvas.main.node.width : 0);
+    const imgH =
+      fallbackH ||
+      (this._canvas && this._canvas.main && this._canvas.main.node ? this._canvas.main.node.height : 0);
+
+    if (!imgW || !imgH) return { left: 0, top: 0, width: vw, height: vh };
+
+    const imgAspect = imgW / imgH;
+    const viewAspect = vw / vh;
+    let width;
+    let height;
+    if (imgAspect > viewAspect) {
+      width = vw;
+      height = vw / imgAspect;
+    } else {
+      height = vh;
+      width = vh * imgAspect;
+    }
+
+    const left = (vw - width) / 2;
+    const top = (vh - height) / 2;
+    return { left, top, width, height };
+  },
+
+  _computeFullscreenInvertTransform(fromRect, targetRect) {
+    const safeW = Math.max(1, targetRect.width || 1);
+    const safeH = Math.max(1, targetRect.height || 1);
+    const fromW = Math.max(1, (fromRect && fromRect.width) || 1);
+    const fromH = Math.max(1, (fromRect && fromRect.height) || 1);
+    const scaleX = fromW / safeW;
+    const scaleY = fromH / safeH;
+    let scale = scaleX;
+    if (!isFinite(scale) || scale <= 0) scale = scaleY;
+    if (!isFinite(scale) || scale <= 0) scale = 1;
+
+    const translateX = ((fromRect && fromRect.left) || 0) - (targetRect.left || 0);
+    const translateY = ((fromRect && fromRect.top) || 0) - (targetRect.top || 0);
+    return { scale, translateX, translateY };
+  },
+
+  _getFullscreenTransformData() {
+    const base = this._fullscreenBase || { scale: 1, x: 0, y: 0 };
+    const user = this._fullscreenUser || { scale: 1, x: 0, y: 0 };
+    const baseScale = isFinite(base.scale) && base.scale > 0 ? base.scale : 1;
+    const userScale = isFinite(user.scale) && user.scale > 0 ? user.scale : 1;
+    return {
+      fullscreenScale: baseScale * userScale,
+      fullscreenTranslateX: (base.x || 0) + (user.x || 0),
+      fullscreenTranslateY: (base.y || 0) + (user.y || 0)
+    };
+  },
+
+  _applyFullscreenTransform() {
+    this.setData(this._getFullscreenTransformData());
+  },
+
   onShow() {
     this._syncSystemTheme();
     if (!this._awaitingPreviewExit) return;
@@ -498,6 +581,14 @@ Page({
   onUnload() {
     if (this._themeChangeHandler && wx.offThemeChange) {
       wx.offThemeChange(this._themeChangeHandler);
+    }
+    if (this._fullscreenCloseTimer) {
+      clearTimeout(this._fullscreenCloseTimer);
+      this._fullscreenCloseTimer = null;
+    }
+    if (this._fullscreenAnimTimer) {
+      clearTimeout(this._fullscreenAnimTimer);
+      this._fullscreenAnimTimer = null;
     }
     this._disposeWorker();
   },
@@ -1421,6 +1512,9 @@ Page({
           controlsPaddingTopPx,
           previewTranslateYPx,
           fullscreenVisible: false,
+          fullscreenActive: false,
+          fullscreenClosing: false,
+          fullscreenAnimating: false,
           fullscreenSrc: "",
           controlsScrollTop: 0
         },
@@ -1457,6 +1551,15 @@ Page({
       clearTimeout(this._layoutRefreshTimer);
       this._layoutRefreshTimer = null;
     }
+    if (this._fullscreenCloseTimer) {
+      clearTimeout(this._fullscreenCloseTimer);
+      this._fullscreenCloseTimer = null;
+    }
+    if (this._fullscreenAnimTimer) {
+      clearTimeout(this._fullscreenAnimTimer);
+      this._fullscreenAnimTimer = null;
+    }
+    this._fullscreenAnimToken = (this._fullscreenAnimToken || 0) + 1;
     this._lockPreviewHeight = false;
 
     this._processToken += 1;
@@ -1476,6 +1579,8 @@ Page({
     this._state.originalImage = null;
     this._state.imageInfo = null;
     this._forceMainThreadToken = null;
+    this._fullscreenBase = { scale: 1, x: 0, y: 0 };
+    this._fullscreenUser = { scale: 1, x: 0, y: 0 };
 
     this._proc.scaled = { token: 0, w: 0, h: 0, data: null };
     this._proc.toneStats = { token: 0, w: 0, h: 0, stats: null };
@@ -1495,7 +1600,13 @@ Page({
       canDownload: false,
       headerVisible,
       fullscreenVisible: false,
-      fullscreenSrc: ""
+      fullscreenActive: false,
+      fullscreenClosing: false,
+      fullscreenAnimating: false,
+      fullscreenSrc: "",
+      fullscreenScale: 1,
+      fullscreenTranslateX: 0,
+      fullscreenTranslateY: 0
     });
     this._updateLayout();
 
@@ -1718,22 +1829,67 @@ Page({
       return;
     }
 
+    if (this._fullscreenCloseTimer) {
+      clearTimeout(this._fullscreenCloseTimer);
+      this._fullscreenCloseTimer = null;
+    }
+    if (this._fullscreenAnimTimer) {
+      clearTimeout(this._fullscreenAnimTimer);
+      this._fullscreenAnimTimer = null;
+    }
+
+    const previewRect = await selectRect(this, "#mainCanvas");
+    const targetRect = this._getFullscreenTargetRect();
+    const fromRect =
+      previewRect && previewRect.width > 0 && previewRect.height > 0 ? previewRect : targetRect;
+    const invert = this._computeFullscreenInvertTransform(fromRect, targetRect);
+
+    this._fullscreenBase = { scale: invert.scale, x: invert.translateX, y: invert.translateY };
+    this._fullscreenUser = { scale: 1, x: 0, y: 0 };
+
+    const animToken = (this._fullscreenAnimToken = (this._fullscreenAnimToken || 0) + 1);
+    const transformData = this._getFullscreenTransformData();
+
     this.setData({
       fullscreenVisible: true,
+      fullscreenActive: false,
+      fullscreenClosing: false,
+      fullscreenAnimating: false,
       fullscreenSrc: "",
-      fullscreenScale: 1,
-      fullscreenTranslateX: 0,
-      fullscreenTranslateY: 0
+      fullscreenImageLeft: targetRect.left,
+      fullscreenImageTop: targetRect.top,
+      fullscreenImageW: targetRect.width,
+      fullscreenImageH: targetRect.height,
+      ...transformData
     });
 
     this._fullscreenTouch = {
       lastDistance: 0,
       lastCenter: { x: 0, y: 0 },
       initialScale: 1,
+      startX: 0,
       startY: 0,
       startTime: 0,
       hasMoved: false,
-      touchCount: 0
+      touchCount: 0,
+      moveThreshold: 10
+    };
+
+    const startAnim = () => {
+      if (this._fullscreenAnimToken !== animToken) return;
+      if (!this.data.fullscreenVisible || this.data.fullscreenClosing) return;
+
+      this.setData({ fullscreenActive: true, fullscreenAnimating: true }, () => {
+        if (this._fullscreenAnimToken !== animToken) return;
+        this._fullscreenBase = { scale: 1, x: 0, y: 0 };
+        this._applyFullscreenTransform();
+
+        this._fullscreenAnimTimer = setTimeout(() => {
+          if (this._fullscreenAnimToken !== animToken) return;
+          this.setData({ fullscreenAnimating: false });
+          this._fullscreenAnimTimer = null;
+        }, 260);
+      });
     };
 
     try {
@@ -1746,22 +1902,35 @@ Page({
         });
       });
 
-      this.setData({ fullscreenSrc: tmp.tempFilePath });
+      if (this._fullscreenAnimToken !== animToken) return;
+      this.setData({ fullscreenSrc: tmp.tempFilePath }, () => {
+        setTimeout(startAnim, 16);
+      });
     } catch {
-      this.setData({ fullscreenVisible: false, fullscreenSrc: "" });
+      if (this._fullscreenAnimToken !== animToken) return;
+      this.setData({
+        fullscreenVisible: false,
+        fullscreenActive: false,
+        fullscreenClosing: false,
+        fullscreenAnimating: false,
+        fullscreenSrc: ""
+      });
       wx.showToast({ title: "预览失败", icon: "none" });
     }
   },
 
   onFullscreenTouchStart(e) {
-    const touches = e.touches;
+    if (!this.data.fullscreenActive || this.data.fullscreenClosing) return;
+    const touches = e.touches || [];
     this._fullscreenTouch.touchCount = touches.length;
     this._fullscreenTouch.hasMoved = false;
 
     if (touches.length === 1) {
+      this._fullscreenTouch.startX = touches[0].clientX;
       this._fullscreenTouch.startY = touches[0].clientY;
       this._fullscreenTouch.startTime = Date.now();
     } else if (touches.length === 2) {
+      this._fullscreenTouch.hasMoved = true;
       const dx = touches[1].clientX - touches[0].clientX;
       const dy = touches[1].clientY - touches[0].clientY;
       this._fullscreenTouch.lastDistance = Math.sqrt(dx * dx + dy * dy);
@@ -1769,15 +1938,17 @@ Page({
         x: (touches[0].clientX + touches[1].clientX) / 2,
         y: (touches[0].clientY + touches[1].clientY) / 2
       };
-      this._fullscreenTouch.initialScale = this.data.fullscreenScale;
+      this._fullscreenTouch.initialScale = this._fullscreenUser ? this._fullscreenUser.scale : 1;
     }
   },
 
   onFullscreenTouchMove(e) {
+    if (!this.data.fullscreenActive || this.data.fullscreenClosing) return;
     const touches = e.touches;
-    this._fullscreenTouch.hasMoved = true;
+    if (!touches || !touches.length) return;
 
     if (touches.length === 2) {
+      this._fullscreenTouch.hasMoved = true;
       const dx = touches[1].clientX - touches[0].clientX;
       const dy = touches[1].clientY - touches[0].clientY;
       const distance = Math.sqrt(dx * dx + dy * dy);
@@ -1786,20 +1957,28 @@ Page({
         const scale = (distance / this._fullscreenTouch.lastDistance) * this._fullscreenTouch.initialScale;
         const clampedScale = Math.max(1, Math.min(5, scale));
 
-        this.setData({
-          fullscreenScale: clampedScale
-        });
+        this._fullscreenUser = this._fullscreenUser || { scale: 1, x: 0, y: 0 };
+        this._fullscreenUser.scale = clampedScale;
+        this._applyFullscreenTransform();
       }
     } else if (touches.length === 1 && this._fullscreenTouch.touchCount === 1) {
+      const deltaX = touches[0].clientX - this._fullscreenTouch.startX;
       const deltaY = touches[0].clientY - this._fullscreenTouch.startY;
+      const threshold = this._fullscreenTouch.moveThreshold || 6;
 
-      if (deltaY > 100 && this.data.fullscreenScale === 1) {
+      if (!this._fullscreenTouch.hasMoved && (Math.abs(deltaX) > threshold || Math.abs(deltaY) > threshold)) {
+        this._fullscreenTouch.hasMoved = true;
+      }
+
+      const userScale = this._fullscreenUser ? this._fullscreenUser.scale : 1;
+      if (deltaY > 100 && userScale === 1 && !this.data.fullscreenAnimating) {
         this.onCloseFullscreen();
       }
     }
   },
 
   onFullscreenTouchEnd(e) {
+    if (!this.data.fullscreenActive || this.data.fullscreenClosing) return;
     const touches = e.touches;
 
     if (touches.length < 2) {
@@ -1808,7 +1987,7 @@ Page({
 
     if (touches.length === 0) {
       const duration = Date.now() - this._fullscreenTouch.startTime;
-      const wasTap = !this._fullscreenTouch.hasMoved && duration < 300 && this._fullscreenTouch.touchCount === 1;
+      const wasTap = !this._fullscreenTouch.hasMoved && duration < 450 && this._fullscreenTouch.touchCount === 1;
 
       if (wasTap) {
         this.onCloseFullscreen();
@@ -1819,16 +1998,86 @@ Page({
     }
   },
 
-  onCloseFullscreen() {
-    if (!this.data.fullscreenVisible) return;
-    this.setData({
-      fullscreenVisible: false,
-      fullscreenSrc: "",
-      fullscreenScale: 1,
-      fullscreenTranslateX: 0,
-      fullscreenTranslateY: 0
-    }, () => {
-      this._showCloseHint();
-    });
+  onFullscreenTap() {
+    if (!this.data.fullscreenActive || this.data.fullscreenClosing) return;
+    const touch = this._fullscreenTouch;
+    if (touch && touch.touchCount > 1) return;
+    if (touch && touch.hasMoved) return;
+    this.onCloseFullscreen();
+  },
+
+  async onCloseFullscreen() {
+    if (!this.data.fullscreenVisible || this.data.fullscreenClosing) return;
+    if (this._fullscreenCloseTimer) {
+      clearTimeout(this._fullscreenCloseTimer);
+      this._fullscreenCloseTimer = null;
+    }
+    if (this._fullscreenAnimTimer) {
+      clearTimeout(this._fullscreenAnimTimer);
+      this._fullscreenAnimTimer = null;
+    }
+
+    const closeToken = (this._fullscreenAnimToken = (this._fullscreenAnimToken || 0) + 1);
+
+    const previewRect = await selectRect(this, "#mainCanvas");
+    const targetRect = this._getFullscreenTargetRect();
+    const fromRect =
+      previewRect && previewRect.width > 0 && previewRect.height > 0 ? previewRect : targetRect;
+    const invert = this._computeFullscreenInvertTransform(fromRect, targetRect);
+
+    const user = this._fullscreenUser || { scale: 1, x: 0, y: 0 };
+    const userScale = user.scale || 1;
+    const userX = user.x || 0;
+    const userY = user.y || 0;
+
+    const baseScale = invert.scale / userScale;
+    const baseX = invert.translateX - userX;
+    const baseY = invert.translateY - userY;
+    const nextBase = { scale: baseScale, x: baseX, y: baseY };
+
+    this.setData(
+      {
+        fullscreenClosing: true,
+        fullscreenActive: false,
+        fullscreenAnimating: true,
+        fullscreenImageLeft: targetRect.left,
+        fullscreenImageTop: targetRect.top,
+        fullscreenImageW: targetRect.width,
+        fullscreenImageH: targetRect.height,
+        ...this._getFullscreenTransformData()
+      },
+      () => {
+        if (this._fullscreenAnimToken !== closeToken) return;
+        this._fullscreenAnimTimer = setTimeout(() => {
+          if (this._fullscreenAnimToken !== closeToken) return;
+          this._fullscreenAnimTimer = null;
+          this._fullscreenBase = nextBase;
+          this._applyFullscreenTransform();
+
+          const duration = 260;
+          this._fullscreenCloseTimer = setTimeout(() => {
+            if (this._fullscreenAnimToken !== closeToken) return;
+            this._fullscreenCloseTimer = null;
+            this._fullscreenBase = { scale: 1, x: 0, y: 0 };
+            this._fullscreenUser = { scale: 1, x: 0, y: 0 };
+            this.setData(
+              {
+                fullscreenVisible: false,
+                fullscreenActive: false,
+                fullscreenClosing: false,
+                fullscreenAnimating: false,
+                fullscreenSrc: "",
+                fullscreenScale: 1,
+                fullscreenTranslateX: 0,
+                fullscreenTranslateY: 0
+              },
+              () => {
+                this._showCloseHint();
+              }
+            );
+          }, duration);
+        }, 16);
+      }
+    );
   }
 });

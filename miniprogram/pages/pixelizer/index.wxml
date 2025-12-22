@@ -131,14 +131,14 @@
     </scroll-view>
 
     <view
-      class="preview-area {{fullscreenVisible ? 'is-hidden' : ''}}"
+      class="preview-area {{(fullscreenActive || fullscreenClosing) ? 'is-hidden' : ''}}"
       style="--preview-h: {{previewHeightPx}}px; --preview-shift: {{previewTranslateYPx}}px;"
     >
       <view class="canvas-container" id="canvasContainer">
         <canvas
           type="2d"
           id="mainCanvas"
-          class="main-canvas {{fullscreenVisible ? 'is-hidden' : ''}}"
+          class="main-canvas {{(fullscreenActive || fullscreenClosing) ? 'is-hidden' : ''}}"
           style="width: {{mainCanvasCssW}}px; height: {{mainCanvasCssH}}px;"
           bindtap="onOpenFullscreen"
         ></canvas>
@@ -146,7 +146,7 @@
       </view>
 
       <cover-view
-        wx:if="{{!fullscreenVisible}}"
+        wx:if="{{!fullscreenActive && !fullscreenClosing}}"
         class="close-btn {{closeEnabled ? 'enabled' : ''}} {{closeShown ? 'shown' : ''}}"
         catchtap="onCloseImage"
       >×</cover-view>
@@ -158,16 +158,24 @@
 
   </view>
 
-  <view wx:if="{{fullscreenVisible}}" class="fullscreen-modal" catchtap="onCloseFullscreen">
-    <image
-      class="fullscreen-image"
-      src="{{fullscreenSrc}}"
-      mode="aspectFit"
-      catchtouchmove="onFullscreenTouchMove"
-      catchtouchstart="onFullscreenTouchStart"
-      catchtouchend="onFullscreenTouchEnd"
-      style="transform: scale({{fullscreenScale}}) translate({{fullscreenTranslateX}}px, {{fullscreenTranslateY}}px);"
-    ></image>
+  <view
+    wx:if="{{fullscreenVisible || fullscreenClosing}}"
+    class="fullscreen-modal {{fullscreenActive ? 'active' : ''}} {{fullscreenClosing ? 'closing' : ''}} {{fullscreenAnimating ? 'animating' : ''}}"
+  >
+    <view class="fullscreen-backdrop" catchtap="onCloseFullscreen"></view>
+    <view class="fullscreen-stage" bindtap="onCloseFullscreen">
+      <image
+        class="fullscreen-image"
+        src="{{fullscreenSrc}}"
+        mode="aspectFit"
+        catchtap="onFullscreenTap"
+        catchtouchmove="onFullscreenTouchMove"
+        catchtouchstart="onFullscreenTouchStart"
+        catchtouchend="onFullscreenTouchEnd"
+        catchtouchcancel="onFullscreenTouchEnd"
+        style="left: {{fullscreenImageLeft}}px; top: {{fullscreenImageTop}}px; width: {{fullscreenImageW}}px; height: {{fullscreenImageH}}px; transform: translate({{fullscreenTranslateX}}px, {{fullscreenTranslateY}}px) scale({{fullscreenScale}});"
+      ></image>
+    </view>
   </view>
 
 </view>
