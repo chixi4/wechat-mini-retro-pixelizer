@@ -23,6 +23,13 @@ const state = {
   palette: null
 };
 
+function perfNow() {
+  if (typeof performance !== "undefined" && performance.now) {
+    return performance.now();
+  }
+  return Date.now();
+}
+
 function clamp01(v) {
   if (!(v > 0)) return 0;
   if (v > 1) return 1;
@@ -86,6 +93,15 @@ worker.onMessage((msg) => {
 
   if (type === "render") {
     const token = data.token;
+    const perfEnabled = !!data.perf;
+    const perf = perfEnabled ? { start: perfNow(), steps: {} } : null;
+    const perfMeasure = (label, fn) => {
+      if (!perf) return fn();
+      const t = perfNow();
+      const result = fn();
+      perf.steps[label] = +(perfNow() - t).toFixed(2);
+      return result;
+    };
     const w = state.baseW | 0;
     const h = state.baseH | 0;
     const baseData = state.baseData;
@@ -103,18 +119,26 @@ worker.onMessage((msg) => {
     const paletteKey = typeof data.paletteKey === "string" ? data.paletteKey : "dreamscape8";
     const palette = ensurePalette(paletteKey);
 
-    const workData = ensureWorkBuffer(w, h);
-    workData.set(baseData);
+    let workData;
+    perfMeasure("baseCopy", () => {
+      workData = ensureWorkBuffer(w, h);
+      workData.set(baseData);
+    });
 
     const imgData = { data: workData, width: w, height: h };
 
     if (toneX !== 0 || toneY !== 0) {
       if (!state.toneStats) {
-        state.toneStats = computeToneStats({ data: baseData, width: w, height: h });
+        perfMeasure("toneStats", () => {
+          state.toneStats = computeToneStats({ data: baseData, width: w, height: h });
+        });
       }
-      applyDynamicToneMapping(imgData, toneX, toneY, state.toneStats);
+      perfMeasure("toneMap", () => {
+        applyDynamicToneMapping(imgData, toneX, toneY, state.toneStats);
+      });
     }
 
+    const ditherStart = perf ? perfNow() : 0;
     switch (ditherAlgo) {
       case "floyd-steinberg":
         ditherErrorDiffusion(imgData, palette, "floyd", serpentine);
@@ -135,14 +159,21 @@ worker.onMessage((msg) => {
         ditherNearest(imgData, palette);
         break;
     }
+    if (perf) {
+      perf.steps.dither = +(perfNow() - ditherStart).toFixed(2);
+      perf.total = +(perfNow() - perf.start).toFixed(2);
+      perf.meta = { w, h, ditherAlgo, toneX, toneY };
+    }
 
-    worker.postMessage({
+    const payload = {
       type: "rendered",
       ok: true,
       token,
       w,
       h,
       buffer: workData.buffer
-    });
+    };
+    if (perf) payload.perf = perf;
+    worker.postMessage(payload);
   }
 });

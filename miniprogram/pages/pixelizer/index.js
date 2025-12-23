@@ -33,6 +33,13 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function perfNow() {
+  if (typeof performance !== "undefined" && performance.now) {
+    return performance.now();
+  }
+  return Date.now();
+}
+
 const GRID_BORDER_PX = 2;
 const CANVAS_2D_MAX_DIM = 1365;
 const EXPORT_FILE_MAX_DIM = 4096;
@@ -220,6 +227,15 @@ Page({
     this._sys = sys;
     this._dpr = sys.pixelRatio || 1;
     this._isMobile = (sys.windowWidth || 0) <= 768;
+    const perfSetting = wx.getStorageSync("pixelizer_perf");
+    const perfConfig = perfSetting && typeof perfSetting === "object" ? perfSetting : null;
+    this._perfEnabled =
+      !!perfConfig || perfSetting === true || perfSetting === 1 || perfSetting === "1";
+    this._perfLogMinMs =
+      perfConfig && typeof perfConfig.minMs === "number" ? perfConfig.minMs : 16;
+    this._perfLogEvery =
+      perfConfig && typeof perfConfig.sample === "number" ? Math.max(1, perfConfig.sample) : 1;
+    this._perfSampleCount = 0;
     this._safeTop = (() => {
       const safeAreaTop = sys && sys.safeArea && typeof sys.safeArea.top === "number" ? sys.safeArea.top : null;
       const statusBarHeight = sys && typeof sys.statusBarHeight === "number" ? sys.statusBarHeight : null;
@@ -610,6 +626,15 @@ Page({
 
   _applyFullscreenTransform() {
     this.setData(this._getFullscreenTransformData());
+  },
+
+  _logPerf(perf) {
+    if (!this._perfEnabled || !perf) return;
+    this._perfSampleCount = (this._perfSampleCount || 0) + 1;
+    const every = Math.max(1, this._perfLogEvery || 1);
+    if (this._perfSampleCount % every !== 0) return;
+    if (typeof this._perfLogMinMs === "number" && perf.total < this._perfLogMinMs) return;
+    console.log("[perf] pixelizer", perf);
   },
 
   onShow() {
@@ -1328,6 +1353,29 @@ Page({
     const aspect = oriented.width > 0 ? oriented.height / oriented.width : 1;
     const targetHeight = Math.max(1, Math.round(targetWidth * aspect));
 
+    const perfEnabled = !!this._perfEnabled;
+    const perf = perfEnabled
+      ? {
+          start: perfNow(),
+          steps: {},
+          meta: {
+            targetWidth,
+            targetHeight,
+            ditherAlgo,
+            paletteKey: this.data.paletteKey,
+            toneX,
+            toneY
+          }
+        }
+      : null;
+    const perfMeasure = (label, fn) => {
+      if (!perf) return fn();
+      const t = perfNow();
+      const result = fn();
+      perf.steps[label] = +(perfNow() - t).toFixed(2);
+      return result;
+    };
+
     const renderKey = `${this._state.imageToken}:${targetWidth}x${targetHeight}:${ditherAlgo}:${this.data.paletteKey}:${toneX.toFixed(4)}:${toneY.toFixed(4)}`;
     if (renderKey === this._lastRenderKey) return;
 
@@ -1342,22 +1390,24 @@ Page({
       !proc.scaled.data ||
       proc.scaled.data.length !== expectedLen
     ) {
-      buffer.node.width = targetWidth;
-      buffer.node.height = targetHeight;
-      buffer.ctx.imageSmoothingEnabled = true;
-      if (typeof buffer.ctx.imageSmoothingQuality === "string") {
-        buffer.ctx.imageSmoothingQuality = "high";
-      }
-      drawImageWithOrientation(buffer.ctx, img, info.orientation, targetWidth, targetHeight);
+      perfMeasure("scale+getImageData", () => {
+        buffer.node.width = targetWidth;
+        buffer.node.height = targetHeight;
+        buffer.ctx.imageSmoothingEnabled = true;
+        if (typeof buffer.ctx.imageSmoothingQuality === "string") {
+          buffer.ctx.imageSmoothingQuality = "high";
+        }
+        drawImageWithOrientation(buffer.ctx, img, info.orientation, targetWidth, targetHeight);
 
-      const baseImageData = buffer.ctx.getImageData(0, 0, targetWidth, targetHeight);
-      proc.scaled = {
-        token: this._state.imageToken,
-        w: targetWidth,
-        h: targetHeight,
-        data: baseImageData.data
-      };
-      proc.toneStats = { token: 0, w: 0, h: 0, stats: null };
+        const baseImageData = buffer.ctx.getImageData(0, 0, targetWidth, targetHeight);
+        proc.scaled = {
+          token: this._state.imageToken,
+          w: targetWidth,
+          h: targetHeight,
+          data: baseImageData.data
+        };
+        proc.toneStats = { token: 0, w: 0, h: 0, stats: null };
+      });
     }
 
     if (isAborted()) return;
@@ -1365,11 +1415,13 @@ Page({
     const baseData = proc.scaled.data;
 
     if (!proc.work.imageData || proc.work.w !== targetWidth || proc.work.h !== targetHeight) {
-      this._canvas.work.node.width = targetWidth;
-      this._canvas.work.node.height = targetHeight;
-      proc.work.imageData = this._canvas.work.ctx.getImageData(0, 0, targetWidth, targetHeight);
-      proc.work.w = targetWidth;
-      proc.work.h = targetHeight;
+      perfMeasure("initWorkImageData", () => {
+        this._canvas.work.node.width = targetWidth;
+        this._canvas.work.node.height = targetHeight;
+        proc.work.imageData = this._canvas.work.ctx.getImageData(0, 0, targetWidth, targetHeight);
+        proc.work.w = targetWidth;
+        proc.work.h = targetHeight;
+      });
     }
 
     const workImageData = proc.work.imageData;
@@ -1377,18 +1429,31 @@ Page({
       this._forceMainThreadToken === this._state.imageToken || this._processImmediate;
     const worker = forceMainThread ? null : this._worker;
     const baseKey = `${this._state.imageToken}:${info.orientation || 1}:${targetWidth}x${targetHeight}`;
+    if (perf) perf.meta.worker = !!worker;
+    let workerFrameReady = false;
 
     if (worker) {
-      let workerFrameReady = false;
       if (baseKey !== this._workerBaseKey) {
-        const baseCopy = new Uint8ClampedArray(baseData);
+        let baseCopy;
+        if (perf) {
+          const copyStart = perfNow();
+          baseCopy = new Uint8ClampedArray(baseData);
+          perf.steps.workerBaseCopy = +(perfNow() - copyStart).toFixed(2);
+        } else {
+          baseCopy = new Uint8ClampedArray(baseData);
+        }
+        const postStart = perf ? perfNow() : 0;
         const ok = this._postWorkerMessage({
           type: "setBase",
           baseKey,
           w: targetWidth,
           h: targetHeight,
-          buffer: baseCopy.buffer
+          buffer: baseCopy.buffer,
+          perf: perfEnabled
         });
+        if (perf) {
+          perf.steps.workerBasePost = +(perfNow() - postStart).toFixed(2);
+        }
         if (ok) {
           this._workerBaseKey = baseKey;
         } else {
@@ -1396,13 +1461,21 @@ Page({
         }
       }
 
+      const renderStart = perf ? perfNow() : 0;
       const rendered = await this._renderInWorker(processToken, {
         toneX,
         toneY,
         paletteKey: this.data.paletteKey,
         ditherAlgo,
-        serpentine: this._state.isSerpentine
+        serpentine: this._state.isSerpentine,
+        perf: perfEnabled
       });
+      if (perf) {
+        perf.steps.workerRender = +(perfNow() - renderStart).toFixed(2);
+        if (rendered && rendered.perf) {
+          perf.worker = rendered.perf;
+        }
+      }
 
       if (isAborted()) return;
 
@@ -1415,7 +1488,13 @@ Page({
           if (rendered.buffer.byteLength !== expected) {
             throw new Error(`worker buffer size mismatch (${rendered.buffer.byteLength} != ${expected})`);
           }
-          workImageData.data.set(new Uint8ClampedArray(rendered.buffer));
+          if (perf) {
+            const applyStart = perfNow();
+            workImageData.data.set(new Uint8ClampedArray(rendered.buffer));
+            perf.steps.workerApply = +(perfNow() - applyStart).toFixed(2);
+          } else {
+            workImageData.data.set(new Uint8ClampedArray(rendered.buffer));
+          }
           workerFrameReady = true;
         } catch (e) {
           console.warn("worker render apply failed; fallback to main thread", e);
@@ -1466,14 +1545,25 @@ Page({
 
         const hasNextData = Object.keys(nextData).length > 0;
         if (hasNextData) {
+          const setDataStart = perf ? perfNow() : 0;
           await new Promise((resolve) => this.setData(nextData, resolve));
+          if (perf) {
+            perf.steps.setDataLayout = +(perfNow() - setDataStart).toFixed(2);
+          }
         }
 
         if (isAborted()) return;
 
-        this._canvas.work.ctx.putImageData(workImageData, 0, 0);
+        if (perf) {
+          const putStart = perfNow();
+          this._canvas.work.ctx.putImageData(workImageData, 0, 0);
+          perf.steps.putImageData = +(perfNow() - putStart).toFixed(2);
+        } else {
+          this._canvas.work.ctx.putImageData(workImageData, 0, 0);
+        }
 
         // Draw at native pixel size; CSS scaling keeps the preview crisp like fullscreen.
+        const presentStart = perf ? perfNow() : 0;
         const mainW = Math.max(1, targetWidth);
         const mainH = Math.max(1, targetHeight);
         const mainNode = this._canvas.main.node;
@@ -1487,6 +1577,9 @@ Page({
         }
         mainCtx.clearRect(0, 0, mainW, mainH);
         mainCtx.drawImage(this._canvas.work.node, 0, 0, mainW, mainH);
+        if (perf) {
+          perf.steps.present = +(perfNow() - presentStart).toFixed(2);
+        }
 
         if (!this.data.canDownload) {
           this.setData({ canDownload: true });
@@ -1497,11 +1590,27 @@ Page({
         }
 
         this._lastRenderKey = renderKey;
+        if (perf) {
+          perf.meta.worker = true;
+          perf.total = +(perfNow() - perf.start).toFixed(2);
+          this._logPerf(perf);
+        }
         return;
       }
     }
 
-    workImageData.data.set(baseData);
+    if (perf && worker) {
+      perf.meta.worker = false;
+      perf.meta.workerFallback = true;
+    }
+
+    if (perf) {
+      const baseStart = perfNow();
+      workImageData.data.set(baseData);
+      perf.steps.baseCopy = +(perfNow() - baseStart).toFixed(2);
+    } else {
+      workImageData.data.set(baseData);
+    }
 
     if (toneX !== 0 || toneY !== 0) {
       let toneStats = proc.toneStats.stats;
@@ -1511,14 +1620,23 @@ Page({
         proc.toneStats.w !== targetWidth ||
         proc.toneStats.h !== targetHeight
       ) {
+        const statsStart = perf ? perfNow() : 0;
         toneStats = computeToneStats({ data: baseData, width: targetWidth, height: targetHeight });
+        if (perf) {
+          perf.steps.toneStats = +(perfNow() - statsStart).toFixed(2);
+        }
         proc.toneStats = { token: this._state.imageToken, w: targetWidth, h: targetHeight, stats: toneStats };
       }
+      const toneMapStart = perf ? perfNow() : 0;
       applyDynamicToneMapping(workImageData, toneX, toneY, toneStats, isAborted);
+      if (perf) {
+        perf.steps.toneMap = +(perfNow() - toneMapStart).toFixed(2);
+      }
     }
 
     if (isAborted()) return;
 
+    const ditherStart = perf ? perfNow() : 0;
     switch (ditherAlgo) {
       case "floyd-steinberg":
         ditherErrorDiffusion(workImageData, palette, "floyd", this._state.isSerpentine, isAborted);
@@ -1538,6 +1656,9 @@ Page({
       default:
         ditherNearest(workImageData, palette, isAborted);
         break;
+    }
+    if (perf) {
+      perf.steps.dither = +(perfNow() - ditherStart).toFixed(2);
     }
 
     if (isAborted()) return;
@@ -1577,14 +1698,25 @@ Page({
 
     const hasNextData = Object.keys(nextData).length > 0;
     if (hasNextData) {
+      const setDataStart = perf ? perfNow() : 0;
       await new Promise((resolve) => this.setData(nextData, resolve));
+      if (perf) {
+        perf.steps.setDataLayout = +(perfNow() - setDataStart).toFixed(2);
+      }
     }
 
     if (isAborted()) return;
 
-    this._canvas.work.ctx.putImageData(workImageData, 0, 0);
+    if (perf) {
+      const putStart = perfNow();
+      this._canvas.work.ctx.putImageData(workImageData, 0, 0);
+      perf.steps.putImageData = +(perfNow() - putStart).toFixed(2);
+    } else {
+      this._canvas.work.ctx.putImageData(workImageData, 0, 0);
+    }
 
     // Draw at native pixel size; CSS scaling keeps the preview crisp like fullscreen.
+    const presentStart = perf ? perfNow() : 0;
     const mainW = Math.max(1, targetWidth);
     const mainH = Math.max(1, targetHeight);
     const mainNode = this._canvas.main.node;
@@ -1598,6 +1730,9 @@ Page({
     }
     mainCtx.clearRect(0, 0, mainW, mainH);
     mainCtx.drawImage(this._canvas.work.node, 0, 0, mainW, mainH);
+    if (perf) {
+      perf.steps.present = +(perfNow() - presentStart).toFixed(2);
+    }
 
     if (!this.data.canDownload) {
       this.setData({ canDownload: true });
@@ -1608,6 +1743,11 @@ Page({
     }
 
     this._lastRenderKey = renderKey;
+    if (perf) {
+      perf.meta.worker = !!perf.meta.worker;
+      perf.total = +(perfNow() - perf.start).toFixed(2);
+      this._logPerf(perf);
+    }
   },
 
   async onChooseImage() {

@@ -1,0 +1,204 @@
+VM75:363 Error: not node js file system!path:/saaa_config.json; go __invokeHandler__ readFile worker? false
+h @ VM75:363
+a.WeixinJSCore.invokeHandler @ VM75:363
+w @ WAServiceMainContext.js:1
+invoke @ WAServiceMainContext.js:1
+invoke @ WAServiceMainContext.js:1
+u @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+ae @ WAServiceMainContext.js:1
+o @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+g0 @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emitInternal @ WAServiceMainContext.js:1
+e @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emitInternal @ WAServiceMainContext.js:1
+p @ WAServiceMainContext.js:1
+_ @ WAServiceMainContext.js:1
+B @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+a @ WAServiceMainContext.js:1
+s @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+_emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+subscribeHandler @ WAServiceMainContext.js:1
+ret.subscribeHandler
+Show 8 more frames
+index.js:1754 onChooseImage 被调用
+WAServiceMainContext.js:1 [wxapplib]] backgroundfetch privacy fail {"errno":101,"errMsg":"private_getBackgroundFetchData:fail private_getBackgroundFetchData:fail:jsapi invalid request data"}
+(anonymous) @ WAServiceMainContext.js:1
+i @ WAServiceMainContext.js:1
+s @ WAServiceMainContext.js:1
+fail @ WAServiceMainContext.js:1
+p @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+u @ WAServiceMainContext.js:1
+fail @ WAServiceMainContext.js:1
+p @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+q @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+r @ WAServiceMainContext.js:1
+s @ WAServiceMainContext.js:1
+callAndRemove @ WAServiceMainContext.js:1
+invokeCallbackHandler @ WAServiceMainContext.js:1
+ret.invokeCallbackHandler
+VM75:363 error occurs:no such file or directory, access 'wxfile://usr/miniprogramLog/log2'
+p @ VM75:363
+(anonymous) @ VM75:363
+(anonymous) @ node:fs:181
+index.js:1759 选择图片成功 {tempFiles: Array(1), type: "image", errMsg: "chooseMedia:ok"}
+index.js:1803 图片路径: wxfile://tmp_220a1773e40ca936158787f2aa05873e6c403746f04f099d.jpg
+index.js:1809 获取图片信息成功 {width: 4096, orientation: "up", type: "jpeg", height: 3072, errMsg: "getImageInfo:ok", …}
+index.js:1820 准备加载图片到 canvas
+VM75:363 Error: not node js file system!path:/saaa_config.json; go __invokeHandler__ readFile worker? false
+h @ VM75:363
+a.WeixinJSCore.invokeHandler @ VM75:363
+w @ WAServiceMainContext.js:1
+invoke @ WAServiceMainContext.js:1
+invoke @ WAServiceMainContext.js:1
+u @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+ae @ WAServiceMainContext.js:1
+o @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+g0 @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emitInternal @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+T @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+_emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+subscribeHandler @ WAServiceMainContext.js:1
+ret.subscribeHandler
+index.js:1825 图片加载成功
+index.js:1902 设置图片状态
+index.js:1926 开始处理图片
+index.js:637 [perf] pixelizer {start: 1766482533513, steps: {…}, meta: {…}, total: 51}
+index.js:637 [perf] pixelizer {start: 1766482535735, steps: {…}, meta: {…}, total: 60}
+index.js:637 [perf] pixelizer {start: 1766482535816, steps: {…}, meta: {…}, total: 42}
+index.js:637 [perf] pixelizer {start: 1766482535860, steps: {…}, meta: {…}, total: 39}
+index.js:637 [perf] pixelizer {start: 1766482535902, steps: {…}, meta: {…}, total: 43}
+index.js:637 [perf] pixelizer {start: 1766482535947, steps: {…}, meta: {…}, total: 48}
+index.js:637 [perf] pixelizer {start: 1766482538566, steps: {…}, meta: {…}, total: 56}
+index.js:637 [perf] pixelizer {start: 1766482538663, steps: {…}, meta: {…}, total: 60}
+index.js:637 [perf] pixelizer {start: 1766482538744, steps: {…}, meta: {…}, total: 53}
+index.js:637 [perf] pixelizer {start: 1766482538816, steps: {…}, meta: {…}, total: 42}
+index.js:637 [perf] pixelizer {start: 1766482538878, steps: {…}, meta: {…}, total: 41}
+index.js:637 [perf] pixelizer {start: 1766482538938, steps: {…}, meta: {…}, total: 41}
+index.js:637 [perf] pixelizer {start: 1766482538999, steps: {…}, meta: {…}, total: 43}
+index.js:637 [perf] pixelizer {start: 1766482539061, steps: {…}, meta: {…}, total: 45}
+index.js:637 [perf] pixelizer {start: 1766482539126, steps: {…}, meta: {…}, worker: {…}, total: 66}
+index.js:637 [perf] pixelizer {start: 1766482540808, steps: {…}, meta: {…}, total: 78}
+index.js:637 [perf] pixelizer {start: 1766482540905, steps: {…}, meta: {…}, total: 64}
+index.js:637 [perf] pixelizer {start: 1766482540989, steps: {…}, meta: {…}, total: 89}
+index.js:637 [perf] pixelizer {start: 1766482541097, steps: {…}, meta: {…}, total: 110}
+index.js:637 [perf] pixelizer {start: 1766482541217, steps: {…}, meta: {…}, total: 120}
+index.js:637 [perf] pixelizer {start: 1766482541636, steps: {…}, meta: {…}, total: 73}
+index.js:637 [perf] pixelizer {start: 1766482541728, steps: {…}, meta: {…}, total: 72}
+index.js:637 [perf] pixelizer {start: 1766482541803, steps: {…}, meta: {…}, total: 70}
+index.js:637 [perf] pixelizer {start: 1766482541877, steps: {…}, meta: {…}, total: 70}
+index.js:637 [perf] pixelizer {start: 1766482541950, steps: {…}, meta: {…}, total: 68}
+index.js:637 [perf] pixelizer {start: 1766482542021, steps: {…}, meta: {…}, total: 68}
+index.js:637 [perf] pixelizer {start: 1766482542094, steps: {…}, meta: {…}, total: 68}
+index.js:637 [perf] pixelizer {start: 1766482542164, steps: {…}, meta: {…}, total: 68}
+index.js:637 [perf] pixelizer {start: 1766482542251, steps: {…}, meta: {…}, total: 70}
+index.js:637 [perf] pixelizer {start: 1766482542341, steps: {…}, meta: {…}, total: 71}
+index.js:637 [perf] pixelizer {start: 1766482542415, steps: {…}, meta: {…}, total: 76}
+index.js:637 [perf] pixelizer {start: 1766482542516, steps: {…}, meta: {…}, worker: {…}, total: 97}
+index.js:637 [perf] pixelizer {start: 1766482543956, steps: {…}, meta: {…}, total: 120}
+index.js:637 [perf] pixelizer {start: 1766482544095, steps: {…}, meta: {…}, total: 106}
+index.js:637 [perf] pixelizer {start: 1766482544209, steps: {…}, meta: {…}, total: 145}
+index.js:637 [perf] pixelizer {start: 1766482544731, steps: {…}, meta: {…}, total: 97}
+index.js:637 [perf] pixelizer {start: 1766482544847, steps: {…}, meta: {…}, total: 92}
+index.js:637 [perf] pixelizer {start: 1766482544959, steps: {…}, meta: {…}, total: 88}
+index.js:637 [perf] pixelizer {start: 1766482545067, steps: {…}, meta: {…}, total: 85}
+index.js:637 [perf] pixelizer {start: 1766482545171, steps: {…}, meta: {…}, total: 84}
+index.js:637 [perf] pixelizer {start: 1766482545259, steps: {…}, meta: {…}, total: 84}
+index.js:637 [perf] pixelizer {start: 1766482545347, steps: {…}, meta: {…}, total: 84}
+index.js:637 [perf] pixelizer {start: 1766482545434, steps: {…}, meta: {…}, total: 85}
+index.js:637 [perf] pixelizer {start: 1766482545522, steps: {…}, meta: {…}, total: 85}
+index.js:637 [perf] pixelizer {start: 1766482545611, steps: {…}, meta: {…}, total: 86}
+index.js:637 [perf] pixelizer {start: 1766482545699, steps: {…}, meta: {…}, total: 89}
+index.js:637 [perf] pixelizer {start: 1766482545792, steps: {…}, meta: {…}, total: 93}
+index.js:637 [perf] pixelizer {start: 1766482545887, steps: {…}, meta: {…}, total: 95}
+index.js:637 [perf] pixelizer {start: 1766482545987, steps: {…}, meta: {…}, worker: {…}, total: 96}
+index.js:637 [perf] pixelizer {start: 1766482547660, steps: {…}, meta: {…}, total: 93}
+index.js:637 [perf] pixelizer {start: 1766482548441, steps: {…}, meta: {…}, total: 37}
+index.js:637 [perf] pixelizer {start: 1766482549838, steps: {…}, meta: {…}, total: 37}
+index.js:637 [perf] pixelizer {start: 1766482551587, steps: {…}, meta: {…}, total: 46}
+index.js:637 [perf] pixelizer {start: 1766482552149, steps: {…}, meta: {…}, total: 36}
+index.js:637 [perf] pixelizer {start: 1766482553924, steps: {…}, meta: {…}, total: 36}
+index.js:637 [perf] pixelizer {start: 1766482554298, steps: {…}, meta: {…}, total: 32}
+index.js:637 [perf] pixelizer {start: 1766482555730, steps: {…}, meta: {…}, total: 34}
+index.js:637 [perf] pixelizer {start: 1766482556633, steps: {…}, meta: {…}, total: 32}
+index.js:637 [perf] pixelizer {start: 1766482559340, steps: {…}, meta: {…}, total: 56}
+index.js:637 [perf] pixelizer {start: 1766482559415, steps: {…}, meta: {…}, total: 50}
+index.js:637 [perf] pixelizer {start: 1766482559492, steps: {…}, meta: {…}, total: 47}
+index.js:637 [perf] pixelizer {start: 1766482559556, steps: {…}, meta: {…}, total: 33}
+index.js:637 [perf] pixelizer {start: 1766482559592, steps: {…}, meta: {…}, total: 29}
+index.js:637 [perf] pixelizer {start: 1766482559624, steps: {…}, meta: {…}, total: 25}
+index.js:637 [perf] pixelizer {start: 1766482559668, steps: {…}, meta: {…}, total: 26}
+index.js:637 [perf] pixelizer {start: 1766482559713, steps: {…}, meta: {…}, total: 22}
+index.js:637 [perf] pixelizer {start: 1766482559739, steps: {…}, meta: {…}, total: 25}
+index.js:637 [perf] pixelizer {start: 1766482559782, steps: {…}, meta: {…}, total: 32}
+index.js:637 [perf] pixelizer {start: 1766482559834, steps: {…}, meta: {…}, total: 22}
+index.js:637 [perf] pixelizer {start: 1766482559876, steps: {…}, meta: {…}, total: 22}
+index.js:637 [perf] pixelizer {start: 1766482559916, steps: {…}, meta: {…}, total: 22}
+index.js:637 [perf] pixelizer {start: 1766482559958, steps: {…}, meta: {…}, total: 20}
+index.js:637 [perf] pixelizer {start: 1766482559997, steps: {…}, meta: {…}, total: 20}
+index.js:637 [perf] pixelizer {start: 1766482560037, steps: {…}, meta: {…}, total: 18}
+index.js:637 [perf] pixelizer {start: 1766482563692, steps: {…}, meta: {…}, total: 2}
+index.js:637 [perf] pixelizer {start: 1766482563777, steps: {…}, meta: {…}, total: 2}
+index.js:637 [perf] pixelizer {start: 1766482563795, steps: {…}, meta: {…}, total: 2}
+index.js:637 [perf] pixelizer {start: 1766482563811, steps: {…}, meta: {…}, total: 1}
+index.js:637 [perf] pixelizer {start: 1766482563840, steps: {…}, meta: {…}, total: 1}
+index.js:637 [perf] pixelizer {start: 1766482563869, steps: {…}, meta: {…}, total: 2}
+index.js:637 [perf] pixelizer {start: 1766482563899, steps: {…}, meta: {…}, total: 2}
+index.js:637 [perf] pixelizer {start: 1766482563926, steps: {…}, meta: {…}, total: 2}
+index.js:637 [perf] pixelizer {start: 1766482563952, steps: {…}, meta: {…}, total: 2}
+index.js:637 [perf] pixelizer {start: 1766482563980, steps: {…}, meta: {…}, total: 2}
+index.js:637 [perf] pixelizer {start: 1766482564007, steps: {…}, meta: {…}, total: 2}
+index.js:637 [perf] pixelizer {start: 1766482564028, steps: {…}, meta: {…}, total: 1}
+index.js:637 [perf] pixelizer {start: 1766482564057, steps: {…}, meta: {…}, total: 1}
+index.js:637 [perf] pixelizer {start: 1766482564084, steps: {…}, meta: {…}, total: 2}
+index.js:637 [perf] pixelizer {start: 1766482564116, steps: {…}, meta: {…}, total: 2}
+index.js:637 [perf] pixelizer {start: 1766482564132, steps: {…}, meta: {…}, total: 3}
+index.js:637 [perf] pixelizer {start: 1766482564154, steps: {…}, meta: {…}, total: 4}
+index.js:637 [perf] pixelizer {start: 1766482564184, steps: {…}, meta: {…}, total: 2}
+index.js:637 [perf] pixelizer {start: 1766482564212, steps: {…}, meta: {…}, total: 2}
+index.js:637 [perf] pixelizer {start: 1766482564237, steps: {…}, meta: {…}, total: 2}
+index.js:637 [perf] pixelizer {start: 1766482564258, steps: {…}, meta: {…}, total: 1}
+index.js:637 [perf] pixelizer {start: 1766482564283, steps: {…}, meta: {…}, total: 1}
+index.js:637 [perf] pixelizer {start: 1766482564309, steps: {…}, meta: {…}, total: 1}
+index.js:637 [perf] pixelizer {start: 1766482564334, steps: {…}, meta: {…}, total: 2}
+index.js:637 [perf] pixelizer {start: 1766482564362, steps: {…}, meta: {…}, total: 1}
+index.js:637 [perf] pixelizer {start: 1766482564382, steps: {…}, meta: {…}, total: 1}
+index.js:637 [perf] pixelizer {start: 1766482564407, steps: {…}, meta: {…}, total: 2}
+index.js:637 [perf] pixelizer {start: 1766482564434, steps: {…}, meta: {…}, total: 2}

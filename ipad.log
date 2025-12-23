@@ -1,0 +1,91 @@
+index.js? [sm]:1754 onChooseImage 被调用
+index.js? [sm]:1759 选择图片成功 {tempFiles: , errMsg: "chooseMedia:ok", type: "image", failedCount: }
+index.js? [sm]:1803 图片路径: wxfile://tmp_c468fa69486e5711d1b1a182c1045b93.jpg
+index.js? [sm]:1809 获取图片信息成功 {type: "jpeg", errMsg: "getImageInfo:ok", width: 4032, height: 3024, orientation: "up", …}
+index.js? [sm]:1820 准备加载图片到 canvas
+index.js? [sm]:1825 图片加载成功
+index.js? [sm]:1902 设置图片状态
+index.js? [sm]:1926 开始处理图片
+index.js? [sm]:635 [perf] pixelizer {start: 1766483026227, steps: , meta: , total: 381}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483027686, steps: , meta: , total: 339}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483028029, steps: , meta: , total: 263}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483028318, steps: , meta: , total: 265}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483031252, steps: , meta: , total: 406}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483031689, steps: , meta: , total: 4102}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483035818, steps: , meta: , total: 9805}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483045655, steps: , meta: , total: 2346}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483048022, steps: , meta: , total: 2323}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483050361, steps: , meta: , total: 2295}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483052683, steps: , meta: , total: 356}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483053166, steps: , meta: , total: 365}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483055164, steps: , meta: , total: 537}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483055833, steps: , meta: , total: 527}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483057214, steps: , meta: , total: 260}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483058066, steps: , meta: , total: 199}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483058719, steps: , meta: , total: 441}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483059766, steps: , meta: , total: 198}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483061313, steps: , meta: , total: 281}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483063329, steps: , meta: , total: 316}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483063672, steps: , meta: , total: 22}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483063977, steps: , meta: , total: 36}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483064612, steps: , meta: , total: 22}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483064663, steps: , meta: , total: 23}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483064712, steps: , meta: , total: 14}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483064753, steps: , meta: , total: 17}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483064795, steps: , meta: , total: 11}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483064835, steps: , meta: , total: 15}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483064877, steps: , meta: , total: 10}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483064902, steps: , meta: , total: 15}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483064943, steps: , meta: , total: 10}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483064979, steps: , meta: , total: 14}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483065035, steps: , meta: , total: 11}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483065072, steps: , meta: , total: 14}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483065113, steps: , meta: , total: 10}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483065185, steps: , meta: , total: 16}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483065227, steps: , meta: , total: 10}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483065270, steps: , meta: , total: 11}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483065307, steps: , meta: , total: 15}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483065349, steps: , meta: , total: 10}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483065385, steps: , meta: , total: 14}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483065425, steps: , meta: , total: 10}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483065461, steps: , meta: , total: 13}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483065502, steps: , meta: , total: 10}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483065571, steps: , meta: , total: 15}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483065612, steps: , meta: , total: 10}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483065652, steps: , meta: , total: 10}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483065694, steps: , meta: , total: 9}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483065729, steps: , meta: , total: 9}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483065770, steps: , meta: , total: 14}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483065810, steps: , meta: , total: 10}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483065852, steps: , meta: , total: 14}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483065892, steps: , meta: , total: 10}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483065928, steps: , meta: , total: 12}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483065970, steps: , meta: , total: 10}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483066006, steps: , meta: , total: 9}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483066042, steps: , meta: , total: 14}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483066083, steps: , meta: , total: 11}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483066120, steps: , meta: , total: 14}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483066160, steps: , meta: , total: 11}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483066202, steps: , meta: , total: 13}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483066252, steps: , meta: , total: 11}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483066289, steps: , meta: , total: 14}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483066352, steps: , meta: , total: 11}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483066436, steps: , meta: , total: 15}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483069140, steps: , meta: , total: 27}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483071717, steps: , meta: , total: 46}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483072347, steps: , meta: , total: 45}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483073447, steps: , meta: , total: 42}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483074114, steps: , meta: , total: 41}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483076175, steps: , meta: , total: 31}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483076233, steps: , meta: , total: 18}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483076277, steps: , meta: , total: 19}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483076323, steps: , meta: , total: 16}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483076368, steps: , meta: , total: 14}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483076408, steps: , meta: , total: 15}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483076870, steps: , meta: , total: 84}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483076981, steps: , meta: , total: 290}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483077273, steps: , meta: , total: 297}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483077821, steps: , meta: , total: 283}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483078131, steps: , meta: , total: 263}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483078421, steps: , meta: , total: 263}
+index.js? [sm]:635 [perf] pixelizer {start: 1766483078702, steps: , meta: , worker: , total: 34, …}
