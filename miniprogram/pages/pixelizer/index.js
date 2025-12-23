@@ -634,7 +634,11 @@ Page({
     const every = Math.max(1, this._perfLogEvery || 1);
     if (this._perfSampleCount % every !== 0) return;
     if (typeof this._perfLogMinMs === "number" && perf.total < this._perfLogMinMs) return;
-    console.log("[perf] pixelizer", perf);
+    try {
+      console.log("[perf] pixelizer " + JSON.stringify(perf));
+    } catch (err) {
+      console.log("[perf] pixelizer [unserializable]", err);
+    }
   },
 
   onShow() {
