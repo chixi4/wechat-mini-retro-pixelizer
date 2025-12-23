@@ -165,7 +165,6 @@
   >
     <view class="fullscreen-backdrop" catchtap="onCloseFullscreen"></view>
     <view class="fullscreen-stage">
-      <view class="fullscreen-close-btn" catchtap="onCloseFullscreen" style="top: {{safeTopPx + 8}}px;">×</view>
       <image
         class="fullscreen-image"
         src="{{fullscreenSrc}}"
