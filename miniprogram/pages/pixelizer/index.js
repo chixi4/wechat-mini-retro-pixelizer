@@ -202,10 +202,6 @@ Page({
     fullscreenImageTop: 0,
     fullscreenImageW: 1,
     fullscreenImageH: 1,
-    fullscreenGestureActive: false,
-    fullscreenMvX: 0,
-    fullscreenMvY: 0,
-    fullscreenMvScale: 1,
 
     controlsScrollTop: 0,
     controlsPaddingTopPx: 15,
@@ -341,17 +337,6 @@ Page({
     this._fullscreenAnimTimer = null;
     this._fullscreenBase = { scale: 1, x: 0, y: 0 };
     this._fullscreenUser = { scale: 1, x: 0, y: 0 };
-    this._fullscreenMover = {
-      x: 0,
-      y: 0,
-      scale: 1,
-      pendingX: null,
-      pendingY: null,
-      pendingScale: null,
-      frameTimer: null,
-      frameTimerType: null,
-      frameMs: this._isMobile ? 16 : 24
-    };
     this._fullscreenPreviewRect = null;
     this._layoutAnimTimer = null;
     this._layoutCommitTimer = null;
@@ -627,94 +612,6 @@ Page({
     this.setData(this._getFullscreenTransformData());
   },
 
-  _setFullscreenMoverState(next) {
-    const mover = this._fullscreenMover;
-    if (!mover) return;
-
-    if (next && typeof next.x === "number" && isFinite(next.x)) mover.x = next.x;
-    if (next && typeof next.y === "number" && isFinite(next.y)) mover.y = next.y;
-    if (next && typeof next.scale === "number" && isFinite(next.scale)) mover.scale = next.scale;
-
-    const s = mover.scale;
-    if (!(s > 0) || !isFinite(s)) mover.scale = 1;
-
-    const baseLeft = typeof this.data.fullscreenImageLeft === "number" ? this.data.fullscreenImageLeft : 0;
-    const baseTop = typeof this.data.fullscreenImageTop === "number" ? this.data.fullscreenImageTop : 0;
-    this._fullscreenUser = {
-      scale: mover.scale,
-      x: (mover.x || 0) - baseLeft,
-      y: (mover.y || 0) - baseTop
-    };
-  },
-
-  _queueFullscreenMoverUpdate(next) {
-    const mover = this._fullscreenMover;
-    if (!mover) return;
-
-    this._setFullscreenMoverState(next);
-
-    if (next && typeof next.x === "number") mover.pendingX = next.x;
-    if (next && typeof next.y === "number") mover.pendingY = next.y;
-    if (next && typeof next.scale === "number") mover.pendingScale = next.scale;
-
-    if (mover.frameTimer) return;
-
-    const delay = mover.frameMs || 16;
-    const apply = () => {
-      mover.frameTimer = null;
-      mover.frameTimerType = null;
-
-      const pendingX = mover.pendingX;
-      const pendingY = mover.pendingY;
-      const pendingScale = mover.pendingScale;
-      mover.pendingX = null;
-      mover.pendingY = null;
-      mover.pendingScale = null;
-
-      const update = {};
-      if (typeof pendingX === "number" && pendingX !== this.data.fullscreenMvX) update.fullscreenMvX = pendingX;
-      if (typeof pendingY === "number" && pendingY !== this.data.fullscreenMvY) update.fullscreenMvY = pendingY;
-      if (typeof pendingScale === "number" && pendingScale !== this.data.fullscreenMvScale) {
-        update.fullscreenMvScale = pendingScale;
-      }
-      if (Object.keys(update).length) this.setData(update);
-    };
-
-    if (typeof requestAnimationFrame === "function") {
-      mover.frameTimerType = "raf";
-      mover.frameTimer = requestAnimationFrame(apply);
-    } else {
-      mover.frameTimerType = "timeout";
-      mover.frameTimer = setTimeout(apply, delay);
-    }
-  },
-
-  _flushFullscreenMoverUpdate() {
-    const mover = this._fullscreenMover;
-    if (!mover || !mover.frameTimer) return;
-
-    if (mover.frameTimerType === "raf" && typeof cancelAnimationFrame === "function") {
-      cancelAnimationFrame(mover.frameTimer);
-    } else {
-      clearTimeout(mover.frameTimer);
-    }
-    mover.frameTimer = null;
-    mover.frameTimerType = null;
-
-    const pendingX = mover.pendingX;
-    const pendingY = mover.pendingY;
-    const pendingScale = mover.pendingScale;
-    mover.pendingX = null;
-    mover.pendingY = null;
-    mover.pendingScale = null;
-
-    const update = {};
-    if (typeof pendingX === "number" && pendingX !== this.data.fullscreenMvX) update.fullscreenMvX = pendingX;
-    if (typeof pendingY === "number" && pendingY !== this.data.fullscreenMvY) update.fullscreenMvY = pendingY;
-    if (typeof pendingScale === "number" && pendingScale !== this.data.fullscreenMvScale) update.fullscreenMvScale = pendingScale;
-    if (Object.keys(update).length) this.setData(update);
-  },
-
   onShow() {
     this._syncSystemTheme();
     if (!this._awaitingPreviewExit) return;
@@ -736,18 +633,6 @@ Page({
     if (this._fullscreenAnimTimer) {
       clearTimeout(this._fullscreenAnimTimer);
       this._fullscreenAnimTimer = null;
-    }
-    if (this._fullscreenMover && this._fullscreenMover.frameTimer) {
-      if (this._fullscreenMover.frameTimerType === "raf" && typeof cancelAnimationFrame === "function") {
-        cancelAnimationFrame(this._fullscreenMover.frameTimer);
-      } else {
-        clearTimeout(this._fullscreenMover.frameTimer);
-      }
-      this._fullscreenMover.frameTimer = null;
-      this._fullscreenMover.frameTimerType = null;
-      this._fullscreenMover.pendingX = null;
-      this._fullscreenMover.pendingY = null;
-      this._fullscreenMover.pendingScale = null;
     }
     if (this._layoutAnimTimer) {
       clearTimeout(this._layoutAnimTimer);
@@ -2034,7 +1919,6 @@ Page({
     if (!this._isMobile) return;
   },
 
-  noop() {},
 
   _showHeader() {
     if (this.data.headerVisible) return;
@@ -2263,16 +2147,6 @@ Page({
     this._fullscreenBase = { scale: invert.scale, x: invert.translateX, y: invert.translateY };
     this._fullscreenUser = { scale: 1, x: 0, y: 0 };
 
-    if (this._fullscreenMover) {
-      this._flushFullscreenMoverUpdate();
-      this._fullscreenMover.x = targetRect.left;
-      this._fullscreenMover.y = targetRect.top;
-      this._fullscreenMover.scale = 1;
-      this._fullscreenMover.pendingX = null;
-      this._fullscreenMover.pendingY = null;
-      this._fullscreenMover.pendingScale = null;
-    }
-
     const animToken = (this._fullscreenAnimToken = (this._fullscreenAnimToken || 0) + 1);
     const transformData = this._getFullscreenTransformData();
 
@@ -2281,15 +2155,11 @@ Page({
       fullscreenActive: false,
       fullscreenClosing: false,
       fullscreenAnimating: false,
-      fullscreenGestureActive: false,
       fullscreenSrc: "",
       fullscreenImageLeft: targetRect.left,
       fullscreenImageTop: targetRect.top,
       fullscreenImageW: targetRect.width,
       fullscreenImageH: targetRect.height,
-      fullscreenMvX: targetRect.left,
-      fullscreenMvY: targetRect.top,
-      fullscreenMvScale: 1,
       ...transformData
     });
 
@@ -2315,7 +2185,7 @@ Page({
 
           this._fullscreenAnimTimer = setTimeout(() => {
             if (this._fullscreenAnimToken !== animToken) return;
-            this.setData({ fullscreenAnimating: false, fullscreenGestureActive: true });
+            this.setData({ fullscreenAnimating: false });
             this._fullscreenAnimTimer = null;
           }, 260);
         };
@@ -2349,46 +2219,10 @@ Page({
         fullscreenActive: false,
         fullscreenClosing: false,
         fullscreenAnimating: false,
-        fullscreenGestureActive: false,
         fullscreenSrc: ""
       });
       wx.showToast({ title: "预览失败", icon: "none" });
     }
-  },
-
-  onFullscreenMove(e) {
-    if (!this.data.fullscreenGestureActive || this.data.fullscreenClosing) return;
-    const detail = e && e.detail ? e.detail : {};
-    if (detail.source === "") return;
-
-    const xRaw = detail.x;
-    const yRaw = detail.y;
-    const x = typeof xRaw === "number" ? xRaw : parseFloat(xRaw);
-    const y = typeof yRaw === "number" ? yRaw : parseFloat(yRaw);
-    if (!isFinite(x) || !isFinite(y)) return;
-
-    this._queueFullscreenMoverUpdate({ x, y });
-  },
-
-  onFullscreenScale(e) {
-    if (!this.data.fullscreenGestureActive || this.data.fullscreenClosing) return;
-    const detail = e && e.detail ? e.detail : {};
-
-    const xRaw = detail.x;
-    const yRaw = detail.y;
-    const sRaw = detail.scale;
-
-    const x = typeof xRaw === "number" ? xRaw : parseFloat(xRaw);
-    const y = typeof yRaw === "number" ? yRaw : parseFloat(yRaw);
-    const scale = typeof sRaw === "number" ? sRaw : parseFloat(sRaw);
-
-    const next = {};
-    if (isFinite(x)) next.x = x;
-    if (isFinite(y)) next.y = y;
-    if (isFinite(scale)) next.scale = scale;
-    if (!Object.keys(next).length) return;
-
-    this._queueFullscreenMoverUpdate(next);
   },
 
   onFullscreenTouchStart(e) {
@@ -2456,8 +2290,6 @@ Page({
       clearTimeout(this._fullscreenAnimTimer);
       this._fullscreenAnimTimer = null;
     }
-    this._flushFullscreenMoverUpdate();
-
     const closeToken = (this._fullscreenAnimToken = (this._fullscreenAnimToken || 0) + 1);
 
     const previewRect = await selectRect(this, "#mainCanvas");
@@ -2465,16 +2297,6 @@ Page({
     const fromRect =
       previewRect && previewRect.width > 0 && previewRect.height > 0 ? previewRect : targetRect;
     const invert = this._computeFullscreenInvertTransform(fromRect, targetRect);
-
-    if (this.data.fullscreenGestureActive && this._fullscreenMover) {
-      const s = this._fullscreenMover.scale;
-      const scale = isFinite(s) && s > 0 ? s : 1;
-      this._fullscreenUser = {
-        scale,
-        x: (this._fullscreenMover.x || 0) - targetRect.left,
-        y: (this._fullscreenMover.y || 0) - targetRect.top
-      };
-    }
 
     const user = this._fullscreenUser || { scale: 1, x: 0, y: 0 };
     const userScale = user.scale || 1;
@@ -2488,7 +2310,6 @@ Page({
 
     this.setData(
       {
-        fullscreenGestureActive: false,
         fullscreenClosing: true,
         fullscreenActive: false,
         fullscreenAnimating: true,
@@ -2512,28 +2333,16 @@ Page({
             this._fullscreenCloseTimer = null;
             this._fullscreenBase = { scale: 1, x: 0, y: 0 };
             this._fullscreenUser = { scale: 1, x: 0, y: 0 };
-            if (this._fullscreenMover) {
-              this._fullscreenMover.x = 0;
-              this._fullscreenMover.y = 0;
-              this._fullscreenMover.scale = 1;
-              this._fullscreenMover.pendingX = null;
-              this._fullscreenMover.pendingY = null;
-              this._fullscreenMover.pendingScale = null;
-            }
             this.setData(
               {
                 fullscreenVisible: false,
                 fullscreenActive: false,
                 fullscreenClosing: false,
                 fullscreenAnimating: false,
-                fullscreenGestureActive: false,
                 fullscreenSrc: "",
                 fullscreenScale: 1,
                 fullscreenTranslateX: 0,
-                fullscreenTranslateY: 0,
-                fullscreenMvX: 0,
-                fullscreenMvY: 0,
-                fullscreenMvScale: 1
+                fullscreenTranslateY: 0
               },
               () => {
                 this._showCloseHint();
