@@ -1249,14 +1249,11 @@ Page({
       if (this._processRunning) {
         this._processToken += 1;
         this._updatePending = true;
-        if (this._workerRenderJob) {
-          this._disposeWorker();
-        }
       }
       return;
     }
 
-    if (!immediateRequested && !this._worker) {
+    if (!this._worker) {
       this._initWorker();
     }
 
@@ -1282,7 +1279,7 @@ Page({
       this._processImmediate = immediate;
       this._processRunning = true;
       this._updatePending = false;
-      if (!immediate && !this._worker) {
+      if (!this._worker) {
         this._initWorker();
       }
       let result;
@@ -1429,12 +1426,12 @@ Page({
     }
 
     const workImageData = proc.work.imageData;
-    const forceMainThread =
-      this._forceMainThreadToken === this._state.imageToken || this._processImmediate;
+    const forceMainThread = this._forceMainThreadToken === this._state.imageToken;
     const worker = forceMainThread ? null : this._worker;
     const baseKey = `${this._state.imageToken}:${info.orientation || 1}:${targetWidth}x${targetHeight}`;
     if (perf) perf.meta.worker = !!worker;
     let workerFrameReady = false;
+    const workerBusy = !!this._workerRenderJob;
 
     if (worker) {
       if (baseKey !== this._workerBaseKey) {
@@ -1482,6 +1479,15 @@ Page({
       }
 
       if (isAborted()) return;
+
+      if (!rendered && workerBusy) {
+        if (perf) {
+          perf.meta.workerBusy = true;
+          perf.total = +(perfNow() - perf.start).toFixed(2);
+          this._logPerf(perf);
+        }
+        return;
+      }
 
       if (rendered && rendered.ok && rendered.buffer) {
         try {

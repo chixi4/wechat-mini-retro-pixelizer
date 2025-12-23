@@ -1,1 +1,4 @@
 /_archive
+/tools/pixelizer-wasm/target/
+/tools/pixelizer-wasm/target-wasm-base/
+/tools/pixelizer-wasm/target-wasm-simd/
