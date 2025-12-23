@@ -34,6 +34,8 @@ function sleep(ms) {
 }
 
 const GRID_BORDER_PX = 2;
+const CANVAS_2D_MAX_DIM = 1365;
+const EXPORT_FILE_MAX_DIM = 4096;
 
 function getGridInnerRect(rect) {
   const safeRect = rect || {};
@@ -200,6 +202,10 @@ Page({
     fullscreenImageTop: 0,
     fullscreenImageW: 1,
     fullscreenImageH: 1,
+    fullscreenGestureActive: false,
+    fullscreenMvX: 0,
+    fullscreenMvY: 0,
+    fullscreenMvScale: 1,
 
     controlsScrollTop: 0,
     controlsPaddingTopPx: 15,
@@ -273,7 +279,8 @@ Page({
 
     this._slider = {
       min: 32,
-      max: 640,
+      max: 1024,
+      baseMax: 1024,
       step: 4,
       dragging: false,
       rect: null,
@@ -334,6 +341,17 @@ Page({
     this._fullscreenAnimTimer = null;
     this._fullscreenBase = { scale: 1, x: 0, y: 0 };
     this._fullscreenUser = { scale: 1, x: 0, y: 0 };
+    this._fullscreenMover = {
+      x: 0,
+      y: 0,
+      scale: 1,
+      pendingX: null,
+      pendingY: null,
+      pendingScale: null,
+      frameTimer: null,
+      frameTimerType: null,
+      frameMs: this._isMobile ? 16 : 24
+    };
     this._fullscreenPreviewRect = null;
     this._layoutAnimTimer = null;
     this._layoutCommitTimer = null;
@@ -387,29 +405,34 @@ Page({
       this.setData({ layoutAnimEnabled: true });
     }, 120);
 
-    wx.onWindowResize(async (res) => {
-      this._sys = { ...this._sys, ...res };
-      const navPad = this._calcNavPadding(this._sys);
-      this.setData({ navPadLeftPx: navPad.left, navPadRightPx: navPad.right });
-      await sleep(50);
-      await this._refreshRects();
-      this._updateSliderUI();
-      this._syncToneCursorToRect();
+    if (wx.onWindowResize) {
+      this._windowResizeHandler = async (res) => {
+        const size = res && res.size ? res.size : res || {};
+        const nextSys = { ...this._sys, ...size };
+        this._sys = nextSys;
+        const navPad = this._calcNavPadding(nextSys);
+        this.setData({ navPadLeftPx: navPad.left, navPadRightPx: navPad.right });
+        await sleep(50);
+        await this._refreshRects();
+        this._updateSliderUI();
+        this._syncToneCursorToRect();
 
-      if (this._isMobile && this.data.hasImage && this._state && this._state.originalImage) {
-        const info = this._state.imageInfo || {};
-        const oriented = getOrientedSize(this._state.originalImage, info);
-        const aspect = oriented.width > 0 ? oriented.height / oriented.width : 1;
-        const box = this._computeMobilePreviewBox(aspect);
-        this._lockPreviewHeight = true;
-        this.setData({ previewHeightPx: box.previewHeightPx }, () => this._updateLayout());
-      } else {
-        this._updateLayout();
-      }
+        if (this._isMobile && this.data.hasImage && this._state && this._state.originalImage) {
+          const info = this._state.imageInfo || {};
+          const oriented = getOrientedSize(this._state.originalImage, info);
+          const aspect = oriented.width > 0 ? oriented.height / oriented.width : 1;
+          const box = this._computeMobilePreviewBox(aspect);
+          this._lockPreviewHeight = true;
+          this.setData({ previewHeightPx: box.previewHeightPx }, () => this._updateLayout());
+        } else {
+          this._updateLayout();
+        }
 
-      await this._ensureCanvases();
-      this._scheduleProcess();
-    });
+        await this._ensureCanvases();
+        this._scheduleProcess();
+      };
+      wx.onWindowResize(this._windowResizeHandler);
+    }
   },
 
   async _ensureCanvases() {
@@ -604,6 +627,94 @@ Page({
     this.setData(this._getFullscreenTransformData());
   },
 
+  _setFullscreenMoverState(next) {
+    const mover = this._fullscreenMover;
+    if (!mover) return;
+
+    if (next && typeof next.x === "number" && isFinite(next.x)) mover.x = next.x;
+    if (next && typeof next.y === "number" && isFinite(next.y)) mover.y = next.y;
+    if (next && typeof next.scale === "number" && isFinite(next.scale)) mover.scale = next.scale;
+
+    const s = mover.scale;
+    if (!(s > 0) || !isFinite(s)) mover.scale = 1;
+
+    const baseLeft = typeof this.data.fullscreenImageLeft === "number" ? this.data.fullscreenImageLeft : 0;
+    const baseTop = typeof this.data.fullscreenImageTop === "number" ? this.data.fullscreenImageTop : 0;
+    this._fullscreenUser = {
+      scale: mover.scale,
+      x: (mover.x || 0) - baseLeft,
+      y: (mover.y || 0) - baseTop
+    };
+  },
+
+  _queueFullscreenMoverUpdate(next) {
+    const mover = this._fullscreenMover;
+    if (!mover) return;
+
+    this._setFullscreenMoverState(next);
+
+    if (next && typeof next.x === "number") mover.pendingX = next.x;
+    if (next && typeof next.y === "number") mover.pendingY = next.y;
+    if (next && typeof next.scale === "number") mover.pendingScale = next.scale;
+
+    if (mover.frameTimer) return;
+
+    const delay = mover.frameMs || 16;
+    const apply = () => {
+      mover.frameTimer = null;
+      mover.frameTimerType = null;
+
+      const pendingX = mover.pendingX;
+      const pendingY = mover.pendingY;
+      const pendingScale = mover.pendingScale;
+      mover.pendingX = null;
+      mover.pendingY = null;
+      mover.pendingScale = null;
+
+      const update = {};
+      if (typeof pendingX === "number" && pendingX !== this.data.fullscreenMvX) update.fullscreenMvX = pendingX;
+      if (typeof pendingY === "number" && pendingY !== this.data.fullscreenMvY) update.fullscreenMvY = pendingY;
+      if (typeof pendingScale === "number" && pendingScale !== this.data.fullscreenMvScale) {
+        update.fullscreenMvScale = pendingScale;
+      }
+      if (Object.keys(update).length) this.setData(update);
+    };
+
+    if (typeof requestAnimationFrame === "function") {
+      mover.frameTimerType = "raf";
+      mover.frameTimer = requestAnimationFrame(apply);
+    } else {
+      mover.frameTimerType = "timeout";
+      mover.frameTimer = setTimeout(apply, delay);
+    }
+  },
+
+  _flushFullscreenMoverUpdate() {
+    const mover = this._fullscreenMover;
+    if (!mover || !mover.frameTimer) return;
+
+    if (mover.frameTimerType === "raf" && typeof cancelAnimationFrame === "function") {
+      cancelAnimationFrame(mover.frameTimer);
+    } else {
+      clearTimeout(mover.frameTimer);
+    }
+    mover.frameTimer = null;
+    mover.frameTimerType = null;
+
+    const pendingX = mover.pendingX;
+    const pendingY = mover.pendingY;
+    const pendingScale = mover.pendingScale;
+    mover.pendingX = null;
+    mover.pendingY = null;
+    mover.pendingScale = null;
+
+    const update = {};
+    if (typeof pendingX === "number" && pendingX !== this.data.fullscreenMvX) update.fullscreenMvX = pendingX;
+    if (typeof pendingY === "number" && pendingY !== this.data.fullscreenMvY) update.fullscreenMvY = pendingY;
+    if (typeof pendingScale === "number" && pendingScale !== this.data.fullscreenMvScale) update.fullscreenMvScale = pendingScale;
+    if (Object.keys(update).length) this.setData(update);
+  },
+
   onShow() {
     this._syncSystemTheme();
     if (!this._awaitingPreviewExit) return;
@@ -615,6 +726,9 @@ Page({
     if (this._themeChangeHandler && wx.offThemeChange) {
       wx.offThemeChange(this._themeChangeHandler);
     }
+    if (this._windowResizeHandler && wx.offWindowResize) {
+      wx.offWindowResize(this._windowResizeHandler);
+    }
     if (this._fullscreenCloseTimer) {
       clearTimeout(this._fullscreenCloseTimer);
       this._fullscreenCloseTimer = null;
@@ -622,6 +736,18 @@ Page({
     if (this._fullscreenAnimTimer) {
       clearTimeout(this._fullscreenAnimTimer);
       this._fullscreenAnimTimer = null;
+    }
+    if (this._fullscreenMover && this._fullscreenMover.frameTimer) {
+      if (this._fullscreenMover.frameTimerType === "raf" && typeof cancelAnimationFrame === "function") {
+        cancelAnimationFrame(this._fullscreenMover.frameTimer);
+      } else {
+        clearTimeout(this._fullscreenMover.frameTimer);
+      }
+      this._fullscreenMover.frameTimer = null;
+      this._fullscreenMover.frameTimerType = null;
+      this._fullscreenMover.pendingX = null;
+      this._fullscreenMover.pendingY = null;
+      this._fullscreenMover.pendingScale = null;
     }
     if (this._layoutAnimTimer) {
       clearTimeout(this._layoutAnimTimer);
@@ -1604,22 +1730,39 @@ Page({
 
     try {
       const chooseRes = await new Promise((resolve, reject) => {
+        const onSuccess = (res) => {
+          console.log("选择图片成功", res);
+          resolve(res);
+        };
+        const onFail = (err) => {
+          console.error("选择图片失败", err);
+          reject(err);
+        };
+
+        if (wx.chooseMedia) {
+          wx.chooseMedia({
+            count: 1,
+            mediaType: ["image"],
+            sizeType: ["original"],
+            sourceType: ["album", "camera"],
+            success: onSuccess,
+            fail: onFail
+          });
+          return;
+        }
+
         wx.chooseImage({
           count: 1,
           sizeType: ["original"],
           sourceType: ["album", "camera"],
-          success: (res) => {
-            console.log("选择图片成功", res);
-            resolve(res);
-          },
-          fail: (err) => {
-            console.error("选择图片失败", err);
-            reject(err);
-          }
+          success: onSuccess,
+          fail: onFail
         });
       });
 
-      const src = chooseRes.tempFilePaths && chooseRes.tempFilePaths[0];
+      const src =
+        (chooseRes.tempFiles && chooseRes.tempFiles[0] && chooseRes.tempFiles[0].tempFilePath) ||
+        (chooseRes.tempFilePaths && chooseRes.tempFilePaths[0]);
       if (!src) {
         console.error("未获取到图片路径");
         return;
@@ -1677,6 +1820,22 @@ Page({
 
       const oriented = getOrientedSize(img, info);
       const aspect = oriented.width > 0 ? oriented.height / oriented.width : 1;
+      if (this._slider) {
+        const min = this._slider.min || 1;
+        const step = this._slider.step || 1;
+        let nextMax = this._slider.baseMax || this._slider.max || 640;
+        const maxByDim = CANVAS_2D_MAX_DIM;
+        const maxByHeight = aspect > 0 ? Math.floor(maxByDim / aspect) : maxByDim;
+        nextMax = Math.min(nextMax, maxByDim, maxByHeight);
+        nextMax = Math.floor(nextMax / step) * step;
+        if (nextMax < min) nextMax = min;
+        this._slider.max = nextMax;
+
+        const current = this.data.targetWidth;
+        if (typeof current === "number" && current > nextMax) {
+          this.setData({ targetWidth: nextMax });
+        }
+      }
 
       const replacingImage = this.data.hasImage;
       let nextPreviewHeightPx = this.data.previewHeightPx;
@@ -1743,6 +1902,7 @@ Page({
           this._updateLayout();
           await sleep(50);
           await this._refreshRects();
+          this._updateSliderUI();
           await this.onResetTone({ skipProcess: true });
 
           if (this._initialProcessTimer) clearTimeout(this._initialProcessTimer);
@@ -1763,6 +1923,7 @@ Page({
   },
 
   onCloseImage() {
+    if (!this.data.closeEnabled || !this.data.closeShown) return;
     if (this._initialProcessTimer) {
       clearTimeout(this._initialProcessTimer);
       this._initialProcessTimer = null;
@@ -1778,6 +1939,10 @@ Page({
     if (this._layoutCommitTimer) {
       clearTimeout(this._layoutCommitTimer);
       this._layoutCommitTimer = null;
+    }
+    if (this._slider) {
+      this._slider.max = this._slider.baseMax || this._slider.max;
+      this._updateSliderUI();
     }
     this._layoutCommitToken = (this._layoutCommitToken || 0) + 1;
     this._layoutOpening = false;
@@ -1868,6 +2033,8 @@ Page({
     // Mobile 端标题栏常驻，关闭“下拉拉出标题栏”逻辑
     if (!this._isMobile) return;
   },
+
+  noop() {},
 
   _showHeader() {
     if (this.data.headerVisible) return;
@@ -1991,46 +2158,55 @@ Page({
     if (!w || !h) return;
 
     const minWidth = 2000;
-    let scale = Math.ceil(minWidth / w);
-    if (scale < 1) scale = 1;
+    let outputScale = Math.ceil(minWidth / w);
+    if (outputScale < 1) outputScale = 1;
 
-    const MAX_EXPORT_DIM = 4096;
-    const maxScale = Math.max(1, Math.floor(MAX_EXPORT_DIM / Math.max(w, h)));
-    if (scale > maxScale) scale = maxScale;
+    const maxOutputScale = Math.max(1, Math.floor(EXPORT_FILE_MAX_DIM / Math.max(w, h)));
+    if (outputScale > maxOutputScale) outputScale = maxOutputScale;
 
-    const exportW = w * scale;
-    const exportH = h * scale;
+    const maxCanvasScale = Math.max(1, Math.floor(CANVAS_2D_MAX_DIM / Math.max(w, h)));
+    const drawScale = Math.max(1, Math.min(outputScale, maxCanvasScale));
+
+    const canvasW = w * drawScale;
+    const canvasH = h * drawScale;
+    const exportW = w * outputScale;
+    const exportH = h * outputScale;
 
     const exportCanvas = this._canvas.export;
-    exportCanvas.node.width = exportW;
-    exportCanvas.node.height = exportH;
+    exportCanvas.node.width = canvasW;
+    exportCanvas.node.height = canvasH;
     const exportCtx = exportCanvas.ctx;
     exportCtx.setTransform(1, 0, 0, 1, 0, 0);
     exportCtx.imageSmoothingEnabled = false;
     if (typeof exportCtx.imageSmoothingQuality === "string") {
       exportCtx.imageSmoothingQuality = "low";
     }
-    exportCtx.clearRect(0, 0, exportW, exportH);
+    exportCtx.clearRect(0, 0, canvasW, canvasH);
 
     const workImageData = this._proc.work.imageData;
-    if (workImageData && workImageData.data && scale > 1 && exportCtx.createImageData) {
-      const scaledData = exportCtx.createImageData(exportW, exportH);
-      scaleImageDataNearest(workImageData.data, w, h, scale, scaledData.data);
+    if (workImageData && workImageData.data && drawScale > 1 && exportCtx.createImageData) {
+      const scaledData = exportCtx.createImageData(canvasW, canvasH);
+      scaleImageDataNearest(workImageData.data, w, h, drawScale, scaledData.data);
       exportCtx.putImageData(scaledData, 0, 0);
-    } else if (workImageData && workImageData.data && scale === 1) {
+    } else if (workImageData && workImageData.data && drawScale === 1) {
       exportCtx.putImageData(workImageData, 0, 0);
     } else {
-      exportCtx.drawImage(this._canvas.work.node, 0, 0, exportW, exportH);
+      exportCtx.drawImage(this._canvas.work.node, 0, 0, canvasW, canvasH);
     }
 
     try {
       const tmp = await new Promise((resolve, reject) => {
-        wx.canvasToTempFilePath({
+        const options = {
           canvas: exportCanvas.node,
           fileType: "png",
           success: resolve,
           fail: reject
-        });
+        };
+        if (exportW !== canvasW || exportH !== canvasH) {
+          options.destWidth = exportW;
+          options.destHeight = exportH;
+        }
+        wx.canvasToTempFilePath(options);
       });
 
       const filePath = tmp.tempFilePath;
@@ -2087,6 +2263,16 @@ Page({
     this._fullscreenBase = { scale: invert.scale, x: invert.translateX, y: invert.translateY };
     this._fullscreenUser = { scale: 1, x: 0, y: 0 };
 
+    if (this._fullscreenMover) {
+      this._flushFullscreenMoverUpdate();
+      this._fullscreenMover.x = targetRect.left;
+      this._fullscreenMover.y = targetRect.top;
+      this._fullscreenMover.scale = 1;
+      this._fullscreenMover.pendingX = null;
+      this._fullscreenMover.pendingY = null;
+      this._fullscreenMover.pendingScale = null;
+    }
+
     const animToken = (this._fullscreenAnimToken = (this._fullscreenAnimToken || 0) + 1);
     const transformData = this._getFullscreenTransformData();
 
@@ -2095,11 +2281,15 @@ Page({
       fullscreenActive: false,
       fullscreenClosing: false,
       fullscreenAnimating: false,
+      fullscreenGestureActive: false,
       fullscreenSrc: "",
       fullscreenImageLeft: targetRect.left,
       fullscreenImageTop: targetRect.top,
       fullscreenImageW: targetRect.width,
       fullscreenImageH: targetRect.height,
+      fullscreenMvX: targetRect.left,
+      fullscreenMvY: targetRect.top,
+      fullscreenMvScale: 1,
       ...transformData
     });
 
@@ -2125,7 +2315,7 @@ Page({
 
           this._fullscreenAnimTimer = setTimeout(() => {
             if (this._fullscreenAnimToken !== animToken) return;
-            this.setData({ fullscreenAnimating: false });
+            this.setData({ fullscreenAnimating: false, fullscreenGestureActive: true });
             this._fullscreenAnimTimer = null;
           }, 260);
         };
@@ -2159,10 +2349,46 @@ Page({
         fullscreenActive: false,
         fullscreenClosing: false,
         fullscreenAnimating: false,
+        fullscreenGestureActive: false,
         fullscreenSrc: ""
       });
       wx.showToast({ title: "预览失败", icon: "none" });
     }
+  },
+
+  onFullscreenMove(e) {
+    if (!this.data.fullscreenGestureActive || this.data.fullscreenClosing) return;
+    const detail = e && e.detail ? e.detail : {};
+    if (detail.source === "") return;
+
+    const xRaw = detail.x;
+    const yRaw = detail.y;
+    const x = typeof xRaw === "number" ? xRaw : parseFloat(xRaw);
+    const y = typeof yRaw === "number" ? yRaw : parseFloat(yRaw);
+    if (!isFinite(x) || !isFinite(y)) return;
+
+    this._queueFullscreenMoverUpdate({ x, y });
+  },
+
+  onFullscreenScale(e) {
+    if (!this.data.fullscreenGestureActive || this.data.fullscreenClosing) return;
+    const detail = e && e.detail ? e.detail : {};
+
+    const xRaw = detail.x;
+    const yRaw = detail.y;
+    const sRaw = detail.scale;
+
+    const x = typeof xRaw === "number" ? xRaw : parseFloat(xRaw);
+    const y = typeof yRaw === "number" ? yRaw : parseFloat(yRaw);
+    const scale = typeof sRaw === "number" ? sRaw : parseFloat(sRaw);
+
+    const next = {};
+    if (isFinite(x)) next.x = x;
+    if (isFinite(y)) next.y = y;
+    if (isFinite(scale)) next.scale = scale;
+    if (!Object.keys(next).length) return;
+
+    this._queueFullscreenMoverUpdate(next);
   },
 
   onFullscreenTouchStart(e) {
@@ -2230,6 +2456,7 @@ Page({
       clearTimeout(this._fullscreenAnimTimer);
       this._fullscreenAnimTimer = null;
     }
+    this._flushFullscreenMoverUpdate();
 
     const closeToken = (this._fullscreenAnimToken = (this._fullscreenAnimToken || 0) + 1);
 
@@ -2238,6 +2465,16 @@ Page({
     const fromRect =
       previewRect && previewRect.width > 0 && previewRect.height > 0 ? previewRect : targetRect;
     const invert = this._computeFullscreenInvertTransform(fromRect, targetRect);
+
+    if (this.data.fullscreenGestureActive && this._fullscreenMover) {
+      const s = this._fullscreenMover.scale;
+      const scale = isFinite(s) && s > 0 ? s : 1;
+      this._fullscreenUser = {
+        scale,
+        x: (this._fullscreenMover.x || 0) - targetRect.left,
+        y: (this._fullscreenMover.y || 0) - targetRect.top
+      };
+    }
 
     const user = this._fullscreenUser || { scale: 1, x: 0, y: 0 };
     const userScale = user.scale || 1;
@@ -2251,6 +2488,7 @@ Page({
 
     this.setData(
       {
+        fullscreenGestureActive: false,
         fullscreenClosing: true,
         fullscreenActive: false,
         fullscreenAnimating: true,
@@ -2274,16 +2512,28 @@ Page({
             this._fullscreenCloseTimer = null;
             this._fullscreenBase = { scale: 1, x: 0, y: 0 };
             this._fullscreenUser = { scale: 1, x: 0, y: 0 };
+            if (this._fullscreenMover) {
+              this._fullscreenMover.x = 0;
+              this._fullscreenMover.y = 0;
+              this._fullscreenMover.scale = 1;
+              this._fullscreenMover.pendingX = null;
+              this._fullscreenMover.pendingY = null;
+              this._fullscreenMover.pendingScale = null;
+            }
             this.setData(
               {
                 fullscreenVisible: false,
                 fullscreenActive: false,
                 fullscreenClosing: false,
                 fullscreenAnimating: false,
+                fullscreenGestureActive: false,
                 fullscreenSrc: "",
                 fullscreenScale: 1,
                 fullscreenTranslateX: 0,
-                fullscreenTranslateY: 0
+                fullscreenTranslateY: 0,
+                fullscreenMvX: 0,
+                fullscreenMvY: 0,
+                fullscreenMvScale: 1
               },
               () => {
                 this._showCloseHint();

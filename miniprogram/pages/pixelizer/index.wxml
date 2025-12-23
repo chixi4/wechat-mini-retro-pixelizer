@@ -146,11 +146,11 @@
         <view wx:if="{{!hasImage}}" class="empty-hint">点击左侧上传图片</view>
       </view>
 
-      <cover-view
+      <view
         wx:if="{{!fullscreenVisible && hasImage}}"
         class="close-btn {{closeEnabled ? 'enabled' : ''}} {{closeShown ? 'shown' : ''}}"
         catchtap="onCloseImage"
-      >×</cover-view>
+      >×</view>
 
       <canvas type="2d" id="workCanvas" class="hidden-canvas"></canvas>
       <canvas type="2d" id="bufferCanvas" class="hidden-canvas"></canvas>
@@ -165,17 +165,37 @@
   >
     <view class="fullscreen-backdrop" catchtap="onCloseFullscreen"></view>
     <view class="fullscreen-stage" bindtap="onCloseFullscreen">
+      <view class="fullscreen-close-btn" catchtap="onCloseFullscreen" style="top: {{safeTopPx + 8}}px;">×</view>
       <image
+        wx:if="{{!fullscreenGestureActive}}"
         class="fullscreen-image"
         src="{{fullscreenSrc}}"
         mode="aspectFit"
-        catchtap="onFullscreenTap"
-        catchtouchmove="onFullscreenTouchMove"
-        catchtouchstart="onFullscreenTouchStart"
-        catchtouchend="onFullscreenTouchEnd"
-        catchtouchcancel="onFullscreenTouchEnd"
+        catchtap="onCloseFullscreen"
         style="left: {{fullscreenImageLeft}}px; top: {{fullscreenImageTop}}px; width: {{fullscreenImageW}}px; height: {{fullscreenImageH}}px; transform: translate({{fullscreenTranslateX}}px, {{fullscreenTranslateY}}px) scale({{fullscreenScale}});"
       ></image>
+
+      <movable-area wx:if="{{fullscreenGestureActive}}" class="fullscreen-movable-area" scale-area="true">
+        <movable-view
+          class="fullscreen-movable-view"
+          direction="all"
+          scale="true"
+          scale-min="1"
+          scale-max="8"
+          scale-value="{{fullscreenMvScale}}"
+          x="{{fullscreenMvX}}"
+          y="{{fullscreenMvY}}"
+          out-of-bounds="true"
+          inertia="true"
+          animation="false"
+          bindchange="onFullscreenMove"
+          bindscale="onFullscreenScale"
+          catchtap="noop"
+          style="width: {{fullscreenImageW}}px; height: {{fullscreenImageH}}px;"
+        >
+          <image class="fullscreen-movable-image" src="{{fullscreenSrc}}" mode="aspectFit"></image>
+        </movable-view>
+      </movable-area>
     </view>
   </view>
 

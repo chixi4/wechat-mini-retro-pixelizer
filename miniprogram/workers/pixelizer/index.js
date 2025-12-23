@@ -1,12 +1,12 @@
-const { PALETTES } = require("../../utils/pixelizer/palettes");
+const { PALETTES } = require("./palettes");
 const {
   hexToRgb,
   ditherNearest,
   ditherRandom,
   ditherErrorDiffusion,
   ditherBayer
-} = require("../../utils/pixelizer/dither");
-const { computeToneStats, applyDynamicToneMapping } = require("../../utils/pixelizer/tone");
+} = require("./dither");
+const { computeToneStats, applyDynamicToneMapping } = require("./tone");
 
 const state = {
   baseKey: "",
@@ -146,4 +146,3 @@ worker.onMessage((msg) => {
     });
   }
 });
-
