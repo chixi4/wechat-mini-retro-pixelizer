@@ -42,30 +42,71 @@ function makeSelfTestBase(w, h) {
   return out;
 }
 
-function runWasmSelfTest(exports, memory) {
+function describeMismatch(index, expected, got, w) {
+  const px = (index / 4) | 0;
+  return {
+    index,
+    expected,
+    got,
+    x: px % w,
+    y: (px / w) | 0,
+    channel: index % 4
+  };
+}
+
+function summarizeSelfTest(result) {
+  if (!result) return "ok=0 reason=missing";
+  const simd = result.isSimd | 0;
+  if (result.ok) return `ok=1 simd=${simd}`;
+  const fail = Array.isArray(result.cases) ? result.cases.find((c) => !c.ok) : null;
+  if (!fail) {
+    const reason = result.reason || "unknown";
+    return `ok=0 simd=${simd} reason=${reason}`;
+  }
+  const reason = fail.reason || result.reason || "unknown";
+  const name = fail.name || result.failedCase || "unknown";
+  const m = fail.mismatch;
+  if (m) {
+    return `ok=0 simd=${simd} case=${name} reason=${reason} idx=${m.index} exp=${m.expected} got=${m.got} x=${m.x} y=${m.y} ch=${m.channel}`;
+  }
+  return `ok=0 simd=${simd} case=${name} reason=${reason}`;
+}
+
+function runWasmSelfTestDetailed(exports, memory) {
+  const result = {
+    ok: false,
+    reason: "",
+    cases: [],
+    isSimd: 0
+  };
+
   try {
-    if (!exports || !memory) return false;
+    if (!exports || !memory) {
+      result.reason = "missing exports/memory";
+      return result;
+    }
+
+    if (typeof exports.is_simd === "function") {
+      result.isSimd = exports.is_simd() | 0;
+    }
 
     const w = 32;
     const h = 24;
-    const toneX = -0.33;
-    const toneY = 0.41;
     const serpentine = true;
-
     const palette = hexToRgb(PALETTES.dreamscape8.colors);
     const base = makeSelfTestBase(w, h);
+    const baseView = new Uint8Array(base.buffer, base.byteOffset, base.byteLength);
+    const toneStats = computeToneStats({ data: base, width: w, height: h });
 
-    const jsExpected = (type) => {
+    const jsExpected = (type, toneX, toneY) => {
       const out = new Uint8ClampedArray(base);
       const imgData = { data: out, width: w, height: h };
-      const stats = computeToneStats({ data: base, width: w, height: h });
-      applyDynamicToneMapping(imgData, toneX, toneY, stats);
+      if (toneX !== 0 || toneY !== 0) {
+        applyDynamicToneMapping(imgData, toneX, toneY, toneStats);
+      }
       ditherErrorDiffusion(imgData, palette, type, serpentine);
       return out;
     };
-
-    const expectedAtk = jsExpected("atkinson");
-    const expectedFloyd = jsExpected("floyd");
 
     const palBytes = new Uint8Array(palette.length * 3);
     for (let i = 0; i < palette.length; i++) {
@@ -76,33 +117,86 @@ function runWasmSelfTest(exports, memory) {
     }
 
     let ptr = exports.alloc(palBytes.length) >>> 0;
+    if (!ptr && palBytes.length) {
+      result.reason = "alloc palette failed";
+      return result;
+    }
     new Uint8Array(memory.buffer, ptr, palBytes.length).set(palBytes);
-    exports.set_palette(ptr, palette.length);
+    const palOk = (exports.set_palette(ptr, palette.length) | 0) === 1;
     exports.dealloc(ptr, palBytes.length);
+    if (!palOk) {
+      result.reason = "set_palette failed";
+      return result;
+    }
 
-    ptr = exports.alloc(base.length) >>> 0;
-    new Uint8Array(memory.buffer, ptr, base.length).set(new Uint8Array(base.buffer));
-    exports.set_base(ptr, base.length, w, h);
-    exports.dealloc(ptr, base.length);
+    ptr = exports.alloc(baseView.length) >>> 0;
+    if (!ptr) {
+      result.reason = "alloc base failed";
+      return result;
+    }
+    new Uint8Array(memory.buffer, ptr, baseView.length).set(baseView);
+    const baseOk = (exports.set_base(ptr, baseView.length, w, h) | 0) === 1;
+    exports.dealloc(ptr, baseView.length);
+    if (!baseOk) {
+      result.reason = "set_base failed";
+      return result;
+    }
 
-    const verify = (algoCode, expected) => {
-      const outPtr = exports.render(toneX, toneY, algoCode, serpentine ? 1 : 0, 0) >>> 0;
-      if (!outPtr) return false;
-      const outLen = exports.work_len() >>> 0;
-      if (outLen !== expected.length) return false;
-      const got = new Uint8Array(memory.buffer, outPtr, outLen);
-      for (let i = 0; i < outLen; i++) {
-        if (got[i] !== expected[i]) return false;
+    const cases = [
+      { name: "tone-off-atk", toneX: 0, toneY: 0, type: "atkinson", code: 1 },
+      { name: "tone-off-floyd", toneX: 0, toneY: 0, type: "floyd", code: 2 },
+      { name: "tone-on-atk", toneX: -0.33, toneY: 0.41, type: "atkinson", code: 1 },
+      { name: "tone-on-floyd", toneX: -0.33, toneY: 0.41, type: "floyd", code: 2 }
+    ];
+
+    let firstFail = null;
+
+    for (let i = 0; i < cases.length; i++) {
+      const c = cases[i];
+      const expected = jsExpected(c.type, c.toneX, c.toneY);
+      const outPtr = exports.render(c.toneX, c.toneY, c.code, serpentine ? 1 : 0, 0) >>> 0;
+      const entry = { name: c.name, ok: false };
+
+      if (!outPtr) {
+        entry.reason = "render returned 0";
+      } else {
+        const outLen = exports.work_len() >>> 0;
+        if (outLen !== expected.length) {
+          entry.reason = "length mismatch";
+          entry.meta = { outLen, expected: expected.length };
+        } else {
+          const got = new Uint8Array(memory.buffer, outPtr, outLen);
+          let mismatch = null;
+          for (let j = 0; j < outLen; j++) {
+            if (got[j] !== expected[j]) {
+              mismatch = describeMismatch(j, expected[j], got[j], w);
+              break;
+            }
+          }
+          if (mismatch) {
+            entry.reason = "byte mismatch";
+            entry.mismatch = mismatch;
+          } else {
+            entry.ok = true;
+          }
+        }
       }
-      return true;
-    };
 
-    // atkinson = 1, floyd = 2 (same mapping as worker)
-    if (!verify(1, expectedAtk)) return false;
-    if (!verify(2, expectedFloyd)) return false;
-    return true;
+      result.cases.push(entry);
+      if (!entry.ok && !firstFail) {
+        firstFail = entry;
+      }
+    }
+
+    result.ok = !firstFail;
+    if (firstFail) {
+      result.reason = firstFail.reason || "self-test failed";
+      result.failedCase = firstFail.name;
+    }
+    return result;
   } catch (e) {
-    return false;
+    result.reason = e && e.message ? e.message : String(e);
+    return result;
   }
 }
 
@@ -114,6 +208,7 @@ async function ensureWasm() {
   if (!hasWXWebAssembly()) {
     wasm.status = "failed";
     wasm.lastError = "WXWebAssembly unavailable";
+    postWorkerLog("warn", "WXWebAssembly unavailable");
     return null;
   }
 
@@ -122,16 +217,36 @@ async function ensureWasm() {
     const imports = {}; // 安卓旧版本不传 imports 可能 crash
 
     let result;
+    let simdTest = null;
     try {
       result = await WXWebAssembly.instantiate(WASM_PATH_SIMD, imports);
       const ex = result && result.instance && result.instance.exports ? result.instance.exports : null;
-      if (!runWasmSelfTest(ex, ex && ex.memory ? ex.memory : null)) {
+      simdTest = runWasmSelfTestDetailed(ex, ex && ex.memory ? ex.memory : null);
+      if (!simdTest.ok) {
+        wasm.lastError = `simd self-test failed: ${simdTest.reason}`;
+        const summary = summarizeSelfTest(simdTest);
+        console.log("[wasm] simd self-test failed", summary);
+        postWorkerLog("warn", "wasm simd self-test failed", summary);
         throw new Error("wasm simd self-test failed");
       }
+      postWorkerLog("info", "wasm simd self-test ok", summarizeSelfTest(simdTest));
       wasm.isSimd = true;
     } catch (e) {
+      if (!simdTest) {
+        const msg = e && e.message ? e.message : String(e);
+        wasm.lastError = `simd instantiate failed: ${msg}`;
+        console.log("[wasm] simd instantiate failed", msg);
+        postWorkerLog("warn", "wasm simd instantiate failed", { message: msg });
+      }
       result = await WXWebAssembly.instantiate(WASM_PATH_BASE, imports);
       wasm.isSimd = false;
+      if (simdTest && !simdTest.ok) {
+        const baseEx = result && result.instance && result.instance.exports ? result.instance.exports : null;
+        const baseTest = runWasmSelfTestDetailed(baseEx, baseEx && baseEx.memory ? baseEx.memory : null);
+        const baseSummary = summarizeSelfTest(baseTest);
+        console.log("[wasm] base self-test after simd failure", baseSummary);
+        postWorkerLog("info", "wasm base self-test after simd failure", baseSummary);
+      }
     }
 
     const exports = result && result.instance && result.instance.exports ? result.instance.exports : null;
@@ -285,6 +400,14 @@ function ensurePalette(paletteKey) {
 
 function postError(type, token, message) {
   worker.postMessage({ type, token, ok: false, error: message });
+}
+
+function postWorkerLog(level, message, detail) {
+  try {
+    worker.postMessage({ type: "workerLog", level, message, detail });
+  } catch (e) {
+    // ignore logging failures
+  }
 }
 
 let messageQueue = Promise.resolve();

@@ -511,6 +511,18 @@ Page({
       return;
     }
 
+    if (data.type === "workerLog") {
+      const level = data.level || "info";
+      const message = data.message || "";
+      const detail = data.detail;
+      if (typeof detail === "undefined") {
+        console.log("[worker]", level, message);
+      } else {
+        console.log("[worker]", level, message, detail);
+      }
+      return;
+    }
+
     if (data.type === "baseSet") {
       // no-op, mainly for debugging/health checks
       return;
