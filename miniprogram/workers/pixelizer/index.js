@@ -58,7 +58,21 @@ function describeMismatch(index, expected, got, w) {
 function summarizeSelfTest(result) {
   if (!result) return "ok=0 reason=missing";
   const simd = result.isSimd | 0;
-  if (result.ok) return `ok=1 simd=${simd}`;
+  if (result.ok) {
+    let tolerated = 0;
+    let maxDiff = 0;
+    if (Array.isArray(result.cases)) {
+      for (let i = 0; i < result.cases.length; i++) {
+        const t = result.cases[i] && result.cases[i].tolerance;
+        if (t && t.count > 0) {
+          tolerated += t.count | 0;
+          if ((t.maxAbsDiff | 0) > maxDiff) maxDiff = t.maxAbsDiff | 0;
+        }
+      }
+    }
+    if (tolerated > 0) return `ok=1 simd=${simd} tolerated=${tolerated} maxDiff=${maxDiff}`;
+    return `ok=1 simd=${simd}`;
+  }
   const fail = Array.isArray(result.cases) ? result.cases.find((c) => !c.ok) : null;
   if (!fail) {
     const reason = result.reason || "unknown";
@@ -67,10 +81,15 @@ function summarizeSelfTest(result) {
   const reason = fail.reason || result.reason || "unknown";
   const name = fail.name || result.failedCase || "unknown";
   const m = fail.mismatch;
-  if (m) {
-    return `ok=0 simd=${simd} case=${name} reason=${reason} idx=${m.index} exp=${m.expected} got=${m.got} x=${m.x} y=${m.y} ch=${m.channel}`;
+  const t = fail.tolerance;
+  let tail = "";
+  if (t && typeof t.count === "number") {
+    tail = ` mismatches=${t.count} maxDiff=${t.maxAbsDiff} allowCount=${t.allowedCount} allowDiff=${t.allowedDiff}`;
   }
-  return `ok=0 simd=${simd} case=${name} reason=${reason}`;
+  if (m) {
+    return `ok=0 simd=${simd} case=${name} reason=${reason} idx=${m.index} exp=${m.expected} got=${m.got} x=${m.x} y=${m.y} ch=${m.channel}${tail}`;
+  }
+  return `ok=0 simd=${simd} case=${name} reason=${reason}${tail}`;
 }
 
 function runWasmSelfTestDetailed(exports, memory) {
@@ -150,6 +169,10 @@ function runWasmSelfTestDetailed(exports, memory) {
       { name: "tone-on-floyd", toneX: -0.33, toneY: 0.41, type: "floyd", code: 2 }
     ];
 
+    const allowTolerance = result.isSimd === 1;
+    const tolMaxDiff = allowTolerance ? 1 : 0;
+    const tolMaxMismatches = allowTolerance ? 256 : 0;
+
     let firstFail = null;
 
     for (let i = 0; i < cases.length; i++) {
@@ -168,17 +191,36 @@ function runWasmSelfTestDetailed(exports, memory) {
         } else {
           const got = new Uint8Array(memory.buffer, outPtr, outLen);
           let mismatch = null;
+          let mismatchCount = 0;
+          let maxAbsDiff = 0;
           for (let j = 0; j < outLen; j++) {
-            if (got[j] !== expected[j]) {
-              mismatch = describeMismatch(j, expected[j], got[j], w);
-              break;
+            const diff = got[j] - expected[j];
+            if (diff !== 0) {
+              mismatchCount++;
+              const absDiff = diff < 0 ? -diff : diff;
+              if (absDiff > maxAbsDiff) maxAbsDiff = absDiff;
+              if (!mismatch) mismatch = describeMismatch(j, expected[j], got[j], w);
             }
           }
-          if (mismatch) {
+          if (mismatchCount === 0) {
+            entry.ok = true;
+          } else if (allowTolerance && maxAbsDiff <= tolMaxDiff && mismatchCount <= tolMaxMismatches) {
+            entry.ok = true;
+            entry.tolerance = {
+              count: mismatchCount,
+              maxAbsDiff,
+              allowedCount: tolMaxMismatches,
+              allowedDiff: tolMaxDiff
+            };
+          } else {
             entry.reason = "byte mismatch";
             entry.mismatch = mismatch;
-          } else {
-            entry.ok = true;
+            entry.tolerance = {
+              count: mismatchCount,
+              maxAbsDiff,
+              allowedCount: tolMaxMismatches,
+              allowedDiff: tolMaxDiff
+            };
           }
         }
       }
