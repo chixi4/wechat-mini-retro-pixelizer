@@ -363,6 +363,13 @@ Page({
     this._layoutAnimReadyTimer = null;
     this._layoutAnimAllowed = false;
     this._lastHasImage = false;
+    this._previewScale = 1;
+    this._previewScaleMin = this._isMobile ? 0.35 : 0.5;
+    this._previewScaleMax = 1;
+    this._previewScaleLastUpdate = 0;
+    this._previewScaleCooldownMs = this._isMobile ? 120 : 80;
+    this._previewTargetMs = this._isMobile ? 22 : 16;
+    this._lastRenderMs = 0;
 
     const safeTopPx = this._safeTop;
     const safeBottomPx = this._safeBottom;
@@ -532,7 +539,12 @@ Page({
   _postWorkerMessage(payload) {
     if (!this._worker) return false;
     try {
-      this._worker.postMessage(payload);
+      const transfer = payload && payload.buffer instanceof ArrayBuffer ? [payload.buffer] : null;
+      if (transfer && transfer.length) {
+        this._worker.postMessage(payload, transfer);
+      } else {
+        this._worker.postMessage(payload);
+      }
       return true;
     } catch (e) {
       this._disposeWorker();
@@ -1351,20 +1363,86 @@ Page({
     return { displayW, displayH, previewHeightPx };
   },
 
+  _isInteracting() {
+    return !!(this.data.sliderDragging || (this._grid && this._grid.dragging));
+  },
+
+  _getInteractiveTargetWidth(baseWidth, isInteracting) {
+    if (!isInteracting) return baseWidth;
+    const safeBase = Math.max(1, baseWidth || 1);
+    const step = this._slider && this._slider.step ? this._slider.step : 1;
+    const minWidth = this._slider && this._slider.min ? this._slider.min : 1;
+    const minScale = typeof this._previewScaleMin === "number" ? this._previewScaleMin : 0.35;
+    const maxScale = typeof this._previewScaleMax === "number" ? this._previewScaleMax : 1;
+
+    let scale = typeof this._previewScale === "number" ? this._previewScale : 1;
+    scale = Math.max(minScale, Math.min(maxScale, scale));
+
+    const minScaleForWidth = Math.min(1, minWidth / safeBase);
+    if (minScaleForWidth > scale) scale = minScaleForWidth;
+
+    const scaled = Math.round((safeBase * scale) / step) * step;
+    const clamped = Math.max(minWidth, Math.min(safeBase, scaled));
+    return clamped;
+  },
+
+  _updatePreviewScale(renderMs, baseWidth) {
+    if (!renderMs || !isFinite(renderMs)) return;
+    const budget = typeof this._previewTargetMs === "number" ? this._previewTargetMs : 22;
+    if (!budget || !isFinite(budget)) return;
+    const now = perfNow();
+    const cooldown =
+      typeof this._previewScaleCooldownMs === "number" ? this._previewScaleCooldownMs : 120;
+    const lastUpdate = this._previewScaleLastUpdate || 0;
+    if (now - lastUpdate < cooldown) return;
+
+    const current = typeof this._previewScale === "number" ? this._previewScale : 1;
+    let next = current;
+
+    if (renderMs > budget * 1.1) {
+      const ratio = Math.sqrt(budget / renderMs);
+      next = current * ratio;
+    } else if (renderMs < budget * 0.65) {
+      const ratio = Math.sqrt(budget / Math.max(1, renderMs));
+      const boost = Math.min(1.12, Math.max(1.03, ratio));
+      next = current * boost;
+    } else {
+      return;
+    }
+
+    const minScale = typeof this._previewScaleMin === "number" ? this._previewScaleMin : 0.35;
+    const maxScale = typeof this._previewScaleMax === "number" ? this._previewScaleMax : 1;
+    next = Math.max(minScale, Math.min(maxScale, next));
+
+    const step = this._slider && this._slider.step ? this._slider.step : 1;
+    const safeBase = Math.max(1, baseWidth || 1);
+    const currentWidth = Math.round((safeBase * current) / step) * step;
+    const nextWidth = Math.round((safeBase * next) / step) * step;
+    if (currentWidth === nextWidth) return;
+
+    this._previewScale = next;
+    this._previewScaleLastUpdate = now;
+  },
+
   async _processImage(processToken) {
     const isAborted = () => typeof processToken === "number" && processToken !== this._processToken;
     const img = this._state.originalImage;
     const palette = this._state.palette;
     if (!img || !palette) return;
 
-    const { targetWidth, ditherAlgo } = this.data;
+    const { ditherAlgo } = this.data;
+    const requestedWidth = typeof this.data.targetWidth === "number" ? this.data.targetWidth : 1;
     const toneX = this._state.toneX;
     const toneY = this._state.toneY;
 
     const info = this._state.imageInfo || {};
     const oriented = getOrientedSize(img, info);
     const aspect = oriented.width > 0 ? oriented.height / oriented.width : 1;
+    const isInteracting = this._isInteracting();
+    const targetWidth = this._getInteractiveTargetWidth(requestedWidth, isInteracting);
     const targetHeight = Math.max(1, Math.round(targetWidth * aspect));
+    const requestedHeight = Math.max(1, Math.round(requestedWidth * aspect));
+    const previewScale = requestedWidth > 0 ? targetWidth / requestedWidth : 1;
 
     const perfEnabled = !!this._perfEnabled;
     const perf = perfEnabled
@@ -1374,6 +1452,10 @@ Page({
           meta: {
             targetWidth,
             targetHeight,
+            requestedWidth,
+            requestedHeight,
+            previewScale,
+            interactive: isInteracting,
             ditherAlgo,
             paletteKey: this.data.paletteKey,
             toneX,
@@ -1391,6 +1473,7 @@ Page({
 
     const renderKey = `${this._state.imageToken}:${targetWidth}x${targetHeight}:${ditherAlgo}:${this.data.paletteKey}:${toneX.toFixed(4)}:${toneY.toFixed(4)}`;
     if (renderKey === this._lastRenderKey) return;
+    const renderStart = perfNow();
 
     const proc = this._proc;
     const buffer = this._canvas.buffer;
@@ -1493,6 +1576,10 @@ Page({
       if (isAborted()) return;
 
       if (!rendered && workerBusy) {
+        this._updatePending = true;
+        if (!this._pendingProcessOptions) {
+          this._pendingProcessOptions = { immediate: true };
+        }
         if (perf) {
           perf.meta.workerBusy = true;
           perf.total = +(perfNow() - perf.start).toFixed(2);
@@ -1612,6 +1699,14 @@ Page({
         }
 
         this._lastRenderKey = renderKey;
+        const renderMs = perfNow() - renderStart;
+        this._lastRenderMs = renderMs;
+        if (perf && perf.meta) {
+          perf.meta.renderMs = +renderMs.toFixed(2);
+        }
+        if (isInteracting) {
+          this._updatePreviewScale(renderMs, requestedWidth);
+        }
         if (perf) {
           perf.meta.worker = true;
           perf.total = +(perfNow() - perf.start).toFixed(2);
@@ -1765,6 +1860,14 @@ Page({
     }
 
     this._lastRenderKey = renderKey;
+    const renderMs = perfNow() - renderStart;
+    this._lastRenderMs = renderMs;
+    if (perf && perf.meta) {
+      perf.meta.renderMs = +renderMs.toFixed(2);
+    }
+    if (isInteracting) {
+      this._updatePreviewScale(renderMs, requestedWidth);
+    }
     if (perf) {
       perf.meta.worker = !!perf.meta.worker;
       perf.total = +(perfNow() - perf.start).toFixed(2);
@@ -1864,6 +1967,9 @@ Page({
       this._proc.toneStats = { token: 0, w: 0, h: 0, stats: null };
       this._proc.work = { w: 0, h: 0, imageData: null };
       this._lastRenderKey = "";
+      this._previewScale = 1;
+      this._previewScaleLastUpdate = 0;
+      this._lastRenderMs = 0;
 
       const oriented = getOrientedSize(img, info);
       const aspect = oriented.width > 0 ? oriented.height / oriented.width : 1;
@@ -2027,6 +2133,9 @@ Page({
     this._proc.scaled = { token: 0, w: 0, h: 0, data: null };
     this._proc.toneStats = { token: 0, w: 0, h: 0, stats: null };
     this._proc.work = { w: 0, h: 0, imageData: null };
+    this._previewScale = 1;
+    this._previewScaleLastUpdate = 0;
+    this._lastRenderMs = 0;
 
     this._closeHintShown = false;
     this._awaitingPreviewExit = false;
@@ -2115,7 +2224,9 @@ Page({
   onSliderTouchEnd() {
     if (!this.data.sliderDragging) return;
     this._flushSliderUpdate();
-    this.setData({ sliderDragging: false });
+    this.setData({ sliderDragging: false }, () => {
+      this._scheduleProcess({ immediate: true });
+    });
   },
 
   async onXYTouchStart(e) {
@@ -2141,6 +2252,7 @@ Page({
     if (!this._grid.dragging) return;
     this._grid.dragging = false;
     this._flushGridUpdate();
+    this._scheduleProcess({ immediate: true });
   },
 
   async onResetTone(options) {

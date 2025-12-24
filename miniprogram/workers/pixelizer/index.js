@@ -457,7 +457,8 @@ function clamp01(v) {
 
 function ensureWorkBuffer(w, h) {
   const needLen = Math.max(0, (w | 0) * (h | 0) * 4);
-  if (!state.workData || state.workW !== w || state.workH !== h || state.workData.length !== needLen) {
+  const detached = state.workData && state.workData.buffer && state.workData.buffer.byteLength === 0;
+  if (!state.workData || detached || state.workW !== w || state.workH !== h || state.workData.length !== needLen) {
     state.workW = w;
     state.workH = h;
     state.workData = new Uint8ClampedArray(needLen);
@@ -647,6 +648,13 @@ async function handleMessage(msg) {
 
     const payload = { type: "rendered", ok: true, token, w, h, buffer: workData.buffer };
     if (perf) payload.perf = perf;
-    worker.postMessage(payload);
+    if (payload.buffer instanceof ArrayBuffer) {
+      worker.postMessage(payload, [payload.buffer]);
+      state.workData = null;
+      state.workW = 0;
+      state.workH = 0;
+    } else {
+      worker.postMessage(payload);
+    }
   }
 }
