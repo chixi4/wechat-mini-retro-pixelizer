@@ -179,6 +179,9 @@ impl State {
   }
 }
 
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+static mut SIMD_ERROR_DIFFUSION: bool = true;
+
 static mut STATE_PTR: *mut State = core::ptr::null_mut();
 
 fn with_state<R>(f: impl FnOnce(&mut State) -> R) -> R {
@@ -502,7 +505,6 @@ fn dither_nearest(state: &mut State, data: &mut [u8]) {
   }
 }
 
-#[cfg(not(all(target_arch = "wasm32", target_feature = "simd128")))]
 #[inline(always)]
 fn clamp_round_fixed_pow2(n: i32, shift: u32) -> u8 {
   if n <= 0 {
@@ -530,7 +532,6 @@ fn clamp_round_fixed_pow2(n: i32, shift: u32) -> u8 {
   q as u8
 }
 
-#[cfg(not(all(target_arch = "wasm32", target_feature = "simd128")))]
 #[inline(always)]
 fn add_error_pow2(base: u8, err: i32, num: i32, shift: u32) -> u8 {
   let n = ((base as i32) << shift) + err * num;
@@ -582,16 +583,15 @@ unsafe fn add_error_pixel_pow2_simd(data: &mut [u8], i: usize, err_r: i32, err_g
 fn add_error_pixel_pow2(data: &mut [u8], i: usize, err_r: i32, err_g: i32, err_b: i32, num: i32, shift: u32) {
   #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
   unsafe {
-    add_error_pixel_pow2_simd(data, i, err_r, err_g, err_b, num, shift);
-    return;
+    if SIMD_ERROR_DIFFUSION {
+      add_error_pixel_pow2_simd(data, i, err_r, err_g, err_b, num, shift);
+      return;
+    }
   }
 
-  #[cfg(not(all(target_arch = "wasm32", target_feature = "simd128")))]
-  {
-    data[i] = add_error_pow2(data[i], err_r, num, shift);
-    data[i + 1] = add_error_pow2(data[i + 1], err_g, num, shift);
-    data[i + 2] = add_error_pow2(data[i + 2], err_b, num, shift);
-  }
+  data[i] = add_error_pow2(data[i], err_r, num, shift);
+  data[i + 1] = add_error_pow2(data[i + 1], err_g, num, shift);
+  data[i + 2] = add_error_pow2(data[i + 2], err_b, num, shift);
 }
 
 fn dither_random(state: &mut State, data: &mut [u8], seed: u32) {
@@ -917,6 +917,14 @@ pub extern "C" fn is_simd() -> u32 {
   #[cfg(not(target_feature = "simd128"))]
   {
     return 0;
+  }
+}
+
+#[no_mangle]
+pub extern "C" fn set_simd_error_mode(_enable: u32) {
+  #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+  unsafe {
+    SIMD_ERROR_DIFFUSION = _enable != 0;
   }
 }
 

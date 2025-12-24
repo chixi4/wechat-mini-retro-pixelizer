@@ -17,6 +17,7 @@ const wasm = {
   exports: null,
   memory: null,
   isSimd: false,
+  simdErrorDiffusion: true,
   baseKey: "",
   paletteKey: "",
   lastError: ""
@@ -208,6 +209,7 @@ async function ensureWasm() {
   if (!hasWXWebAssembly()) {
     wasm.status = "failed";
     wasm.lastError = "WXWebAssembly unavailable";
+    wasm.simdErrorDiffusion = false;
     postWorkerLog("warn", "WXWebAssembly unavailable");
     return null;
   }
@@ -227,8 +229,39 @@ async function ensureWasm() {
         const summary = summarizeSelfTest(simdTest);
         console.log("[wasm] simd self-test failed", summary);
         postWorkerLog("warn", "wasm simd self-test failed", summary);
-        throw new Error("wasm simd self-test failed");
+
+        if (ex && typeof ex.set_simd_error_mode === "function") {
+          try {
+            ex.set_simd_error_mode(0);
+          } catch (e) {
+            // ignore
+          }
+          const retry = runWasmSelfTestDetailed(ex, ex && ex.memory ? ex.memory : null);
+          const retrySummary = summarizeSelfTest(retry);
+          console.log("[wasm] simd self-test retry (scalar error diffusion)", retrySummary);
+          postWorkerLog("info", "wasm simd self-test retry (scalar error diffusion)", retrySummary);
+
+          if (!retry.ok) {
+            throw new Error("wasm simd self-test failed");
+          }
+
+          simdTest = retry;
+          wasm.simdErrorDiffusion = false;
+        } else {
+          throw new Error("wasm simd self-test failed");
+        }
+      } else {
+        wasm.simdErrorDiffusion = true;
       }
+
+      if (ex && typeof ex.set_simd_error_mode === "function" && wasm.simdErrorDiffusion) {
+        try {
+          ex.set_simd_error_mode(1);
+        } catch (e) {
+          // ignore
+        }
+      }
+
       postWorkerLog("info", "wasm simd self-test ok", summarizeSelfTest(simdTest));
       wasm.isSimd = true;
     } catch (e) {
@@ -240,6 +273,7 @@ async function ensureWasm() {
       }
       result = await WXWebAssembly.instantiate(WASM_PATH_BASE, imports);
       wasm.isSimd = false;
+      wasm.simdErrorDiffusion = false;
       if (simdTest && !simdTest.ok) {
         const baseEx = result && result.instance && result.instance.exports ? result.instance.exports : null;
         const baseTest = runWasmSelfTestDetailed(baseEx, baseEx && baseEx.memory ? baseEx.memory : null);
