@@ -366,6 +366,7 @@ Page({
     this._layoutAnimAllowed = false;
     this._lastHasImage = false;
     this._previewScale = 1;
+    this._previewScaleCap = null;
     // Allow deeper downscaling for slow devices (iPad etc.)
     // Absolute minimum is enforced in _getInteractiveTargetWidth
     this._previewScaleMin = 0.1;
@@ -1459,7 +1460,12 @@ Page({
     }
 
     const minScale = typeof this._previewScaleMin === "number" ? this._previewScaleMin : 0.1;
-    const maxScale = typeof this._previewScaleMax === "number" ? this._previewScaleMax : 1;
+    let maxScale = typeof this._previewScaleMax === "number" ? this._previewScaleMax : 1;
+    const cap = this._previewScaleCap;
+    if (typeof cap === "number" && isFinite(cap) && cap > 0) {
+      maxScale = Math.min(maxScale, cap);
+    }
+    if (maxScale < minScale) maxScale = minScale;
     next = Math.max(minScale, Math.min(maxScale, next));
 
     const step = this._slider && this._slider.step ? this._slider.step : 1;
@@ -2030,6 +2036,7 @@ Page({
       this._proc.work = { w: 0, h: 0, imageData: null };
       this._lastRenderKey = "";
       this._previewScale = 1;
+      this._previewScaleCap = null;
       this._previewScaleLastUpdate = 0;
       this._lastRenderMs = 0;
 
@@ -2196,6 +2203,7 @@ Page({
     this._proc.toneStats = { token: 0, w: 0, h: 0, stats: null };
     this._proc.work = { w: 0, h: 0, imageData: null };
     this._previewScale = 1;
+    this._previewScaleCap = null;
     this._previewScaleLastUpdate = 0;
     this._lastRenderMs = 0;
 
@@ -2276,6 +2284,7 @@ Page({
     if (currentW > SAFE_START_WIDTH && this._previewScale > 0.4) {
       this._previewScale = SAFE_START_WIDTH / currentW;
     }
+    this._previewScaleCap = this._previewScale;
   },
 
   onSliderTouchStart(e) {
@@ -2298,6 +2307,7 @@ Page({
     if (!this.data.sliderDragging) return;
     this._flushSliderUpdate();
     this.setData({ sliderDragging: false }, () => {
+      if (!this._isInteracting()) this._previewScaleCap = null;
       this._scheduleRefine();
     });
   },
@@ -2327,6 +2337,7 @@ Page({
     if (!this._grid.dragging) return;
     this._flushGridUpdate();
     this._grid.dragging = false;
+    if (!this._isInteracting()) this._previewScaleCap = null;
     this._scheduleRefine();
   },
 
