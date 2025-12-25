@@ -368,6 +368,8 @@ Page({
     this._previewScale = 1;
     this._previewScaleCap = null;
     this._interactionMode = null;
+    this._sliderMaxWidth = null;
+    this._sliderPerf = null;
     // Allow deeper downscaling for slow devices (iPad etc.)
     // Absolute minimum is enforced in _getInteractiveTargetWidth
     this._previewScaleMin = 0.1;
@@ -1438,12 +1440,10 @@ Page({
     const now = perfNow();
     const cooldown = typeof this._previewScaleCooldownMs === "number" ? this._previewScaleCooldownMs : 60;
     const lastUpdate = this._previewScaleLastUpdate || 0;
-    const isSlider = this._interactionMode === "slider";
 
     // Allow immediate emergency drops even during cooldown
     const isSevereLag = renderMs > budget * 2;
-    const isOverBudget = isSlider && renderMs > budget;
-    if (!isSevereLag && !isOverBudget && now - lastUpdate < cooldown) return;
+    if (!isSevereLag && now - lastUpdate < cooldown) return;
 
     const current = typeof this._previewScale === "number" ? this._previewScale : 1;
     let next = current;
@@ -1456,10 +1456,7 @@ Page({
     }
     if (maxScale < minScale) maxScale = minScale;
 
-    if (isOverBudget) {
-      // For resolution slider: drop to minimum scale immediately to avoid jank.
-      next = minScale;
-    } else if (isSevereLag) {
+    if (isSevereLag) {
       // Severe lag (>66ms): drop scale aggressively by 40%
       next = current * 0.6;
     } else if (renderMs > budget * 1.05) {
@@ -1486,6 +1483,54 @@ Page({
     this._previewScaleLastUpdate = now;
   },
 
+  _updateSliderMaxWidth(renderMs, targetWidth, requestedWidth) {
+    if (!renderMs || !isFinite(renderMs)) return;
+    if (this._interactionMode !== "slider") return;
+    if (!this._sliderMaxWidth || !isFinite(this._sliderMaxWidth)) return;
+
+    const budget = typeof this._previewTargetMs === "number" ? this._previewTargetMs : 100;
+    if (!budget || !isFinite(budget)) return;
+
+    const step = this._slider && this._slider.step ? this._slider.step : 1;
+    const minWidth = this._slider && this._slider.min ? this._slider.min : 1;
+    const ABSOLUTE_MIN_PX = 96;
+    const floorWidth = Math.max(minWidth, ABSOLUTE_MIN_PX);
+
+    let cap = this._sliderMaxWidth;
+    if (!cap || !isFinite(cap)) cap = requestedWidth || targetWidth || floorWidth;
+    cap = Math.max(floorWidth, Math.round(cap / step) * step);
+
+    const perf = this._sliderPerf || { over: 0, under: 0, severe: 0 };
+    const isSevere = renderMs >= budget * 2;
+    const isOver = renderMs > budget;
+    const isUnder = renderMs < budget * 0.8;
+
+    perf.severe = isSevere ? perf.severe + 1 : 0;
+    perf.over = isOver ? perf.over + 1 : 0;
+    perf.under = isUnder ? perf.under + 1 : 0;
+
+    let nextCap = cap;
+    if (isOver) {
+      const base = Math.max(floorWidth, targetWidth || cap);
+      let ratio = Math.sqrt(budget / renderMs);
+      const minRatio = perf.severe >= 2 ? 0.5 : 0.7;
+      if (!isFinite(ratio) || ratio <= 0) ratio = minRatio;
+      ratio = Math.max(minRatio, Math.min(1, ratio));
+      nextCap = Math.min(cap, base * ratio);
+      perf.under = 0;
+    } else if (perf.under >= 2 && requestedWidth && requestedWidth > cap) {
+      nextCap = Math.min(requestedWidth, cap * 1.05);
+    }
+
+    nextCap = Math.max(floorWidth, Math.round(nextCap / step) * step);
+    if (nextCap < floorWidth) nextCap = floorWidth;
+
+    if (nextCap !== cap) {
+      this._sliderMaxWidth = nextCap;
+    }
+    this._sliderPerf = perf;
+  },
+
   async _processImage(processToken) {
     const isAborted = () => typeof processToken === "number" && processToken !== this._processToken;
     const img = this._state.originalImage;
@@ -1508,9 +1553,12 @@ Page({
     const previewMaxWidth = displayWidth > 10
       ? Math.max(1, Math.ceil(displayWidth * clampedDpr))
       : requestedWidth;
-    const effectiveRequestedWidth = isInteracting
+    let effectiveRequestedWidth = isInteracting
       ? requestedWidth
       : Math.min(requestedWidth, previewMaxWidth);
+    if (isInteracting && this._interactionMode === "slider" && this._sliderMaxWidth) {
+      effectiveRequestedWidth = Math.min(effectiveRequestedWidth, this._sliderMaxWidth);
+    }
 
     const targetWidth = this._getInteractiveTargetWidth(effectiveRequestedWidth, isInteracting);
     const targetHeight = Math.max(1, Math.round(targetWidth * aspect));
@@ -1781,7 +1829,11 @@ Page({
           perf.meta.renderMs = +renderMs.toFixed(2);
         }
         if (isInteracting) {
-          this._updatePreviewScale(renderMs, requestedWidth);
+          if (this._interactionMode === "slider") {
+            this._updateSliderMaxWidth(renderMs, targetWidth, requestedWidth);
+          } else {
+            this._updatePreviewScale(renderMs, requestedWidth);
+          }
         }
         if (perf) {
           perf.meta.worker = true;
@@ -1942,7 +1994,11 @@ Page({
       perf.meta.renderMs = +renderMs.toFixed(2);
     }
     if (isInteracting) {
-      this._updatePreviewScale(renderMs, requestedWidth);
+      if (this._interactionMode === "slider") {
+        this._updateSliderMaxWidth(renderMs, targetWidth, requestedWidth);
+      } else {
+        this._updatePreviewScale(renderMs, requestedWidth);
+      }
     }
     if (perf) {
       perf.meta.worker = !!perf.meta.worker;
@@ -2047,6 +2103,8 @@ Page({
       this._previewScaleCap = null;
       this._previewScaleLastUpdate = 0;
       this._interactionMode = null;
+      this._sliderMaxWidth = null;
+      this._sliderPerf = null;
       this._previewTargetMs = this._previewTargetMsBase || 33;
       this._lastRenderMs = 0;
 
@@ -2216,6 +2274,8 @@ Page({
     this._previewScaleCap = null;
     this._previewScaleLastUpdate = 0;
     this._interactionMode = null;
+    this._sliderMaxWidth = null;
+    this._sliderPerf = null;
     this._previewTargetMs = this._previewTargetMsBase || 33;
     this._lastRenderMs = 0;
 
@@ -2304,6 +2364,8 @@ Page({
     this._previewScaleCap = null;
     this._previewTargetMs = this._previewTargetMsBase || 33;
     this._interactionMode = null;
+    this._sliderMaxWidth = null;
+    this._sliderPerf = null;
   },
 
   onSliderTap(e) {
@@ -2318,15 +2380,25 @@ Page({
     const currentW = this.data.targetWidth || 1000;
     const targetScale = currentW > safeWidth ? safeWidth / currentW : 1;
     if (mode === "slider") {
-      this._previewScale = targetScale;
+      this._previewScale = 1;
+      this._previewScaleCap = null;
       this._previewTargetMs = 100;
+      const sliderMax = this._slider && this._slider.max ? this._slider.max : safeWidth;
+      const step = this._slider && this._slider.step ? this._slider.step : 1;
+      const capped = Math.min(sliderMax, safeWidth);
+      this._sliderMaxWidth = Math.max(step, Math.round(capped / step) * step);
+      this._sliderPerf = { over: 0, under: 0, severe: 0 };
     } else {
       const currentScale = typeof this._previewScale === "number" ? this._previewScale : 1;
       this._previewScale = Math.min(currentScale, targetScale);
       this._previewTargetMs = this._previewTargetMsBase || 33;
+      this._sliderMaxWidth = null;
+      this._sliderPerf = null;
     }
     this._interactionMode = mode || null;
-    this._previewScaleCap = this._previewScale;
+    if (mode !== "slider") {
+      this._previewScaleCap = this._previewScale;
+    }
   },
 
   onSliderTouchStart(e) {
