@@ -366,11 +366,15 @@ Page({
     this._layoutAnimAllowed = false;
     this._lastHasImage = false;
     this._previewScale = 1;
-    this._previewScaleMin = this._isMobile ? 0.35 : 0.5;
+    // Allow deeper downscaling for slow devices (iPad etc.)
+    // Absolute minimum is enforced in _getInteractiveTargetWidth
+    this._previewScaleMin = 0.1;
     this._previewScaleMax = 1;
     this._previewScaleLastUpdate = 0;
-    this._previewScaleCooldownMs = this._isMobile ? 120 : 80;
-    this._previewTargetMs = this._isMobile ? 22 : 16;
+    // Shorter cooldown for faster reaction
+    this._previewScaleCooldownMs = 60;
+    // Target 30fps (33ms) for smooth interaction
+    this._previewTargetMs = 33;
     this._lastRenderMs = 0;
 
     const safeTopPx = this._safeTop;
@@ -1406,45 +1410,55 @@ Page({
     const safeBase = Math.max(1, baseWidth || 1);
     const step = this._slider && this._slider.step ? this._slider.step : 1;
     const minWidth = this._slider && this._slider.min ? this._slider.min : 1;
-    const minScale = typeof this._previewScaleMin === "number" ? this._previewScaleMin : 0.35;
+
+    // Absolute minimum pixel width for preview (prevents too-tiny previews)
+    const ABSOLUTE_MIN_PX = 96;
+    const absMinScale = ABSOLUTE_MIN_PX / safeBase;
+
+    // Use configured min scale but respect absolute pixel floor
+    const configMin = typeof this._previewScaleMin === "number" ? this._previewScaleMin : 0.1;
+    const effectiveMinScale = Math.max(configMin, absMinScale);
     const maxScale = typeof this._previewScaleMax === "number" ? this._previewScaleMax : 1;
 
     let scale = typeof this._previewScale === "number" ? this._previewScale : 1;
-    scale = Math.max(minScale, Math.min(maxScale, scale));
-
-    const minScaleForWidth = Math.min(1, minWidth / safeBase);
-    if (minScaleForWidth > scale) scale = minScaleForWidth;
+    scale = Math.max(effectiveMinScale, Math.min(maxScale, scale));
 
     const scaled = Math.round((safeBase * scale) / step) * step;
-    const clamped = Math.max(minWidth, Math.min(safeBase, scaled));
-    return clamped;
+    return Math.max(minWidth, Math.min(safeBase, scaled));
   },
 
   _updatePreviewScale(renderMs, baseWidth) {
     if (!renderMs || !isFinite(renderMs)) return;
-    const budget = typeof this._previewTargetMs === "number" ? this._previewTargetMs : 22;
+    const budget = typeof this._previewTargetMs === "number" ? this._previewTargetMs : 33;
     if (!budget || !isFinite(budget)) return;
+
     const now = perfNow();
-    const cooldown =
-      typeof this._previewScaleCooldownMs === "number" ? this._previewScaleCooldownMs : 120;
+    const cooldown = typeof this._previewScaleCooldownMs === "number" ? this._previewScaleCooldownMs : 60;
     const lastUpdate = this._previewScaleLastUpdate || 0;
-    if (now - lastUpdate < cooldown) return;
+
+    // Allow immediate emergency drops even during cooldown
+    const isSevereLag = renderMs > budget * 2;
+    if (!isSevereLag && now - lastUpdate < cooldown) return;
 
     const current = typeof this._previewScale === "number" ? this._previewScale : 1;
     let next = current;
 
-    if (renderMs > budget * 1.1) {
+    if (isSevereLag) {
+      // Severe lag (>66ms): drop scale aggressively by 40%
+      next = current * 0.6;
+    } else if (renderMs > budget * 1.05) {
+      // Moderate lag: drop proportional to error
       const ratio = Math.sqrt(budget / renderMs);
       next = current * ratio;
-    } else if (renderMs < budget * 0.65) {
-      const ratio = Math.sqrt(budget / Math.max(1, renderMs));
-      const boost = Math.min(1.12, Math.max(1.03, ratio));
-      next = current * boost;
+    } else if (renderMs < budget * 0.7) {
+      // Under budget: slowly recover (5% per step)
+      next = current * 1.05;
     } else {
+      // Within hysteresis zone: do nothing
       return;
     }
 
-    const minScale = typeof this._previewScaleMin === "number" ? this._previewScaleMin : 0.35;
+    const minScale = typeof this._previewScaleMin === "number" ? this._previewScaleMin : 0.1;
     const maxScale = typeof this._previewScaleMax === "number" ? this._previewScaleMax : 1;
     next = Math.max(minScale, Math.min(maxScale, next));
 
@@ -2255,10 +2269,20 @@ Page({
     this._updateValueFromClientX(t.clientX);
   },
 
+  _applyInteractionStartScale() {
+    // On interaction start, force a safe low-res preview to avoid first-frame lag
+    const SAFE_START_WIDTH = 192;
+    const currentW = this.data.targetWidth || 1000;
+    if (currentW > SAFE_START_WIDTH && this._previewScale > 0.4) {
+      this._previewScale = SAFE_START_WIDTH / currentW;
+    }
+  },
+
   onSliderTouchStart(e) {
     const t = e && e.touches && e.touches[0] ? e.touches[0] : null;
     if (!t) return;
     this._cancelRefine();
+    this._applyInteractionStartScale();
     this.setData({ sliderDragging: true });
     this._updateValueFromClientX(t.clientX);
   },
@@ -2283,6 +2307,7 @@ Page({
     if (!t) return;
 
     this._cancelRefine();
+    this._applyInteractionStartScale();
     const rect = await selectRect(this, "#xyPadContainer");
     if (!rect) return;
 
