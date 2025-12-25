@@ -419,6 +419,7 @@ Page({
     hasImage: false,
     closeEnabled: false,
     closeShown: false,
+    isIPad: false,
     safeTopPx: 0,
     safeBottomPx: 0,
     navPadLeftPx: 20,
@@ -650,6 +651,7 @@ Page({
       paletteList,
       safeTopPx,
       safeBottomPx,
+      isIPad: this._isIPad,
       navPadLeftPx: navPad.left,
       navPadRightPx: navPad.right,
       previewHeightPx,
@@ -939,6 +941,37 @@ Page({
 
   _applyFullscreenTransform() {
     this.setData(this._getFullscreenTransformData());
+  },
+
+  _refreshPreviewSurface() {
+    if (!this._canvas || !this._proc || !this._proc.work || !this._proc.work.imageData) return;
+    const work = this._proc.work;
+    const workW = work.w || 0;
+    const workH = work.h || 0;
+    if (!workW || !workH) return;
+
+    if (this.data.useGLPreview && this._glPreview) {
+      const cssW = this.data.mainCanvasCssW || 1;
+      const cssH = this.data.mainCanvasCssH || 1;
+      this._glPreview.resize(cssW, cssH);
+      this._glPreview.updateTexture(workW, workH, work.imageData.data);
+      this._glPreview.draw();
+      return;
+    }
+
+    const mainW = Math.max(1, workW);
+    const mainH = Math.max(1, workH);
+    const mainNode = this._canvas.main.node;
+    if (mainNode.width !== mainW) mainNode.width = mainW;
+    if (mainNode.height !== mainH) mainNode.height = mainH;
+    const mainCtx = this._canvas.main.ctx;
+    mainCtx.setTransform(1, 0, 0, 1, 0, 0);
+    mainCtx.imageSmoothingEnabled = false;
+    if (typeof mainCtx.imageSmoothingQuality === "string") {
+      mainCtx.imageSmoothingQuality = "low";
+    }
+    mainCtx.clearRect(0, 0, mainW, mainH);
+    mainCtx.drawImage(this._canvas.work.node, 0, 0, mainW, mainH);
   },
 
   _logPerf(perf) {
@@ -1399,7 +1432,7 @@ Page({
   _isPagedLayout() {
     const width = this._sys && typeof this._sys.windowWidth === "number" ? this._sys.windowWidth : 0;
     if (!width) return !this._isMobile;
-    return width > 768;
+    return !!this._isIPad || width >= 768;
   },
 
   _syncToneCursorToRect() {
@@ -3154,6 +3187,7 @@ Page({
             this._fullscreenCloseTimer = null;
             this._fullscreenBase = { scale: 1, x: 0, y: 0 };
             this._fullscreenUser = { scale: 1, x: 0, y: 0 };
+            this._refreshPreviewSurface();
             this.setData(
               {
                 fullscreenVisible: false,

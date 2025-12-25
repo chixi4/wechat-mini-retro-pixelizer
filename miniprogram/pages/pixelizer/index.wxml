@@ -1,5 +1,5 @@
 <wxs module="grid" src="./grid.wxs"></wxs>
-<view class="page {{themeClass}}" style="--safe-top: {{safeTopPx}}px; --safe-bottom: {{safeBottomPx}}px;">
+<view class="page {{themeClass}} {{isIPad ? 'is-ipad' : ''}}" style="--safe-top: {{safeTopPx}}px; --safe-bottom: {{safeBottomPx}}px;">
   <view class="safe-top-mask"></view>
   <view
     class="header {{headerVisible ? 'visible' : ''}}"
@@ -140,14 +140,14 @@
         <canvas
           type="2d"
           id="mainCanvas"
-          class="main-canvas {{useGLPreview ? 'offscreen-canvas' : ''}} {{(fullscreenActive || fullscreenClosing) ? 'is-hidden' : ''}}"
+          class="main-canvas {{useGLPreview ? 'offscreen-canvas' : ''}} {{fullscreenVisible ? 'is-hidden' : ''}}"
           style="width: {{mainCanvasCssW}}px; height: {{mainCanvasCssH}}px;"
           bindtap="onOpenFullscreen"
         ></canvas>
         <canvas
           type="webgl"
           id="mainGLCanvas"
-          class="main-canvas {{!useGLPreview ? 'offscreen-canvas' : ''}} {{(fullscreenActive || fullscreenClosing) ? 'is-hidden' : ''}}"
+          class="main-canvas {{!useGLPreview ? 'offscreen-canvas' : ''}} {{fullscreenVisible ? 'is-hidden' : ''}}"
           style="width: {{mainCanvasCssW}}px; height: {{mainCanvasCssH}}px;"
           bindtap="onOpenFullscreen"
         ></canvas>
@@ -155,10 +155,15 @@
       </view>
 
       <view
-        wx:if="{{!fullscreenVisible && hasImage}}"
+        wx:if="{{hasImage}}"
         class="close-btn {{closeEnabled ? 'enabled' : ''}} {{closeShown ? 'shown' : ''}}"
         catchtap="onCloseImage"
-      >×</view>
+      >
+        <view class="close-btn-icon">
+          <view class="close-btn-line line-a"></view>
+          <view class="close-btn-line line-b"></view>
+        </view>
+      </view>
 
       <canvas type="2d" id="workCanvas" class="hidden-canvas"></canvas>
       <canvas type="2d" id="bufferCanvas" class="hidden-canvas"></canvas>
