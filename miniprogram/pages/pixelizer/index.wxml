@@ -49,6 +49,7 @@
               catchtouchstart="onSliderTouchStart"
               catchtouchmove="onSliderTouchMove"
               bindtouchend="onSliderTouchEnd"
+              bindtouchcancel="onSliderTouchEnd"
             >
               <view class="slider-track"></view>
               <view class="slider-thumb {{sliderDragging ? 'active' : ''}}" style="left: {{sliderThumbLeftPx}}px;">

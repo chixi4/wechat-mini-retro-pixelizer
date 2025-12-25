@@ -2418,8 +2418,12 @@ Page({
   },
 
   onSliderTouchEnd() {
-    if (!this.data.sliderDragging) return;
     this._flushSliderUpdate();
+    if (!this.data.sliderDragging) {
+      this._clearInteractionConstraints();
+      this._scheduleRefine();
+      return;
+    }
     this.setData({ sliderDragging: false }, () => {
       this._clearInteractionConstraints();
       this._scheduleRefine();
