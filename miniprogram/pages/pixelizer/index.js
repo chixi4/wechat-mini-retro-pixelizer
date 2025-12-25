@@ -338,6 +338,8 @@ Page({
     this._updatePending = false;
     this._processImmediate = false;
     this._pendingProcessOptions = null;
+    this._refineTimer = null;
+    this._refineToken = 0;
     this._worker = null;
     this._workerBaseKey = "";
     this._workerRenderJob = null;
@@ -1367,6 +1369,38 @@ Page({
     return !!(this.data.sliderDragging || (this._grid && this._grid.dragging));
   },
 
+  _cancelRefine() {
+    this._refineToken = (this._refineToken || 0) + 1;
+    if (this._refineTimer) {
+      clearTimeout(this._refineTimer);
+      this._refineTimer = null;
+    }
+    if (this._processRunning && !this._isInteracting()) {
+      this._processToken += 1;
+    }
+  },
+
+  _scheduleRefine() {
+    if (!this.data.hasImage) return;
+    this._cancelRefine();
+
+    const token = this._refineToken;
+    const delayMs = this._isMobile ? 150 : 100;
+
+    const attempt = () => {
+      if (token !== this._refineToken) return;
+      if (this._isInteracting()) return;
+      if (this._isProcessing) {
+        this._refineTimer = setTimeout(attempt, 50);
+        return;
+      }
+      this._refineTimer = null;
+      this._scheduleProcess({ immediate: true });
+    };
+
+    this._refineTimer = setTimeout(attempt, delayMs);
+  },
+
   _getInteractiveTargetWidth(baseWidth, isInteracting) {
     if (!isInteracting) return baseWidth;
     const safeBase = Math.max(1, baseWidth || 1);
@@ -1439,7 +1473,18 @@ Page({
     const oriented = getOrientedSize(img, info);
     const aspect = oriented.width > 0 ? oriented.height / oriented.width : 1;
     const isInteracting = this._isInteracting();
-    const targetWidth = this._getInteractiveTargetWidth(requestedWidth, isInteracting);
+
+    const displayWidth = this.data.mainCanvasCssW || 1;
+    const dpr = this._dpr || 2;
+    const clampedDpr = Math.min(dpr, 2);
+    const previewMaxWidth = displayWidth > 10
+      ? Math.max(1, Math.ceil(displayWidth * clampedDpr))
+      : requestedWidth;
+    const effectiveRequestedWidth = isInteracting
+      ? requestedWidth
+      : Math.min(requestedWidth, previewMaxWidth);
+
+    const targetWidth = this._getInteractiveTargetWidth(effectiveRequestedWidth, isInteracting);
     const targetHeight = Math.max(1, Math.round(targetWidth * aspect));
     const requestedHeight = Math.max(1, Math.round(requestedWidth * aspect));
     const previewScale = requestedWidth > 0 ? targetWidth / requestedWidth : 1;
@@ -1491,7 +1536,7 @@ Page({
         buffer.node.height = targetHeight;
         buffer.ctx.imageSmoothingEnabled = true;
         if (typeof buffer.ctx.imageSmoothingQuality === "string") {
-          buffer.ctx.imageSmoothingQuality = "high";
+          buffer.ctx.imageSmoothingQuality = isInteracting ? "low" : "high";
         }
         drawImageWithOrientation(buffer.ctx, img, info.orientation, targetWidth, targetHeight);
 
@@ -1514,7 +1559,10 @@ Page({
       perfMeasure("initWorkImageData", () => {
         this._canvas.work.node.width = targetWidth;
         this._canvas.work.node.height = targetHeight;
-        proc.work.imageData = this._canvas.work.ctx.getImageData(0, 0, targetWidth, targetHeight);
+        const workCtx = this._canvas.work.ctx;
+        proc.work.imageData = workCtx.createImageData
+          ? workCtx.createImageData(targetWidth, targetHeight)
+          : workCtx.getImageData(0, 0, targetWidth, targetHeight);
         proc.work.w = targetWidth;
         proc.work.h = targetHeight;
       });
@@ -1557,7 +1605,7 @@ Page({
         }
       }
 
-      const renderStart = perf ? perfNow() : 0;
+      const workerRenderStart = perf ? perfNow() : 0;
       const rendered = await this._renderInWorker(processToken, {
         toneX,
         toneY,
@@ -1567,7 +1615,7 @@ Page({
         perf: perfEnabled
       });
       if (perf) {
-        perf.steps.workerRender = +(perfNow() - renderStart).toFixed(2);
+        perf.steps.workerRender = +(perfNow() - workerRenderStart).toFixed(2);
         if (rendered && rendered.perf) {
           perf.worker = rendered.perf;
         }
@@ -2210,6 +2258,7 @@ Page({
   onSliderTouchStart(e) {
     const t = e && e.touches && e.touches[0] ? e.touches[0] : null;
     if (!t) return;
+    this._cancelRefine();
     this.setData({ sliderDragging: true });
     this._updateValueFromClientX(t.clientX);
   },
@@ -2225,7 +2274,7 @@ Page({
     if (!this.data.sliderDragging) return;
     this._flushSliderUpdate();
     this.setData({ sliderDragging: false }, () => {
-      this._scheduleProcess({ immediate: true });
+      this._scheduleRefine();
     });
   },
 
@@ -2233,6 +2282,7 @@ Page({
     const t = e && e.touches && e.touches[0] ? e.touches[0] : null;
     if (!t) return;
 
+    this._cancelRefine();
     const rect = await selectRect(this, "#xyPadContainer");
     if (!rect) return;
 
@@ -2250,9 +2300,9 @@ Page({
 
   onXYTouchEnd() {
     if (!this._grid.dragging) return;
-    this._grid.dragging = false;
     this._flushGridUpdate();
-    this._scheduleProcess({ immediate: true });
+    this._grid.dragging = false;
+    this._scheduleRefine();
   },
 
   async onResetTone(options) {
