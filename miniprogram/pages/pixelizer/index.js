@@ -1486,6 +1486,7 @@ Page({
   _updateSliderMaxWidth(renderMs, targetWidth, requestedWidth) {
     if (!renderMs || !isFinite(renderMs)) return;
     if (this._interactionMode !== "slider") return;
+    if (!this.data.sliderDragging) return;
     if (!this._sliderMaxWidth || !isFinite(this._sliderMaxWidth)) return;
 
     const budget = typeof this._previewTargetMs === "number" ? this._previewTargetMs : 100;
@@ -1556,7 +1557,8 @@ Page({
     let effectiveRequestedWidth = isInteracting
       ? requestedWidth
       : Math.min(requestedWidth, previewMaxWidth);
-    if (isInteracting && this._interactionMode === "slider" && this._sliderMaxWidth) {
+    const isSliderDrag = !!(this.data.sliderDragging && this._interactionMode === "slider");
+    if (isSliderDrag && this._sliderMaxWidth) {
       effectiveRequestedWidth = Math.min(effectiveRequestedWidth, this._sliderMaxWidth);
     }
 
@@ -2359,8 +2361,8 @@ Page({
     return this._isLowPerfDevice() || slowRecent ? lowPerfWidth : SAFE_WIDTH;
   },
 
-  _clearInteractionConstraints() {
-    if (this._isInteracting()) return;
+  _clearInteractionConstraints(force) {
+    if (!force && this._isInteracting()) return;
     this._previewScaleCap = null;
     this._previewTargetMs = this._previewTargetMsBase || 33;
     this._interactionMode = null;
@@ -2420,12 +2422,12 @@ Page({
   onSliderTouchEnd() {
     this._flushSliderUpdate();
     if (!this.data.sliderDragging) {
-      this._clearInteractionConstraints();
+      this._clearInteractionConstraints(true);
       this._scheduleRefine();
       return;
     }
     this.setData({ sliderDragging: false }, () => {
-      this._clearInteractionConstraints();
+      this._clearInteractionConstraints(true);
       this._scheduleRefine();
     });
   },
