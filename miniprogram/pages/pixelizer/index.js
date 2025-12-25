@@ -367,6 +367,7 @@ Page({
     this._lastHasImage = false;
     this._previewScale = 1;
     this._previewScaleCap = null;
+    this._interactionMode = null;
     // Allow deeper downscaling for slow devices (iPad etc.)
     // Absolute minimum is enforced in _getInteractiveTargetWidth
     this._previewScaleMin = 0.1;
@@ -1437,15 +1438,28 @@ Page({
     const now = perfNow();
     const cooldown = typeof this._previewScaleCooldownMs === "number" ? this._previewScaleCooldownMs : 60;
     const lastUpdate = this._previewScaleLastUpdate || 0;
+    const isSlider = this._interactionMode === "slider";
 
     // Allow immediate emergency drops even during cooldown
     const isSevereLag = renderMs > budget * 2;
-    if (!isSevereLag && now - lastUpdate < cooldown) return;
+    const isOverBudget = isSlider && renderMs > budget;
+    if (!isSevereLag && !isOverBudget && now - lastUpdate < cooldown) return;
 
     const current = typeof this._previewScale === "number" ? this._previewScale : 1;
     let next = current;
 
-    if (isSevereLag) {
+    const minScale = typeof this._previewScaleMin === "number" ? this._previewScaleMin : 0.1;
+    let maxScale = typeof this._previewScaleMax === "number" ? this._previewScaleMax : 1;
+    const cap = this._previewScaleCap;
+    if (typeof cap === "number" && isFinite(cap) && cap > 0) {
+      maxScale = Math.min(maxScale, cap);
+    }
+    if (maxScale < minScale) maxScale = minScale;
+
+    if (isOverBudget) {
+      // For resolution slider: drop to minimum scale immediately to avoid jank.
+      next = minScale;
+    } else if (isSevereLag) {
       // Severe lag (>66ms): drop scale aggressively by 40%
       next = current * 0.6;
     } else if (renderMs > budget * 1.05) {
@@ -1460,13 +1474,6 @@ Page({
       return;
     }
 
-    const minScale = typeof this._previewScaleMin === "number" ? this._previewScaleMin : 0.1;
-    let maxScale = typeof this._previewScaleMax === "number" ? this._previewScaleMax : 1;
-    const cap = this._previewScaleCap;
-    if (typeof cap === "number" && isFinite(cap) && cap > 0) {
-      maxScale = Math.min(maxScale, cap);
-    }
-    if (maxScale < minScale) maxScale = minScale;
     next = Math.max(minScale, Math.min(maxScale, next));
 
     const step = this._slider && this._slider.step ? this._slider.step : 1;
@@ -2039,6 +2046,7 @@ Page({
       this._previewScale = 1;
       this._previewScaleCap = null;
       this._previewScaleLastUpdate = 0;
+      this._interactionMode = null;
       this._previewTargetMs = this._previewTargetMsBase || 33;
       this._lastRenderMs = 0;
 
@@ -2207,6 +2215,7 @@ Page({
     this._previewScale = 1;
     this._previewScaleCap = null;
     this._previewScaleLastUpdate = 0;
+    this._interactionMode = null;
     this._previewTargetMs = this._previewTargetMsBase || 33;
     this._lastRenderMs = 0;
 
@@ -2294,6 +2303,7 @@ Page({
     if (this._isInteracting()) return;
     this._previewScaleCap = null;
     this._previewTargetMs = this._previewTargetMsBase || 33;
+    this._interactionMode = null;
   },
 
   onSliderTap(e) {
@@ -2309,12 +2319,13 @@ Page({
     const targetScale = currentW > safeWidth ? safeWidth / currentW : 1;
     if (mode === "slider") {
       this._previewScale = targetScale;
-      this._previewTargetMs = 50;
+      this._previewTargetMs = 100;
     } else {
       const currentScale = typeof this._previewScale === "number" ? this._previewScale : 1;
       this._previewScale = Math.min(currentScale, targetScale);
       this._previewTargetMs = this._previewTargetMsBase || 33;
     }
+    this._interactionMode = mode || null;
     this._previewScaleCap = this._previewScale;
   },
 
