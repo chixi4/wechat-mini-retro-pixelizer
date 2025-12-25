@@ -375,7 +375,8 @@ Page({
     // Shorter cooldown for faster reaction
     this._previewScaleCooldownMs = 60;
     // Target 30fps (33ms) for smooth interaction
-    this._previewTargetMs = 33;
+    this._previewTargetMsBase = 33;
+    this._previewTargetMs = this._previewTargetMsBase;
     this._lastRenderMs = 0;
 
     const safeTopPx = this._safeTop;
@@ -2038,6 +2039,7 @@ Page({
       this._previewScale = 1;
       this._previewScaleCap = null;
       this._previewScaleLastUpdate = 0;
+      this._previewTargetMs = this._previewTargetMsBase || 33;
       this._lastRenderMs = 0;
 
       const oriented = getOrientedSize(img, info);
@@ -2205,6 +2207,7 @@ Page({
     this._previewScale = 1;
     this._previewScaleCap = null;
     this._previewScaleLastUpdate = 0;
+    this._previewTargetMs = this._previewTargetMsBase || 33;
     this._lastRenderMs = 0;
 
     this._closeHintShown = false;
@@ -2271,18 +2274,46 @@ Page({
     this.setData({ headerVisible: false }, () => this._updateLayout());
   },
 
+  _isLowPerfDevice() {
+    const level = this._sys && typeof this._sys.benchmarkLevel === "number" ? this._sys.benchmarkLevel : null;
+    if (typeof level === "number" && isFinite(level)) {
+      return level <= 20;
+    }
+    return false;
+  },
+
+  _getInteractionSafeWidth(mode) {
+    const SAFE_WIDTH = 320;
+    if (mode === "slider") return SAFE_WIDTH;
+    const lowPerfWidth = 192;
+    const slowRecent = (this._lastRenderMs || 0) >= 50;
+    return this._isLowPerfDevice() || slowRecent ? lowPerfWidth : SAFE_WIDTH;
+  },
+
+  _clearInteractionConstraints() {
+    if (this._isInteracting()) return;
+    this._previewScaleCap = null;
+    this._previewTargetMs = this._previewTargetMsBase || 33;
+  },
+
   onSliderTap(e) {
     const t = e && e.changedTouches && e.changedTouches[0] ? e.changedTouches[0] : null;
     if (!t) return;
     this._updateValueFromClientX(t.clientX);
   },
 
-  _applyInteractionStartScale() {
-    // On interaction start, force a safe low-res preview to avoid first-frame lag
-    const SAFE_START_WIDTH = 192;
+  _applyInteractionStartScale(mode) {
+    // On interaction start, set a safe preview size and cap to avoid oscillation.
+    const safeWidth = this._getInteractionSafeWidth(mode);
     const currentW = this.data.targetWidth || 1000;
-    if (currentW > SAFE_START_WIDTH && this._previewScale > 0.4) {
-      this._previewScale = SAFE_START_WIDTH / currentW;
+    const targetScale = currentW > safeWidth ? safeWidth / currentW : 1;
+    if (mode === "slider") {
+      this._previewScale = targetScale;
+      this._previewTargetMs = 50;
+    } else {
+      const currentScale = typeof this._previewScale === "number" ? this._previewScale : 1;
+      this._previewScale = Math.min(currentScale, targetScale);
+      this._previewTargetMs = this._previewTargetMsBase || 33;
     }
     this._previewScaleCap = this._previewScale;
   },
@@ -2291,7 +2322,7 @@ Page({
     const t = e && e.touches && e.touches[0] ? e.touches[0] : null;
     if (!t) return;
     this._cancelRefine();
-    this._applyInteractionStartScale();
+    this._applyInteractionStartScale("slider");
     this.setData({ sliderDragging: true });
     this._updateValueFromClientX(t.clientX);
   },
@@ -2307,7 +2338,7 @@ Page({
     if (!this.data.sliderDragging) return;
     this._flushSliderUpdate();
     this.setData({ sliderDragging: false }, () => {
-      if (!this._isInteracting()) this._previewScaleCap = null;
+      this._clearInteractionConstraints();
       this._scheduleRefine();
     });
   },
@@ -2317,7 +2348,7 @@ Page({
     if (!t) return;
 
     this._cancelRefine();
-    this._applyInteractionStartScale();
+    this._applyInteractionStartScale("tone");
     const rect = await selectRect(this, "#xyPadContainer");
     if (!rect) return;
 
@@ -2337,7 +2368,7 @@ Page({
     if (!this._grid.dragging) return;
     this._flushGridUpdate();
     this._grid.dragging = false;
-    if (!this._isInteracting()) this._previewScaleCap = null;
+    this._clearInteractionConstraints();
     this._scheduleRefine();
   },
 
