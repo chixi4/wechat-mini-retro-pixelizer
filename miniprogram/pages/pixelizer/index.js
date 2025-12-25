@@ -1282,7 +1282,12 @@ Page({
 
     if (this._isProcessing) {
       if (this._processRunning) {
-        this._processToken += 1;
+        // Continuous interactions should NEVER abort in-flight renders.
+        // Aborting can't cancel worker compute, but it *will* drop frames and
+        // make the preview look "stuck" while dragging (Android high-res case).
+        if (!this._isInteracting()) {
+          this._processToken += 1;
+        }
         this._updatePending = true;
       }
       return;
@@ -1511,10 +1516,14 @@ Page({
     const minWidth = this._slider && this._slider.min ? this._slider.min : 1;
     const ABSOLUTE_MIN_PX = 96;
     const floorWidth = Math.max(minWidth, ABSOLUTE_MIN_PX);
+    const safeWidth = this._getInteractionSafeWidth("slider");
+    const sliderMax = this._slider && this._slider.max ? this._slider.max : safeWidth;
+    const hardCap = Math.max(floorWidth, Math.min(safeWidth, sliderMax));
 
     let cap = this._sliderMaxWidth;
     if (!cap || !isFinite(cap)) cap = requestedWidth || targetWidth || floorWidth;
     cap = Math.max(floorWidth, Math.round(cap / step) * step);
+    cap = Math.min(cap, hardCap);
 
     const perf = this._sliderPerf || { over: 0, under: 0, severe: 0 };
     const isSevere = renderMs >= budget * 2;
@@ -1540,6 +1549,7 @@ Page({
 
     nextCap = Math.max(floorWidth, Math.round(nextCap / step) * step);
     if (nextCap < floorWidth) nextCap = floorWidth;
+    nextCap = Math.min(nextCap, hardCap);
 
     if (nextCap !== cap) {
       this._sliderMaxWidth = nextCap;
