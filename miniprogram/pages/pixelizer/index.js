@@ -1308,8 +1308,11 @@ Page({
     };
 
     const run = () => {
-      const currentOptions = this._pendingProcessOptions || options;
+      const currentOptions = this._pendingProcessOptions || options || null;
       this._pendingProcessOptions = null;
+      const onComplete = currentOptions && typeof currentOptions._resolve === "function"
+        ? currentOptions._resolve
+        : null;
       const immediate = !!(currentOptions && currentOptions.immediate);
       this._processImmediate = immediate;
       this._processRunning = true;
@@ -1319,7 +1322,7 @@ Page({
       }
       let result;
       try {
-        result = this._processImage(processToken);
+        result = this._processImage(processToken, currentOptions);
       } catch (e) {
         console.error("processImage error", e);
         finish();
@@ -1327,12 +1330,17 @@ Page({
       }
 
       if (result && typeof result.then === "function") {
-        result.then(finish, (err) => {
+        result.then(() => {
+          finish();
+          if (onComplete) onComplete();
+        }, (err) => {
           console.error("processImage async error", err);
           finish();
+          if (onComplete) onComplete();
         });
       } else {
         finish();
+        if (onComplete) onComplete();
       }
     };
 
@@ -1345,6 +1353,13 @@ Page({
     }
 
     scheduleFrame(() => setTimeout(run, 0));
+  },
+
+  _scheduleProcessAndWait(options) {
+    return new Promise((resolve) => {
+      const nextOptions = { ...(options || {}), _resolve: resolve };
+      this._scheduleProcess(nextOptions);
+    });
   },
 
   _computeMobilePreviewBox(aspect) {
@@ -1404,7 +1419,7 @@ Page({
         return;
       }
       this._refineTimer = null;
-      this._scheduleProcess({ immediate: true });
+      this._scheduleProcess({ immediate: true, fullRes: true });
     };
 
     this._refineTimer = setTimeout(attempt, delayMs);
@@ -1532,11 +1547,12 @@ Page({
     this._sliderPerf = perf;
   },
 
-  async _processImage(processToken) {
+  async _processImage(processToken, options) {
     const isAborted = () => typeof processToken === "number" && processToken !== this._processToken;
     const img = this._state.originalImage;
     const palette = this._state.palette;
     if (!img || !palette) return;
+    const forceFullRes = !!(options && options.fullRes);
 
     const { ditherAlgo } = this.data;
     const requestedWidth = typeof this.data.targetWidth === "number" ? this.data.targetWidth : 1;
@@ -1557,6 +1573,9 @@ Page({
     let effectiveRequestedWidth = isInteracting
       ? requestedWidth
       : Math.min(requestedWidth, previewMaxWidth);
+    if (forceFullRes) {
+      effectiveRequestedWidth = requestedWidth;
+    }
     const isSliderDrag = !!(this.data.sliderDragging && this._interactionMode === "slider");
     if (isSliderDrag && this._sliderMaxWidth) {
       effectiveRequestedWidth = Math.min(effectiveRequestedWidth, this._sliderMaxWidth);
@@ -2354,7 +2373,7 @@ Page({
   },
 
   _getInteractionSafeWidth(mode) {
-    const SAFE_WIDTH = 320;
+    const SAFE_WIDTH = 640;
     if (mode === "slider") return SAFE_WIDTH;
     const lowPerfWidth = 192;
     const slowRecent = (this._lastRenderMs || 0) >= 50;
@@ -2516,6 +2535,13 @@ Page({
 
   async onDownload() {
     if (!this.data.canDownload || !this._canvas) return;
+
+    const requestedWidth = typeof this.data.targetWidth === "number" ? this.data.targetWidth : 0;
+    const currentW = this._proc.work.w;
+    if (!this._isInteracting() && requestedWidth > 0 && currentW !== requestedWidth) {
+      this._clearInteractionConstraints(true);
+      await this._scheduleProcessAndWait({ immediate: true, fullRes: true });
+    }
 
     const w = this._proc.work.w;
     const h = this._proc.work.h;
