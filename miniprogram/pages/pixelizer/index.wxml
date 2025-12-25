@@ -140,7 +140,14 @@
         <canvas
           type="2d"
           id="mainCanvas"
-          class="main-canvas {{(fullscreenActive || fullscreenClosing) ? 'is-hidden' : ''}}"
+          class="main-canvas {{useGLPreview ? 'offscreen-canvas' : ''}} {{(fullscreenActive || fullscreenClosing) ? 'is-hidden' : ''}}"
+          style="width: {{mainCanvasCssW}}px; height: {{mainCanvasCssH}}px;"
+          bindtap="onOpenFullscreen"
+        ></canvas>
+        <canvas
+          type="webgl"
+          id="mainGLCanvas"
+          class="main-canvas {{!useGLPreview ? 'offscreen-canvas' : ''}} {{(fullscreenActive || fullscreenClosing) ? 'is-hidden' : ''}}"
           style="width: {{mainCanvasCssW}}px; height: {{mainCanvasCssH}}px;"
           bindtap="onOpenFullscreen"
         ></canvas>

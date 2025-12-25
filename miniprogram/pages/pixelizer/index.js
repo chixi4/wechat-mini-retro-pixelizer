@@ -44,6 +44,258 @@ const GRID_BORDER_PX = 2;
 const CANVAS_2D_MAX_DIM = 1365;
 const EXPORT_FILE_MAX_DIM = 4096;
 
+function compileShader(gl, type, source) {
+  const shader = gl.createShader(type);
+  if (!shader) return null;
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    try {
+      console.warn("webgl shader compile failed", gl.getShaderInfoLog(shader));
+    } catch (e) {
+      // ignore
+    }
+    gl.deleteShader(shader);
+    return null;
+  }
+  return shader;
+}
+
+function createWebGLProgram(gl, vertexSource, fragmentSource) {
+  const vs = compileShader(gl, gl.VERTEX_SHADER, vertexSource);
+  const fs = compileShader(gl, gl.FRAGMENT_SHADER, fragmentSource);
+  if (!vs || !fs) return null;
+
+  const program = gl.createProgram();
+  if (!program) return null;
+  gl.attachShader(program, vs);
+  gl.attachShader(program, fs);
+  gl.linkProgram(program);
+  gl.deleteShader(vs);
+  gl.deleteShader(fs);
+
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    try {
+      console.warn("webgl program link failed", gl.getProgramInfoLog(program));
+    } catch (e) {
+      // ignore
+    }
+    gl.deleteProgram(program);
+    return null;
+  }
+  return program;
+}
+
+class GLPreviewRenderer {
+  constructor(canvasNode, dpr) {
+    this._node = canvasNode;
+    this._dpr = typeof dpr === "number" && isFinite(dpr) && dpr > 0 ? dpr : 1;
+
+    this._gl = null;
+    this._program = null;
+    this._buffer = null;
+    this._texture = null;
+
+    this._loc = null;
+    this._canvasW = 0;
+    this._canvasH = 0;
+    this._texW = 0;
+    this._texH = 0;
+    this._verts = new Float32Array(16);
+  }
+
+  init() {
+    const node = this._node;
+    if (!node || typeof node.getContext !== "function") return false;
+
+    const gl =
+      node.getContext("webgl", { alpha: true, antialias: false, preserveDrawingBuffer: false }) ||
+      node.getContext("webgl");
+    if (!gl) return false;
+
+    const program = createWebGLProgram(
+      gl,
+      `
+      attribute vec2 a_position;
+      attribute vec2 a_texCoord;
+      varying vec2 v_texCoord;
+      void main() {
+        gl_Position = vec4(a_position, 0.0, 1.0);
+        v_texCoord = a_texCoord;
+      }
+    `,
+      `
+      precision mediump float;
+      varying vec2 v_texCoord;
+      uniform sampler2D u_texture;
+      void main() {
+        gl_FragColor = texture2D(u_texture, v_texCoord);
+      }
+    `
+    );
+    if (!program) return false;
+
+    const aPos = gl.getAttribLocation(program, "a_position");
+    const aTex = gl.getAttribLocation(program, "a_texCoord");
+    const uTex = gl.getUniformLocation(program, "u_texture");
+    if (aPos < 0 || aTex < 0 || !uTex) {
+      gl.deleteProgram(program);
+      return false;
+    }
+
+    const buffer = gl.createBuffer();
+    const texture = gl.createTexture();
+    if (!buffer || !texture) {
+      if (buffer) gl.deleteBuffer(buffer);
+      if (texture) gl.deleteTexture(texture);
+      gl.deleteProgram(program);
+      return false;
+    }
+
+    this._gl = gl;
+    this._program = program;
+    this._buffer = buffer;
+    this._texture = texture;
+    this._loc = { aPos, aTex, uTex };
+
+    gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.CULL_FACE);
+    gl.disable(gl.BLEND);
+
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+    gl.clearColor(0, 0, 0, 0);
+    return true;
+  }
+
+  resize(cssW, cssH) {
+    const node = this._node;
+    const gl = this._gl;
+    if (!node || !gl) return false;
+    const safeW = Math.max(1, Math.floor(cssW || 1));
+    const safeH = Math.max(1, Math.floor(cssH || 1));
+    const dpr = this._dpr || 1;
+    const pxW = Math.max(1, Math.round(safeW * dpr));
+    const pxH = Math.max(1, Math.round(safeH * dpr));
+    if (node.width !== pxW) node.width = pxW;
+    if (node.height !== pxH) node.height = pxH;
+    if (pxW !== this._canvasW || pxH !== this._canvasH) {
+      this._canvasW = pxW;
+      this._canvasH = pxH;
+      gl.viewport(0, 0, pxW, pxH);
+    }
+    return true;
+  }
+
+  updateTexture(w, h, rgbaData) {
+    const gl = this._gl;
+    const texture = this._texture;
+    if (!gl || !texture) return false;
+
+    const texW = Math.max(1, Math.floor(w || 1));
+    const texH = Math.max(1, Math.floor(h || 1));
+    if (!rgbaData || rgbaData.length < texW * texH * 4) return false;
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
+
+    if (texW !== this._texW || texH !== this._texH) {
+      this._texW = texW;
+      this._texH = texH;
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, texW, texH, 0, gl.RGBA, gl.UNSIGNED_BYTE, rgbaData);
+    } else {
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, texW, texH, gl.RGBA, gl.UNSIGNED_BYTE, rgbaData);
+    }
+
+    return true;
+  }
+
+  draw() {
+    const gl = this._gl;
+    const program = this._program;
+    const buffer = this._buffer;
+    const texture = this._texture;
+    const loc = this._loc;
+    if (!gl || !program || !buffer || !texture || !loc) return false;
+    if (!this._canvasW || !this._canvasH || !this._texW || !this._texH) return false;
+
+    const canvasAspect = this._canvasW / this._canvasH;
+    const imgAspect = this._texW / this._texH;
+    let sx = 1;
+    let sy = 1;
+    if (imgAspect > canvasAspect) {
+      sy = canvasAspect / imgAspect;
+    } else {
+      sx = imgAspect / canvasAspect;
+    }
+
+    const vertices = this._verts;
+    vertices[0] = -sx;
+    vertices[1] = -sy;
+    vertices[2] = 0;
+    vertices[3] = 0;
+    vertices[4] = sx;
+    vertices[5] = -sy;
+    vertices[6] = 1;
+    vertices[7] = 0;
+    vertices[8] = -sx;
+    vertices[9] = sy;
+    vertices[10] = 0;
+    vertices[11] = 1;
+    vertices[12] = sx;
+    vertices[13] = sy;
+    vertices[14] = 1;
+    vertices[15] = 1;
+
+    gl.useProgram(program);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.DYNAMIC_DRAW);
+
+    gl.enableVertexAttribArray(loc.aPos);
+    gl.vertexAttribPointer(loc.aPos, 2, gl.FLOAT, false, 16, 0);
+    gl.enableVertexAttribArray(loc.aTex);
+    gl.vertexAttribPointer(loc.aTex, 2, gl.FLOAT, false, 16, 8);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.uniform1i(loc.uTex, 0);
+
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    return true;
+  }
+
+  clear() {
+    const gl = this._gl;
+    if (!gl) return;
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+  }
+
+  dispose() {
+    const gl = this._gl;
+    if (!gl) return;
+    try {
+      if (this._texture) gl.deleteTexture(this._texture);
+      if (this._buffer) gl.deleteBuffer(this._buffer);
+      if (this._program) gl.deleteProgram(this._program);
+    } catch (e) {
+      // ignore
+    }
+    this._texture = null;
+    this._buffer = null;
+    this._program = null;
+    this._gl = null;
+    this._loc = null;
+  }
+}
+
 function getGridInnerRect(rect) {
   const safeRect = rect || {};
   const rawW = typeof safeRect.width === "number" ? safeRect.width : 0;
@@ -219,7 +471,8 @@ Page({
     previewShiftPx: 0,
 
     mainCanvasCssW: 1,
-    mainCanvasCssH: 1
+    mainCanvasCssH: 1,
+    useGLPreview: false
   },
 
   onLoad() {
@@ -227,6 +480,10 @@ Page({
     this._sys = sys;
     this._dpr = sys.pixelRatio || 1;
     this._isMobile = (sys.windowWidth || 0) <= 768;
+    this._isIOS = String(sys.platform || "").toLowerCase() === "ios";
+    const model = String(sys.model || "");
+    this._isIPad = !!(this._isIOS && model.toLowerCase().includes("ipad"));
+    this._useGLPreview = !!this._isIPad;
     const perfSetting = wx.getStorageSync("pixelizer_perf");
     const perfConfig = perfSetting && typeof perfSetting === "object" ? perfSetting : null;
     this._perfEnabled =
@@ -396,7 +653,8 @@ Page({
       navPadLeftPx: navPad.left,
       navPadRightPx: navPad.right,
       previewHeightPx,
-      controlsPaddingTopPx
+      controlsPaddingTopPx,
+      useGLPreview: this._useGLPreview
     });
 
     if (wx.onThemeChange) {
@@ -457,12 +715,20 @@ Page({
   async _ensureCanvases() {
     if (this._canvas) return true;
 
-    const [main, work, buffer, exportC] = await Promise.all([
+    const needsGL = !!this.data.useGLPreview;
+    const requests = [
       selectCanvas(this, "#mainCanvas"),
       selectCanvas(this, "#workCanvas"),
       selectCanvas(this, "#bufferCanvas"),
       selectCanvas(this, "#exportCanvas")
-    ]);
+    ];
+    if (needsGL) {
+      requests.unshift(selectCanvas(this, "#mainGLCanvas"));
+    }
+
+    const res = await Promise.all(requests);
+    const glCanvas = needsGL ? res[0] : null;
+    const [main, work, buffer, exportC] = needsGL ? res.slice(1) : res;
 
     if (!main || !work || !buffer || !exportC) return false;
 
@@ -472,6 +738,18 @@ Page({
       buffer: { node: buffer.node, ctx: buffer.node.getContext("2d") },
       export: { node: exportC.node, ctx: exportC.node.getContext("2d") }
     };
+
+    this._glPreview = null;
+    if (needsGL && glCanvas && glCanvas.node) {
+      const renderer = new GLPreviewRenderer(glCanvas.node, this._dpr || 1);
+      if (renderer.init()) {
+        this._glPreview = renderer;
+      } else {
+        console.warn("webgl preview init failed; fallback to 2d canvas preview");
+        this._useGLPreview = false;
+        this.setData({ useGLPreview: false });
+      }
+    }
 
     return true;
   },
@@ -711,6 +989,10 @@ Page({
       this._layoutAnimReadyTimer = null;
     }
     this._disposeWorker();
+    if (this._glPreview) {
+      this._glPreview.dispose();
+      this._glPreview = null;
+    }
   },
 
   _resolveSystemTheme(sysLike) {
@@ -1826,21 +2108,30 @@ Page({
           this._canvas.work.ctx.putImageData(workImageData, 0, 0);
         }
 
-        // Draw at native pixel size; CSS scaling keeps the preview crisp like fullscreen.
         const presentStart = perf ? perfNow() : 0;
-        const mainW = Math.max(1, targetWidth);
-        const mainH = Math.max(1, targetHeight);
-        const mainNode = this._canvas.main.node;
-        if (mainNode.width !== mainW) mainNode.width = mainW;
-        if (mainNode.height !== mainH) mainNode.height = mainH;
-        const mainCtx = this._canvas.main.ctx;
-        mainCtx.setTransform(1, 0, 0, 1, 0, 0);
-        mainCtx.imageSmoothingEnabled = false;
-        if (typeof mainCtx.imageSmoothingQuality === "string") {
-          mainCtx.imageSmoothingQuality = "low";
+        let presented = false;
+        if (this.data.useGLPreview && this._glPreview) {
+          presented =
+            this._glPreview.resize(displayW, displayH) &&
+            this._glPreview.updateTexture(targetWidth, targetHeight, workImageData.data) &&
+            this._glPreview.draw();
         }
-        mainCtx.clearRect(0, 0, mainW, mainH);
-        mainCtx.drawImage(this._canvas.work.node, 0, 0, mainW, mainH);
+        if (!presented) {
+          // Draw at native pixel size; CSS scaling keeps the preview consistent with fullscreen.
+          const mainW = Math.max(1, targetWidth);
+          const mainH = Math.max(1, targetHeight);
+          const mainNode = this._canvas.main.node;
+          if (mainNode.width !== mainW) mainNode.width = mainW;
+          if (mainNode.height !== mainH) mainNode.height = mainH;
+          const mainCtx = this._canvas.main.ctx;
+          mainCtx.setTransform(1, 0, 0, 1, 0, 0);
+          mainCtx.imageSmoothingEnabled = false;
+          if (typeof mainCtx.imageSmoothingQuality === "string") {
+            mainCtx.imageSmoothingQuality = "low";
+          }
+          mainCtx.clearRect(0, 0, mainW, mainH);
+          mainCtx.drawImage(this._canvas.work.node, 0, 0, mainW, mainH);
+        }
         if (perf) {
           perf.steps.present = +(perfNow() - presentStart).toFixed(2);
         }
@@ -1991,21 +2282,30 @@ Page({
       this._canvas.work.ctx.putImageData(workImageData, 0, 0);
     }
 
-    // Draw at native pixel size; CSS scaling keeps the preview crisp like fullscreen.
     const presentStart = perf ? perfNow() : 0;
-    const mainW = Math.max(1, targetWidth);
-    const mainH = Math.max(1, targetHeight);
-    const mainNode = this._canvas.main.node;
-    if (mainNode.width !== mainW) mainNode.width = mainW;
-    if (mainNode.height !== mainH) mainNode.height = mainH;
-    const mainCtx = this._canvas.main.ctx;
-    mainCtx.setTransform(1, 0, 0, 1, 0, 0);
-    mainCtx.imageSmoothingEnabled = false;
-    if (typeof mainCtx.imageSmoothingQuality === "string") {
-      mainCtx.imageSmoothingQuality = "low";
+    let presented = false;
+    if (this.data.useGLPreview && this._glPreview) {
+      presented =
+        this._glPreview.resize(displayW, displayH) &&
+        this._glPreview.updateTexture(targetWidth, targetHeight, workImageData.data) &&
+        this._glPreview.draw();
     }
-    mainCtx.clearRect(0, 0, mainW, mainH);
-    mainCtx.drawImage(this._canvas.work.node, 0, 0, mainW, mainH);
+    if (!presented) {
+      // Draw at native pixel size; CSS scaling keeps the preview consistent with fullscreen.
+      const mainW = Math.max(1, targetWidth);
+      const mainH = Math.max(1, targetHeight);
+      const mainNode = this._canvas.main.node;
+      if (mainNode.width !== mainW) mainNode.width = mainW;
+      if (mainNode.height !== mainH) mainNode.height = mainH;
+      const mainCtx = this._canvas.main.ctx;
+      mainCtx.setTransform(1, 0, 0, 1, 0, 0);
+      mainCtx.imageSmoothingEnabled = false;
+      if (typeof mainCtx.imageSmoothingQuality === "string") {
+        mainCtx.imageSmoothingQuality = "low";
+      }
+      mainCtx.clearRect(0, 0, mainW, mainH);
+      mainCtx.drawImage(this._canvas.work.node, 0, 0, mainW, mainH);
+    }
     if (perf) {
       perf.steps.present = +(perfNow() - presentStart).toFixed(2);
     }
@@ -2316,6 +2616,9 @@ Page({
       this._canvas.main.ctx.clearRect(0, 0, this._canvas.main.node.width, this._canvas.main.node.height);
       this._canvas.work.ctx.clearRect(0, 0, this._canvas.work.node.width, this._canvas.work.node.height);
       this._canvas.buffer.ctx.clearRect(0, 0, this._canvas.buffer.node.width, this._canvas.buffer.node.height);
+      if (this._glPreview) {
+        this._glPreview.clear();
+      }
     }
 
     const headerVisible = this._isMobile ? true : this.data.headerVisible;
@@ -2654,7 +2957,8 @@ Page({
     this._closeHintShown = false;
     this._updateCloseVisibility();
 
-    const previewRect = await selectRect(this, "#mainCanvas");
+    const previewSelector = this.data.useGLPreview ? "#mainGLCanvas" : "#mainCanvas";
+    const previewRect = await selectRect(this, previewSelector);
     const targetRect = this._getFullscreenTargetRect();
     const fromRect =
       previewRect && previewRect.width > 0 && previewRect.height > 0 ? previewRect : targetRect;
@@ -2808,7 +3112,8 @@ Page({
     }
     const closeToken = (this._fullscreenAnimToken = (this._fullscreenAnimToken || 0) + 1);
 
-    const previewRect = await selectRect(this, "#mainCanvas");
+    const previewSelector = this.data.useGLPreview ? "#mainGLCanvas" : "#mainCanvas";
+    const previewRect = await selectRect(this, previewSelector);
     const targetRect = this._getFullscreenTargetRect();
     const fromRect =
       previewRect && previewRect.width > 0 && previewRect.height > 0 ? previewRect : targetRect;

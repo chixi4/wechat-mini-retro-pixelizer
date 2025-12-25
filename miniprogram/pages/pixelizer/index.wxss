@@ -560,6 +560,12 @@
   height: 1px;
 }
 
+.offscreen-canvas {
+  position: fixed;
+  left: -9999px;
+  top: -9999px;
+}
+
 @media (max-width: 768px) {
   .page {
     display: block;
