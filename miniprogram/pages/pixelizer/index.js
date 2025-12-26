@@ -3517,7 +3517,7 @@ Page({
     const h = this._proc.work.h;
     if (!w || !h) return;
 
-    const minWidth = 2000;
+      const minWidth = 4096;
     let outputScale = Math.ceil(minWidth / w);
     if (outputScale < 1) outputScale = 1;
 
