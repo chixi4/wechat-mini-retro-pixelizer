@@ -140,14 +140,14 @@
         <canvas
           type="2d"
           id="mainCanvas"
-          class="main-canvas {{useGLPreview ? 'offscreen-canvas' : ''}} {{fullscreenVisible ? 'is-hidden' : ''}}"
+          class="main-canvas {{useGLPreview ? 'offscreen-canvas' : ''}} {{(fullscreenActive || fullscreenClosing) ? 'is-hidden' : ''}}"
           style="width: {{mainCanvasCssW}}px; height: {{mainCanvasCssH}}px;"
           bindtap="onOpenFullscreen"
         ></canvas>
         <canvas
           type="webgl"
           id="mainGLCanvas"
-          class="main-canvas {{!useGLPreview ? 'offscreen-canvas' : ''}} {{fullscreenVisible ? 'is-hidden' : ''}}"
+          class="main-canvas {{!useGLPreview ? 'offscreen-canvas' : ''}} {{(fullscreenActive || fullscreenClosing) ? 'is-hidden' : ''}}"
           style="width: {{mainCanvasCssW}}px; height: {{mainCanvasCssH}}px;"
           bindtap="onOpenFullscreen"
         ></canvas>
@@ -156,7 +156,7 @@
 
       <view
         wx:if="{{hasImage}}"
-        class="close-btn {{closeEnabled ? 'enabled' : ''}} {{closeShown ? 'shown' : ''}}"
+        class="close-btn {{closeEnabled ? 'enabled' : ''}} {{closeShown ? 'shown' : ''}} {{fullscreenVisible ? 'is-hidden' : ''}}"
         catchtap="onCloseImage"
       >
         <view class="close-btn-icon">
