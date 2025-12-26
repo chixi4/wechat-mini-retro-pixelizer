@@ -365,7 +365,19 @@
 .dot {
   width: 10px;
   height: 10px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border: 1px solid #000000;
+}
+
+.theme-dark .dot {
+  border-color: #ffffff;
+}
+
+.palette-btn.active .dot {
+  border-color: #ffffff;
+}
+
+.theme-dark .palette-btn.active .dot {
+  border-color: #000000;
 }
 
 .action-btn {
