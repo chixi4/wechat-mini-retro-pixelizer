@@ -53,6 +53,10 @@ const INTERACTION_CAP_GROWTH = 1.08;
 const INTERACTION_CAP_RECOVER_RATIO = 0.85;
 const INTERACTION_CAP_SLOW_WINDOW_MS = 2000;
 const INTERACTION_SLOW_FRAMES = 2;
+const CONTENT_CHECK_MAX_EDGE = 1024;
+const CONTENT_CHECK_MIN_BYTES = 150 * 1024;
+const CONTENT_CHECK_MAX_BYTES = 300 * 1024;
+const CONTENT_CHECK_QUALITY_STEPS = [0.82, 0.72, 0.62, 0.52];
 
 function compileShader(gl, type, source) {
   const shader = gl.createShader(type);
@@ -1800,6 +1804,86 @@ Page({
     return "image/jpeg";
   },
 
+  _getFileInfoSize(filePath) {
+    return new Promise((resolve, reject) => {
+      wx.getFileInfo({
+        filePath,
+        success: resolve,
+        fail: reject
+      });
+    }).then((res) => (res && typeof res.size === "number" ? res.size : 0));
+  },
+
+  async _createContentCheckFile(src, info, img) {
+    if (!img || !this._canvas || !this._canvas.export) return null;
+    if (!wx.canvasToTempFilePath) return null;
+
+    const oriented = getOrientedSize(img, info);
+    let targetW = oriented.width || 0;
+    let targetH = oriented.height || 0;
+    if (!targetW || !targetH) return null;
+
+    const longEdge = Math.max(targetW, targetH);
+    if (longEdge > CONTENT_CHECK_MAX_EDGE) {
+      const scale = CONTENT_CHECK_MAX_EDGE / longEdge;
+      targetW = Math.max(1, Math.round(targetW * scale));
+      targetH = Math.max(1, Math.round(targetH * scale));
+    }
+
+    const exportCanvas = this._canvas.export;
+    exportCanvas.node.width = targetW;
+    exportCanvas.node.height = targetH;
+    const exportCtx = exportCanvas.ctx;
+    exportCtx.setTransform(1, 0, 0, 1, 0, 0);
+    exportCtx.imageSmoothingEnabled = true;
+    if (typeof exportCtx.imageSmoothingQuality === "string") {
+      exportCtx.imageSmoothingQuality = "high";
+    }
+    exportCtx.clearRect(0, 0, targetW, targetH);
+    drawImageWithOrientation(exportCtx, img, info && info.orientation, targetW, targetH);
+
+    const targetMid = (CONTENT_CHECK_MIN_BYTES + CONTENT_CHECK_MAX_BYTES) / 2;
+    let best = null;
+
+    for (const quality of CONTENT_CHECK_QUALITY_STEPS) {
+      let tempPath = "";
+      try {
+        const temp = await new Promise((resolve, reject) => {
+          wx.canvasToTempFilePath({
+            canvas: exportCanvas.node,
+            fileType: "jpg",
+            quality,
+            success: resolve,
+            fail: reject
+          });
+        });
+        tempPath = temp && temp.tempFilePath ? temp.tempFilePath : "";
+      } catch (e) {
+        tempPath = "";
+      }
+
+      if (!tempPath) continue;
+
+      let size = 0;
+      try {
+        size = await this._getFileInfoSize(tempPath);
+      } catch (e) {
+        size = 0;
+      }
+
+      if (!best || Math.abs(size - targetMid) < Math.abs(best.size - targetMid)) {
+        best = { filePath: tempPath, size };
+      }
+
+      if (size >= CONTENT_CHECK_MIN_BYTES && size <= CONTENT_CHECK_MAX_BYTES) {
+        return { filePath: tempPath, contentType: "image/jpeg", size };
+      }
+    }
+
+    if (best) return { filePath: best.filePath, contentType: "image/jpeg", size: best.size };
+    return null;
+  },
+
   _notifyContentReject() {
     wx.showModal({
       title: "内容不合规",
@@ -1812,7 +1896,7 @@ Page({
     wx.showToast({ title: "内容安全检测失败", icon: "none" });
   },
 
-  _startContentCheck(src, info) {
+  _startContentCheck(src, info, img) {
     if (!src) return null;
     if (!wx.cloud || typeof wx.cloud.uploadFile !== "function") {
       this._contentCheckStatus = "unavailable";
@@ -1825,14 +1909,20 @@ Page({
     this._contentCheckError = "";
     this._contentCheckSource = src;
 
-    const contentType = this._getImageContentType(info, src);
-    const ext = contentType.split("/")[1] || "jpg";
-    const rand = Math.random().toString(16).slice(2, 10);
-    const cloudPath = `content-check/${Date.now()}_${rand}.${ext}`;
-
     const promise = (async () => {
       try {
-        const upload = await wx.cloud.uploadFile({ cloudPath, filePath: src });
+        const prepared = await this._createContentCheckFile(src, info, img);
+        if (token !== this._contentCheckToken) return "stale";
+
+        const filePath = prepared && prepared.filePath ? prepared.filePath : src;
+        const contentType =
+          prepared && prepared.contentType ? prepared.contentType : this._getImageContentType(info, src);
+        const extRaw = contentType.split("/")[1] || "jpg";
+        const ext = extRaw === "jpeg" ? "jpg" : extRaw;
+        const rand = Math.random().toString(16).slice(2, 10);
+        const cloudPath = `content-check/${Date.now()}_${rand}.${ext}`;
+
+        const upload = await wx.cloud.uploadFile({ cloudPath, filePath });
         if (token !== this._contentCheckToken) return "stale";
         const fileID = upload && upload.fileID ? upload.fileID : "";
         if (!fileID) throw new Error("upload failed");
@@ -2592,8 +2682,6 @@ Page({
       });
       if (loadToken !== this._imageLoadToken) return;
 
-      this._startContentCheck(src, info);
-
       console.log("准备加载图片到 canvas");
 
       const img = this._canvas.buffer.node.createImage();
@@ -2614,6 +2702,7 @@ Page({
       this._state.originalImage = img;
       this._state.imageInfo = info;
       this._forceMainThreadToken = this._state.imageToken;
+      this._startContentCheck(src, info, img);
 
       this._proc.scaled = { token: 0, w: 0, h: 0, data: null };
       this._proc.toneStats = { token: 0, w: 0, h: 0, stats: null };
