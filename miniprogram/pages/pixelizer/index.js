@@ -43,6 +43,10 @@ function perfNow() {
 const GRID_BORDER_PX = 2;
 const CANVAS_2D_MAX_DIM = 1365;
 const EXPORT_FILE_MAX_DIM = 4096;
+const INTERACTION_CAP_CACHE_KEY = "pixelizer_interaction_cap_v1";
+const INTERACTION_CAP_MAX_ENTRIES = 40;
+const INTERACTION_CAP_PIXELS_PER_BUCKET = 160000;
+const INTERACTION_CAP_COOLDOWN_MS = 120;
 
 function compileShader(gl, type, source) {
   const shader = gl.createShader(type);
@@ -629,6 +633,14 @@ Page({
     this._interactionMode = null;
     this._sliderMaxWidth = null;
     this._sliderPerf = null;
+    this._interactionCapWidth = null;
+    this._interactionCapKey = "";
+    this._interactionCapRequestedWidth = 0;
+    this._interactionCapRequestedHeight = 0;
+    this._interactionCapPerf = null;
+    this._interactionCapLastUpdate = 0;
+    this._interactionCapCache = Object.create(null);
+    this._interactionCapCacheOrder = [];
     // Allow deeper downscaling for slow devices (iPad etc.)
     // Absolute minimum is enforced in _getInteractiveTargetWidth
     this._previewScaleMin = 0.1;
@@ -668,6 +680,7 @@ Page({
       wx.onThemeChange(this._themeChangeHandler);
     }
 
+    this._loadInteractionCapCache();
     this._initWorker();
   },
 
@@ -1001,6 +1014,9 @@ Page({
     }
     if (this._windowResizeHandler && wx.offWindowResize) {
       wx.offWindowResize(this._windowResizeHandler);
+    }
+    if (this._interactionMode === "tone") {
+      this._commitInteractionCapCache();
     }
     if (this._fullscreenCloseTimer) {
       clearTimeout(this._fullscreenCloseTimer);
@@ -2188,6 +2204,7 @@ Page({
           if (this._interactionMode === "slider") {
             this._updateSliderMaxWidth(renderMs, targetWidth, requestedWidth);
           } else {
+            this._updateInteractionCap(renderMs, targetWidth, requestedWidth);
             this._updatePreviewScale(renderMs, requestedWidth);
           }
         }
@@ -2362,6 +2379,7 @@ Page({
       if (this._interactionMode === "slider") {
         this._updateSliderMaxWidth(renderMs, targetWidth, requestedWidth);
       } else {
+        this._updateInteractionCap(renderMs, targetWidth, requestedWidth);
         this._updatePreviewScale(renderMs, requestedWidth);
       }
     }
@@ -2470,6 +2488,12 @@ Page({
       this._interactionMode = null;
       this._sliderMaxWidth = null;
       this._sliderPerf = null;
+      this._interactionCapWidth = null;
+      this._interactionCapKey = "";
+      this._interactionCapRequestedWidth = 0;
+      this._interactionCapRequestedHeight = 0;
+      this._interactionCapPerf = null;
+      this._interactionCapLastUpdate = 0;
       this._previewTargetMs = this._previewTargetMsBase || 33;
       this._lastRenderMs = 0;
 
@@ -2641,6 +2665,12 @@ Page({
     this._interactionMode = null;
     this._sliderMaxWidth = null;
     this._sliderPerf = null;
+    this._interactionCapWidth = null;
+    this._interactionCapKey = "";
+    this._interactionCapRequestedWidth = 0;
+    this._interactionCapRequestedHeight = 0;
+    this._interactionCapPerf = null;
+    this._interactionCapLastUpdate = 0;
     this._previewTargetMs = this._previewTargetMsBase || 33;
     this._lastRenderMs = 0;
 
@@ -2727,13 +2757,291 @@ Page({
     return this._isLowPerfDevice() || slowRecent ? lowPerfWidth : SAFE_WIDTH;
   },
 
+  _getInteractionBaseSize() {
+    const requestedWidth = typeof this.data.targetWidth === "number" ? this.data.targetWidth : 0;
+    if (!requestedWidth || !isFinite(requestedWidth)) {
+      return { requestedWidth: 0, requestedHeight: 0, aspect: 1 };
+    }
+    const img = this._state && this._state.originalImage;
+    const info = (this._state && this._state.imageInfo) || {};
+    const oriented = getOrientedSize(img, info);
+    const aspect = oriented.width > 0 ? oriented.height / oriented.width : 1;
+    const requestedHeight = Math.max(1, Math.round(requestedWidth * aspect));
+    return { requestedWidth, requestedHeight, aspect };
+  },
+
+  _getInteractionCapKey(mode, baseWidth, baseHeight) {
+    const safeMode = mode || "tone";
+    const algo = this.data.ditherAlgo || "";
+    const paletteKey = this.data.paletteKey || "";
+    const serpentine = this._state && this._state.isSerpentine ? 1 : 0;
+    const pixels = Math.max(1, Math.round((baseWidth || 1) * (baseHeight || 1)));
+    const bucket = Math.max(1, Math.round(pixels / INTERACTION_CAP_PIXELS_PER_BUCKET));
+    return `${safeMode}:${algo}:${paletteKey}:${serpentine}:${bucket}`;
+  },
+
+  _loadInteractionCapCache() {
+    let stored = null;
+    try {
+      stored = wx.getStorageSync(INTERACTION_CAP_CACHE_KEY);
+    } catch (e) {
+      stored = null;
+    }
+
+    const cache = Object.create(null);
+    const order = [];
+    const raw = stored && typeof stored === "object" ? stored : null;
+    const rawCache = raw && raw.cache && typeof raw.cache === "object" ? raw.cache : raw;
+    const rawOrder = raw && Array.isArray(raw.order) ? raw.order : null;
+
+    if (rawCache && typeof rawCache === "object") {
+      Object.keys(rawCache).forEach((key) => {
+        const entry = rawCache[key];
+        const width =
+          typeof entry === "number"
+            ? entry
+            : entry && typeof entry.w === "number"
+            ? entry.w
+            : null;
+        if (!width || !isFinite(width)) return;
+        cache[key] = {
+          w: Math.round(width),
+          ts: entry && typeof entry.ts === "number" ? entry.ts : 0
+        };
+      });
+    }
+
+    if (rawOrder && rawOrder.length) {
+      rawOrder.forEach((key) => {
+        if (cache[key] && order.indexOf(key) === -1) {
+          order.push(key);
+        }
+      });
+    }
+
+    if (!order.length) {
+      Object.keys(cache).forEach((key) => order.push(key));
+    }
+
+    while (order.length > INTERACTION_CAP_MAX_ENTRIES) {
+      const drop = order.shift();
+      if (drop) delete cache[drop];
+    }
+
+    this._interactionCapCache = cache;
+    this._interactionCapCacheOrder = order;
+  },
+
+  _persistInteractionCapCache() {
+    const cache = this._interactionCapCache;
+    if (!cache) return;
+    const order = Array.isArray(this._interactionCapCacheOrder) ? [...this._interactionCapCacheOrder] : [];
+    while (order.length > INTERACTION_CAP_MAX_ENTRIES) {
+      const drop = order.shift();
+      if (drop) delete cache[drop];
+    }
+    try {
+      wx.setStorageSync(INTERACTION_CAP_CACHE_KEY, { v: 1, cache, order });
+    } catch (e) {
+      // ignore
+    }
+  },
+
+  _touchInteractionCapKey(key) {
+    if (!key) return;
+    if (!this._interactionCapCacheOrder) this._interactionCapCacheOrder = [];
+    const order = this._interactionCapCacheOrder;
+    const idx = order.indexOf(key);
+    if (idx >= 0) order.splice(idx, 1);
+    order.push(key);
+    while (order.length > INTERACTION_CAP_MAX_ENTRIES) {
+      const drop = order.shift();
+      if (drop && this._interactionCapCache) delete this._interactionCapCache[drop];
+    }
+  },
+
+  _getInteractionCapFromCache(key) {
+    if (!key || !this._interactionCapCache) return null;
+    const entry = this._interactionCapCache[key];
+    if (!entry) return null;
+    const width = typeof entry === "number" ? entry : entry.w;
+    if (!width || !isFinite(width)) return null;
+    this._touchInteractionCapKey(key);
+    return width;
+  },
+
+  _commitInteractionCapCache() {
+    if (!this._interactionCapKey || !this._interactionCapWidth) return;
+
+    const step = this._slider && this._slider.step ? this._slider.step : 1;
+    const minWidth = this._slider && this._slider.min ? this._slider.min : 1;
+    const ABSOLUTE_MIN_PX = 96;
+    const floorWidth = Math.max(minWidth, ABSOLUTE_MIN_PX);
+    const maxWidth =
+      typeof this._interactionCapRequestedWidth === "number" && this._interactionCapRequestedWidth > 0
+        ? this._interactionCapRequestedWidth
+        : this.data.targetWidth || floorWidth;
+
+    let capWidth = this._interactionCapWidth;
+    if (!capWidth || !isFinite(capWidth)) return;
+    capWidth = Math.max(floorWidth, Math.min(maxWidth, capWidth));
+    capWidth = Math.round(capWidth / step) * step;
+    if (capWidth < floorWidth) capWidth = floorWidth;
+    if (capWidth > maxWidth) capWidth = maxWidth;
+
+    const cache = this._interactionCapCache || Object.create(null);
+    const prev = cache[this._interactionCapKey];
+    let nextWidth = capWidth;
+    if (prev && typeof prev.w === "number" && isFinite(prev.w)) {
+      nextWidth = Math.round(prev.w * 0.7 + capWidth * 0.3);
+    }
+
+    cache[this._interactionCapKey] = { w: nextWidth, ts: Date.now() };
+    this._interactionCapCache = cache;
+    this._touchInteractionCapKey(this._interactionCapKey);
+    this._persistInteractionCapCache();
+  },
+
+  _initInteractionCap(mode) {
+    const { requestedWidth, requestedHeight } = this._getInteractionBaseSize();
+    if (!requestedWidth || !requestedHeight) return;
+
+    const safeWidth = this._getInteractionSafeWidth(mode);
+    const step = this._slider && this._slider.step ? this._slider.step : 1;
+    const minWidth = this._slider && this._slider.min ? this._slider.min : 1;
+    const ABSOLUTE_MIN_PX = 96;
+    const floorWidth = Math.max(minWidth, ABSOLUTE_MIN_PX);
+    const maxWidth = Math.max(floorWidth, requestedWidth);
+
+    const key = this._getInteractionCapKey(mode, requestedWidth, requestedHeight);
+    let capWidth = this._getInteractionCapFromCache(key);
+    if (!capWidth || !isFinite(capWidth)) capWidth = safeWidth;
+
+    capWidth = Math.max(floorWidth, Math.min(maxWidth, capWidth));
+    capWidth = Math.round(capWidth / step) * step;
+    if (capWidth < floorWidth) capWidth = floorWidth;
+    if (capWidth > maxWidth) capWidth = maxWidth;
+
+    this._interactionCapWidth = capWidth;
+    this._interactionCapKey = key;
+    this._interactionCapRequestedWidth = requestedWidth;
+    this._interactionCapRequestedHeight = requestedHeight;
+    this._interactionCapPerf = { over: 0, under: 0, severe: 0 };
+    this._interactionCapLastUpdate = 0;
+
+    const configMin = typeof this._previewScaleMin === "number" ? this._previewScaleMin : 0.1;
+    const absMinScale = requestedWidth > 0 ? ABSOLUTE_MIN_PX / requestedWidth : 0;
+    const minScale = Math.max(configMin, absMinScale);
+    const maxScale = typeof this._previewScaleMax === "number" ? this._previewScaleMax : 1;
+    let capScale = requestedWidth > 0 ? capWidth / requestedWidth : 1;
+    capScale = Math.max(minScale, Math.min(maxScale, capScale));
+
+    this._previewScale = capScale;
+    this._previewScaleCap = capScale;
+  },
+
+  _updateInteractionCap(renderMs, targetWidth, requestedWidth) {
+    if (!renderMs || !isFinite(renderMs)) return;
+    if (this._interactionMode !== "tone") return;
+    if (!this._interactionCapWidth || !isFinite(this._interactionCapWidth)) return;
+
+    const budget = typeof this._previewTargetMs === "number" ? this._previewTargetMs : 33;
+    if (!budget || !isFinite(budget)) return;
+
+    const now = perfNow();
+    const lastUpdate = this._interactionCapLastUpdate || 0;
+    const perf = this._interactionCapPerf || { over: 0, under: 0, severe: 0 };
+
+    const isSevere = renderMs >= budget * 2;
+    const isOver = renderMs > budget;
+    const isUnder = renderMs < budget * 0.8;
+
+    perf.severe = isSevere ? perf.severe + 1 : 0;
+    perf.over = isOver ? perf.over + 1 : 0;
+    perf.under = isUnder ? perf.under + 1 : 0;
+
+    if (!isSevere && now - lastUpdate < INTERACTION_CAP_COOLDOWN_MS) {
+      this._interactionCapPerf = perf;
+      return;
+    }
+
+    const step = this._slider && this._slider.step ? this._slider.step : 1;
+    const minWidth = this._slider && this._slider.min ? this._slider.min : 1;
+    const ABSOLUTE_MIN_PX = 96;
+    const floorWidth = Math.max(minWidth, ABSOLUTE_MIN_PX);
+    const safeRequestedWidth =
+      typeof requestedWidth === "number" && isFinite(requestedWidth) && requestedWidth > 0
+        ? requestedWidth
+        : this._interactionCapRequestedWidth || this.data.targetWidth || floorWidth;
+
+    let cap = this._interactionCapWidth;
+    if (!cap || !isFinite(cap)) cap = safeRequestedWidth;
+    const maxWidth = Math.max(floorWidth, safeRequestedWidth);
+
+    const configMin = typeof this._previewScaleMin === "number" ? this._previewScaleMin : 0.1;
+    const absMinScale = safeRequestedWidth > 0 ? ABSOLUTE_MIN_PX / safeRequestedWidth : 0;
+    const minScale = Math.max(configMin, absMinScale);
+    const capScale = safeRequestedWidth > 0 ? cap / safeRequestedWidth : 1;
+    const currentScale = typeof this._previewScale === "number" ? this._previewScale : capScale;
+    const nearCap = currentScale >= capScale * 0.98;
+    const atFloorScale = currentScale <= minScale * 1.05;
+
+    let nextCap = cap;
+    if (isOver && (nearCap || atFloorScale || isSevere)) {
+      let base = cap;
+      if (atFloorScale && targetWidth) {
+        base = targetWidth;
+      }
+      if (isSevere && targetWidth) {
+        base = targetWidth;
+      }
+      base = Math.max(floorWidth, base);
+
+      let ratio = Math.sqrt(budget / renderMs);
+      const minRatio = perf.severe >= 2 ? 0.5 : 0.7;
+      if (!isFinite(ratio) || ratio <= 0) ratio = minRatio;
+      ratio = Math.max(minRatio, Math.min(1, ratio));
+      nextCap = Math.min(cap, base * ratio);
+      perf.under = 0;
+    } else if (perf.under >= 2 && safeRequestedWidth > cap && nearCap) {
+      nextCap = Math.min(safeRequestedWidth, cap * 1.06);
+    }
+
+    nextCap = Math.max(floorWidth, Math.round(nextCap / step) * step);
+    if (nextCap < floorWidth) nextCap = floorWidth;
+    if (nextCap > maxWidth) nextCap = maxWidth;
+
+    if (nextCap !== cap) {
+      this._interactionCapWidth = nextCap;
+      const maxScale = typeof this._previewScaleMax === "number" ? this._previewScaleMax : 1;
+      let nextScaleCap = safeRequestedWidth > 0 ? nextCap / safeRequestedWidth : 1;
+      nextScaleCap = Math.max(minScale, Math.min(maxScale, nextScaleCap));
+      this._previewScaleCap = nextScaleCap;
+      if (this._previewScale > nextScaleCap) {
+        this._previewScale = nextScaleCap;
+      }
+      this._interactionCapLastUpdate = now;
+    }
+
+    this._interactionCapPerf = perf;
+  },
+
   _clearInteractionConstraints(force) {
     if (!force && this._isInteracting()) return;
+    if (this._interactionMode === "tone") {
+      this._commitInteractionCapCache();
+    }
     this._previewScaleCap = null;
     this._previewTargetMs = this._previewTargetMsBase || 33;
     this._interactionMode = null;
     this._sliderMaxWidth = null;
     this._sliderPerf = null;
+    this._interactionCapWidth = null;
+    this._interactionCapKey = "";
+    this._interactionCapRequestedWidth = 0;
+    this._interactionCapRequestedHeight = 0;
+    this._interactionCapPerf = null;
+    this._interactionCapLastUpdate = 0;
   },
 
   onSliderTap(e) {
@@ -2743,11 +3051,8 @@ Page({
   },
 
   _applyInteractionStartScale(mode) {
-    // On interaction start, set a safe preview size and cap to avoid oscillation.
-    const safeWidth = this._getInteractionSafeWidth(mode);
-    const currentW = this.data.targetWidth || 1000;
-    const targetScale = currentW > safeWidth ? safeWidth / currentW : 1;
     if (mode === "slider") {
+      const safeWidth = this._getInteractionSafeWidth(mode);
       this._previewScale = 1;
       this._previewScaleCap = null;
       this._previewTargetMs = 100;
@@ -2757,16 +3062,21 @@ Page({
       this._sliderMaxWidth = Math.max(step, Math.round(capped / step) * step);
       this._sliderPerf = { over: 0, under: 0, severe: 0 };
     } else {
-      const currentScale = typeof this._previewScale === "number" ? this._previewScale : 1;
-      this._previewScale = Math.min(currentScale, targetScale);
       this._previewTargetMs = this._previewTargetMsBase || 33;
       this._sliderMaxWidth = null;
       this._sliderPerf = null;
+      if (mode === "tone") {
+        this._initInteractionCap(mode);
+      } else {
+        const safeWidth = this._getInteractionSafeWidth(mode);
+        const currentW = this.data.targetWidth || 1000;
+        const targetScale = currentW > safeWidth ? safeWidth / currentW : 1;
+        const currentScale = typeof this._previewScale === "number" ? this._previewScale : 1;
+        this._previewScale = Math.min(currentScale, targetScale);
+        this._previewScaleCap = null;
+      }
     }
     this._interactionMode = mode || null;
-    if (mode !== "slider") {
-      this._previewScaleCap = this._previewScale;
-    }
   },
 
   onSliderTouchStart(e) {
