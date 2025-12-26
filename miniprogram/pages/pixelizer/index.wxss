@@ -277,7 +277,7 @@
 .reset-btn {
   font-size: 12px;
   border: 1px solid #000000;
-  padding: 4px 8px;
+  padding: 2px 8px;
 }
 
 .theme-dark .reset-btn {
