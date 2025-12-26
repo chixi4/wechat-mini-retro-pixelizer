@@ -43,10 +43,16 @@ function perfNow() {
 const GRID_BORDER_PX = 2;
 const CANVAS_2D_MAX_DIM = 1365;
 const EXPORT_FILE_MAX_DIM = 4096;
-const INTERACTION_CAP_CACHE_KEY = "pixelizer_interaction_cap_v1";
+const INTERACTION_CAP_CACHE_KEY = "pixelizer_interaction_cap_v2";
 const INTERACTION_CAP_MAX_ENTRIES = 40;
-const INTERACTION_CAP_PIXELS_PER_BUCKET = 160000;
+const INTERACTION_CAP_DIM_BUCKET = 32;
 const INTERACTION_CAP_COOLDOWN_MS = 120;
+const INTERACTION_CAP_UNDER_RATIO = 0.9;
+const INTERACTION_CAP_STABLE_FRAMES = 2;
+const INTERACTION_CAP_GROWTH = 1.08;
+const INTERACTION_CAP_RECOVER_RATIO = 0.85;
+const INTERACTION_CAP_SLOW_WINDOW_MS = 2000;
+const INTERACTION_SLOW_FRAMES = 2;
 
 function compileShader(gl, type, source) {
   const shader = gl.createShader(type);
@@ -646,12 +652,17 @@ Page({
     this._previewScaleMin = 0.1;
     this._previewScaleMax = 1;
     this._previewScaleLastUpdate = 0;
+    this._previewScaleOverCount = 0;
     // Shorter cooldown for faster reaction
     this._previewScaleCooldownMs = 60;
     // Target 30fps (33ms) for smooth interaction
     this._previewTargetMsBase = 33;
     this._previewTargetMs = this._previewTargetMsBase;
     this._lastRenderMs = 0;
+    this._lastInteractiveRenderMs = 0;
+    this._lastInteractiveRenderAt = 0;
+    this._interactionCapPeakWidth = 0;
+    this._interactionCapStableCount = 0;
 
     const safeTopPx = this._safeTop;
     const safeBottomPx = this._safeBottom;
@@ -1795,6 +1806,9 @@ Page({
 
     // Allow immediate emergency drops even during cooldown
     const isSevereLag = renderMs > budget * 2;
+    const isOver = renderMs > budget * 1.05;
+    const prevOverCount = typeof this._previewScaleOverCount === "number" ? this._previewScaleOverCount : 0;
+    this._previewScaleOverCount = isOver ? prevOverCount + 1 : 0;
     if (!isSevereLag && now - lastUpdate < cooldown) return;
 
     const current = typeof this._previewScale === "number" ? this._previewScale : 1;
@@ -1808,14 +1822,17 @@ Page({
     }
     if (maxScale < minScale) maxScale = minScale;
 
+    const recoverRatio = this._interactionMode === "tone" ? INTERACTION_CAP_RECOVER_RATIO : 0.7;
+
     if (isSevereLag) {
       // Severe lag (>66ms): drop scale aggressively by 40%
       next = current * 0.6;
-    } else if (renderMs > budget * 1.05) {
+    } else if (isOver) {
+      if (this._previewScaleOverCount < INTERACTION_SLOW_FRAMES) return;
       // Moderate lag: drop proportional to error
       const ratio = Math.sqrt(budget / renderMs);
       next = current * ratio;
-    } else if (renderMs < budget * 0.7) {
+    } else if (renderMs < budget * recoverRatio) {
       // Under budget: slowly recover (5% per step)
       next = current * 1.05;
     } else {
@@ -2201,6 +2218,8 @@ Page({
           perf.meta.renderMs = +renderMs.toFixed(2);
         }
         if (isInteracting) {
+          this._lastInteractiveRenderMs = renderMs;
+          this._lastInteractiveRenderAt = perfNow();
           if (this._interactionMode === "slider") {
             this._updateSliderMaxWidth(renderMs, targetWidth, requestedWidth);
           } else {
@@ -2376,6 +2395,8 @@ Page({
       perf.meta.renderMs = +renderMs.toFixed(2);
     }
     if (isInteracting) {
+      this._lastInteractiveRenderMs = renderMs;
+      this._lastInteractiveRenderAt = perfNow();
       if (this._interactionMode === "slider") {
         this._updateSliderMaxWidth(renderMs, targetWidth, requestedWidth);
       } else {
@@ -2485,6 +2506,7 @@ Page({
       this._previewScale = 1;
       this._previewScaleCap = null;
       this._previewScaleLastUpdate = 0;
+      this._previewScaleOverCount = 0;
       this._interactionMode = null;
       this._sliderMaxWidth = null;
       this._sliderPerf = null;
@@ -2496,6 +2518,10 @@ Page({
       this._interactionCapLastUpdate = 0;
       this._previewTargetMs = this._previewTargetMsBase || 33;
       this._lastRenderMs = 0;
+      this._lastInteractiveRenderMs = 0;
+      this._lastInteractiveRenderAt = 0;
+      this._interactionCapPeakWidth = 0;
+      this._interactionCapStableCount = 0;
 
       const oriented = getOrientedSize(img, info);
       const aspect = oriented.width > 0 ? oriented.height / oriented.width : 1;
@@ -2662,6 +2688,7 @@ Page({
     this._previewScale = 1;
     this._previewScaleCap = null;
     this._previewScaleLastUpdate = 0;
+    this._previewScaleOverCount = 0;
     this._interactionMode = null;
     this._sliderMaxWidth = null;
     this._sliderPerf = null;
@@ -2673,6 +2700,10 @@ Page({
     this._interactionCapLastUpdate = 0;
     this._previewTargetMs = this._previewTargetMsBase || 33;
     this._lastRenderMs = 0;
+    this._lastInteractiveRenderMs = 0;
+    this._lastInteractiveRenderAt = 0;
+    this._interactionCapPeakWidth = 0;
+    this._interactionCapStableCount = 0;
 
     this._closeHintShown = false;
     this._awaitingPreviewExit = false;
@@ -2753,7 +2784,13 @@ Page({
     const SAFE_WIDTH = 640;
     if (mode === "slider") return SAFE_WIDTH;
     const lowPerfWidth = 192;
-    const slowRecent = (this._lastRenderMs || 0) >= 50;
+    const lastInteractiveMs =
+      typeof this._lastInteractiveRenderMs === "number" ? this._lastInteractiveRenderMs : 0;
+    const lastInteractiveAt =
+      typeof this._lastInteractiveRenderAt === "number" ? this._lastInteractiveRenderAt : 0;
+    const freshInteraction =
+      lastInteractiveAt > 0 && perfNow() - lastInteractiveAt < INTERACTION_CAP_SLOW_WINDOW_MS;
+    const slowRecent = freshInteraction && lastInteractiveMs >= 50;
     return this._isLowPerfDevice() || slowRecent ? lowPerfWidth : SAFE_WIDTH;
   },
 
@@ -2775,9 +2812,9 @@ Page({
     const algo = this.data.ditherAlgo || "";
     const paletteKey = this.data.paletteKey || "";
     const serpentine = this._state && this._state.isSerpentine ? 1 : 0;
-    const pixels = Math.max(1, Math.round((baseWidth || 1) * (baseHeight || 1)));
-    const bucket = Math.max(1, Math.round(pixels / INTERACTION_CAP_PIXELS_PER_BUCKET));
-    return `${safeMode}:${algo}:${paletteKey}:${serpentine}:${bucket}`;
+    const widthBucket = Math.max(1, Math.round((baseWidth || 1) / INTERACTION_CAP_DIM_BUCKET));
+    const heightBucket = Math.max(1, Math.round((baseHeight || 1) / INTERACTION_CAP_DIM_BUCKET));
+    return `${safeMode}:${algo}:${paletteKey}:${serpentine}:w${widthBucket}:h${heightBucket}`;
   },
 
   _loadInteractionCapCache() {
@@ -2871,7 +2908,7 @@ Page({
   },
 
   _commitInteractionCapCache() {
-    if (!this._interactionCapKey || !this._interactionCapWidth) return;
+    if (!this._interactionCapKey) return;
 
     const step = this._slider && this._slider.step ? this._slider.step : 1;
     const minWidth = this._slider && this._slider.min ? this._slider.min : 1;
@@ -2882,18 +2919,24 @@ Page({
         ? this._interactionCapRequestedWidth
         : this.data.targetWidth || floorWidth;
 
-    let capWidth = this._interactionCapWidth;
-    if (!capWidth || !isFinite(capWidth)) return;
-    capWidth = Math.max(floorWidth, Math.min(maxWidth, capWidth));
-    capWidth = Math.round(capWidth / step) * step;
-    if (capWidth < floorWidth) capWidth = floorWidth;
-    if (capWidth > maxWidth) capWidth = maxWidth;
-
     const cache = this._interactionCapCache || Object.create(null);
     const prev = cache[this._interactionCapKey];
-    let nextWidth = capWidth;
+    let baseWidth = this._interactionCapPeakWidth;
+    if (!baseWidth || !isFinite(baseWidth)) {
+      if (prev && typeof prev.w === "number" && isFinite(prev.w)) {
+        baseWidth = prev.w;
+      } else {
+        return;
+      }
+    }
+    baseWidth = Math.max(floorWidth, Math.min(maxWidth, baseWidth));
+    baseWidth = Math.round(baseWidth / step) * step;
+    if (baseWidth < floorWidth) baseWidth = floorWidth;
+    if (baseWidth > maxWidth) baseWidth = maxWidth;
+
+    let nextWidth = baseWidth;
     if (prev && typeof prev.w === "number" && isFinite(prev.w)) {
-      nextWidth = Math.round(prev.w * 0.7 + capWidth * 0.3);
+      nextWidth = Math.round(prev.w * 0.7 + baseWidth * 0.3);
     }
 
     cache[this._interactionCapKey] = { w: nextWidth, ts: Date.now() };
@@ -2914,8 +2957,9 @@ Page({
     const maxWidth = Math.max(floorWidth, requestedWidth);
 
     const key = this._getInteractionCapKey(mode, requestedWidth, requestedHeight);
-    let capWidth = this._getInteractionCapFromCache(key);
-    if (!capWidth || !isFinite(capWidth)) capWidth = safeWidth;
+    const cachedWidth = this._getInteractionCapFromCache(key);
+    let capWidth =
+      typeof cachedWidth === "number" && isFinite(cachedWidth) ? cachedWidth : safeWidth;
 
     capWidth = Math.max(floorWidth, Math.min(maxWidth, capWidth));
     capWidth = Math.round(capWidth / step) * step;
@@ -2928,6 +2972,14 @@ Page({
     this._interactionCapRequestedHeight = requestedHeight;
     this._interactionCapPerf = { over: 0, under: 0, severe: 0 };
     this._interactionCapLastUpdate = 0;
+    if (typeof cachedWidth === "number" && isFinite(cachedWidth)) {
+      let peakWidth = Math.round(cachedWidth / step) * step;
+      peakWidth = Math.max(floorWidth, Math.min(maxWidth, peakWidth));
+      this._interactionCapPeakWidth = peakWidth;
+    } else {
+      this._interactionCapPeakWidth = 0;
+    }
+    this._interactionCapStableCount = 0;
 
     const configMin = typeof this._previewScaleMin === "number" ? this._previewScaleMin : 0.1;
     const absMinScale = requestedWidth > 0 ? ABSOLUTE_MIN_PX / requestedWidth : 0;
@@ -2948,13 +3000,36 @@ Page({
     const budget = typeof this._previewTargetMs === "number" ? this._previewTargetMs : 33;
     if (!budget || !isFinite(budget)) return;
 
+    const step = this._slider && this._slider.step ? this._slider.step : 1;
+    const minWidth = this._slider && this._slider.min ? this._slider.min : 1;
+    const ABSOLUTE_MIN_PX = 96;
+    const floorWidth = Math.max(minWidth, ABSOLUTE_MIN_PX);
+    const safeRequestedWidth =
+      typeof requestedWidth === "number" && isFinite(requestedWidth) && requestedWidth > 0
+        ? requestedWidth
+        : this._interactionCapRequestedWidth || this.data.targetWidth || floorWidth;
+
+    const isStable = renderMs <= budget;
+    if (isStable) {
+      this._interactionCapStableCount = (this._interactionCapStableCount || 0) + 1;
+    } else {
+      this._interactionCapStableCount = 0;
+    }
+    if (isStable && this._interactionCapStableCount >= INTERACTION_CAP_STABLE_FRAMES && targetWidth) {
+      let stableWidth = Math.round(targetWidth / step) * step;
+      stableWidth = Math.max(floorWidth, Math.min(safeRequestedWidth, stableWidth));
+      if (!this._interactionCapPeakWidth || stableWidth > this._interactionCapPeakWidth) {
+        this._interactionCapPeakWidth = stableWidth;
+      }
+    }
+
     const now = perfNow();
     const lastUpdate = this._interactionCapLastUpdate || 0;
     const perf = this._interactionCapPerf || { over: 0, under: 0, severe: 0 };
 
     const isSevere = renderMs >= budget * 2;
     const isOver = renderMs > budget;
-    const isUnder = renderMs < budget * 0.8;
+    const isUnder = renderMs < budget * INTERACTION_CAP_UNDER_RATIO;
 
     perf.severe = isSevere ? perf.severe + 1 : 0;
     perf.over = isOver ? perf.over + 1 : 0;
@@ -2964,15 +3039,6 @@ Page({
       this._interactionCapPerf = perf;
       return;
     }
-
-    const step = this._slider && this._slider.step ? this._slider.step : 1;
-    const minWidth = this._slider && this._slider.min ? this._slider.min : 1;
-    const ABSOLUTE_MIN_PX = 96;
-    const floorWidth = Math.max(minWidth, ABSOLUTE_MIN_PX);
-    const safeRequestedWidth =
-      typeof requestedWidth === "number" && isFinite(requestedWidth) && requestedWidth > 0
-        ? requestedWidth
-        : this._interactionCapRequestedWidth || this.data.targetWidth || floorWidth;
 
     let cap = this._interactionCapWidth;
     if (!cap || !isFinite(cap)) cap = safeRequestedWidth;
@@ -2987,7 +3053,9 @@ Page({
     const atFloorScale = currentScale <= minScale * 1.05;
 
     let nextCap = cap;
-    if (isOver && (nearCap || atFloorScale || isSevere)) {
+    const overEnough = perf.over >= INTERACTION_SLOW_FRAMES;
+    const shouldReduce = isSevere || (isOver && overEnough);
+    if (shouldReduce && (nearCap || atFloorScale || isSevere)) {
       let base = cap;
       if (atFloorScale && targetWidth) {
         base = targetWidth;
@@ -3004,7 +3072,7 @@ Page({
       nextCap = Math.min(cap, base * ratio);
       perf.under = 0;
     } else if (perf.under >= 2 && safeRequestedWidth > cap && nearCap) {
-      nextCap = Math.min(safeRequestedWidth, cap * 1.06);
+      nextCap = Math.min(safeRequestedWidth, cap * INTERACTION_CAP_GROWTH);
     }
 
     nextCap = Math.max(floorWidth, Math.round(nextCap / step) * step);
@@ -3034,6 +3102,7 @@ Page({
     this._previewScaleCap = null;
     this._previewTargetMs = this._previewTargetMsBase || 33;
     this._interactionMode = null;
+    this._previewScaleOverCount = 0;
     this._sliderMaxWidth = null;
     this._sliderPerf = null;
     this._interactionCapWidth = null;
@@ -3042,6 +3111,8 @@ Page({
     this._interactionCapRequestedHeight = 0;
     this._interactionCapPerf = null;
     this._interactionCapLastUpdate = 0;
+    this._interactionCapPeakWidth = 0;
+    this._interactionCapStableCount = 0;
   },
 
   onSliderTap(e) {
