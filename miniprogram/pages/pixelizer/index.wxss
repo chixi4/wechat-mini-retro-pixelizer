@@ -365,7 +365,7 @@
 .dot {
   width: 10px;
   height: 10px;
-  border: 1px solid #000000;
+  border: 0.5px solid #000000;
 }
 
 .theme-dark .dot {
