@@ -30,6 +30,7 @@
     "include": []
   },
   "miniprogramRoot": "miniprogram/",
+  "cloudfunctionRoot": "cloudfunctions/",
   "appid": "touristappid",
   "editorSetting": {},
   "libVersion": "3.12.1"

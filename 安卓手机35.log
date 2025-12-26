@@ -1,0 +1,630 @@
+VM75:363 Error: not node js file system!path:/saaa_config.json; go __invokeHandler__ readFile worker? false
+h @ VM75:363
+a.WeixinJSCore.invokeHandler @ VM75:363
+w @ WAServiceMainContext.js:1
+invoke @ WAServiceMainContext.js:1
+invoke @ WAServiceMainContext.js:1
+u @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+ae @ WAServiceMainContext.js:1
+o @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+g0 @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emitInternal @ WAServiceMainContext.js:1
+e @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emitInternal @ WAServiceMainContext.js:1
+p @ WAServiceMainContext.js:1
+_ @ WAServiceMainContext.js:1
+B @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+a @ WAServiceMainContext.js:1
+s @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+_emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+subscribeHandler @ WAServiceMainContext.js:1
+ret.subscribeHandler
+Show 8 more frames
+index.js:2415 onChooseImage 被调用
+WAServiceMainContext.js:1 [wxapplib]] backgroundfetch privacy fail {"errno":101,"errMsg":"private_getBackgroundFetchData:fail private_getBackgroundFetchData:fail:jsapi invalid request data"}
+(anonymous) @ WAServiceMainContext.js:1
+i @ WAServiceMainContext.js:1
+s @ WAServiceMainContext.js:1
+fail @ WAServiceMainContext.js:1
+p @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+u @ WAServiceMainContext.js:1
+fail @ WAServiceMainContext.js:1
+p @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+q @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+r @ WAServiceMainContext.js:1
+s @ WAServiceMainContext.js:1
+callAndRemove @ WAServiceMainContext.js:1
+invokeCallbackHandler @ WAServiceMainContext.js:1
+ret.invokeCallbackHandler
+VM75:363 error occurs:no such file or directory, access 'wxfile://usr/miniprogramLog/log2'
+p @ VM75:363
+(anonymous) @ VM75:363
+(anonymous) @ node:fs:181
+index.js:2420 选择图片成功 {tempFiles: Array(1), type: "image", errMsg: "chooseMedia:ok"}
+index.js:2464 图片路径: wxfile://tmp_07933df67fd2aa71a461470c35d54b2dcdf9d047d9b1526a.jpg
+index.js:2470 获取图片信息成功 {width: 1260, orientation: "up", type: "jpeg", height: 1109, errMsg: "getImageInfo:ok", …}
+index.js:2481 准备加载图片到 canvas
+VM75:363 Error: not node js file system!path:/saaa_config.json; go __invokeHandler__ readFile worker? false
+h @ VM75:363
+a.WeixinJSCore.invokeHandler @ VM75:363
+w @ WAServiceMainContext.js:1
+invoke @ WAServiceMainContext.js:1
+invoke @ WAServiceMainContext.js:1
+u @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+ae @ WAServiceMainContext.js:1
+o @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+g0 @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emitInternal @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+T @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+_emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+subscribeHandler @ WAServiceMainContext.js:1
+ret.subscribeHandler
+index.js:2486 图片加载成功
+index.js:2501 [orient-check] {infoW: 1260, infoH: 1109, orientation: "up", imgW: 1260, imgH: 1109}
+index.js:2589 设置图片状态
+index.js:2613 开始处理图片
+index.js:1009 [perf] pixelizer {"start":1766742203367,"steps":{"scale+getImageData":26,"initWorkImageData":5,"baseCopy":0,"dither":12,"putImageData":0,"present":16},"meta":{"targetWidth":128,"targetHeight":113,"requestedWidth":128,"requestedHeight":113,"previewScale":1,"interactive":false,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0,"toneY":0,"worker":false,"renderMs":59},"total":60}
+index.js:2415 onChooseImage 被调用
+index.js:2420 选择图片成功 {tempFiles: Array(1), type: "image", errMsg: "chooseMedia:ok"}
+index.js:2464 图片路径: wxfile://tmp_317a6553643c100c069e41925fff0128aaaa323613bb26a5.jpg
+index.js:2470 获取图片信息成功 {width: 3072, orientation: "up", type: "jpeg", height: 4096, errMsg: "getImageInfo:ok", …}
+index.js:2481 准备加载图片到 canvas
+VM75:363 Error: not node js file system!path:/saaa_config.json; go __invokeHandler__ readFile worker? false
+h @ VM75:363
+a.WeixinJSCore.invokeHandler @ VM75:363
+w @ WAServiceMainContext.js:1
+invoke @ WAServiceMainContext.js:1
+invoke @ WAServiceMainContext.js:1
+u @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+ae @ WAServiceMainContext.js:1
+o @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+g0 @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emitInternal @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+T @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+_emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+subscribeHandler @ WAServiceMainContext.js:1
+ret.subscribeHandler
+index.js:2486 图片加载成功
+index.js:2501 [orient-check] {infoW: 3072, infoH: 4096, orientation: "up", imgW: 3072, imgH: 4096}
+index.js:2589 设置图片状态
+index.js:2613 开始处理图片
+index.js:1009 [perf] pixelizer {"start":1766742213524,"steps":{"scale+getImageData":14,"initWorkImageData":3,"baseCopy":0,"dither":10,"setDataLayout":10,"putImageData":0,"present":2},"meta":{"targetWidth":128,"targetHeight":171,"requestedWidth":128,"requestedHeight":171,"previewScale":1,"interactive":false,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0,"toneY":0,"worker":false,"renderMs":40},"total":40}
+index.js:2415 onChooseImage 被调用
+index.js:2424 选择图片失败 {errMsg: "chooseMedia:fail cancel"}
+r @ index.js:2424
+I.forEach.v.<computed> @ WAServiceMainContext.js:1
+p @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+q @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+r @ WAServiceMainContext.js:1
+s @ WAServiceMainContext.js:1
+callAndRemove @ WAServiceMainContext.js:1
+invokeCallbackHandler @ WAServiceMainContext.js:1
+ret.invokeCallbackHandler
+index.js:2628 上传图片过程出错 {errMsg: "chooseMedia:fail cancel"}
+(anonymous) @ index.js:2628
+s @ app-service.js:1152
+(anonymous) @ app-service.js:1152
+(anonymous) @ app-service.js:1152
+asyncGeneratorStep @ app-service.js:1125
+i @ app-service.js:1125
+Promise.then (async)
+asyncGeneratorStep @ app-service.js:1125
+c @ app-service.js:1125
+(anonymous) @ app-service.js:1125
+(anonymous) @ app-service.js:1125
+onChooseImage @ index.js:2414
+o.safeCallback @ WASubContext.js:1
+(anonymous) @ WASubContext.js:1
+Wn @ WASubContext.js:1
+(anonymous) @ WASubContext.js:1
+ue @ WASubContext.js:1
+ce @ WASubContext.js:1
+(anonymous) @ WASubContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+_emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+dispatch @ WAServiceMainContext.js:1
+cb @ WAServiceMainContext.js:1
+cb @ WAServiceMainContext.js:1
+index.js:2630 用户取消选择图片
+index.js:2415 onChooseImage 被调用
+index.js:2420 选择图片成功 {tempFiles: Array(1), type: "image", errMsg: "chooseMedia:ok"}
+index.js:2464 图片路径: wxfile://tmp_e09d04880f6bc6e34a6c70a04b9aaeb045c8092d3d634bd2.png
+index.js:2470 获取图片信息成功 {width: 3056, orientation: "up", type: "png", height: 4080, errMsg: "getImageInfo:ok", …}
+index.js:2481 准备加载图片到 canvas
+VM75:363 Error: not node js file system!path:/saaa_config.json; go __invokeHandler__ readFile worker? false
+h @ VM75:363
+a.WeixinJSCore.invokeHandler @ VM75:363
+w @ WAServiceMainContext.js:1
+invoke @ WAServiceMainContext.js:1
+invoke @ WAServiceMainContext.js:1
+u @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+ae @ WAServiceMainContext.js:1
+o @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+g0 @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emitInternal @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+T @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+_emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+subscribeHandler @ WAServiceMainContext.js:1
+ret.subscribeHandler
+index.js:2486 图片加载成功
+index.js:2501 [orient-check] {infoW: 3056, infoH: 4080, orientation: "up", imgW: 3056, imgH: 4080}
+index.js:2589 设置图片状态
+index.js:2613 开始处理图片
+index.js:1009 [perf] pixelizer {"start":1766742229010,"steps":{"scale+getImageData":19,"initWorkImageData":3,"baseCopy":0,"dither":3,"setDataLayout":9,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":171,"requestedWidth":128,"requestedHeight":171,"previewScale":1,"interactive":false,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0,"toneY":0,"worker":false,"renderMs":35},"total":35}
+index.js:2415 onChooseImage 被调用
+index.js:2420 选择图片成功 {tempFiles: Array(1), type: "image", errMsg: "chooseMedia:ok"}
+index.js:2464 图片路径: wxfile://tmp_003a14fcfedd4b824f2453f42e67ad1579712a85334d401e.jpg
+VM75:363 Error: not node js file system!path:/saaa_config.json; go __invokeHandler__ readFile worker? false
+h @ VM75:363
+a.WeixinJSCore.invokeHandler @ VM75:363
+w @ WAServiceMainContext.js:1
+invoke @ WAServiceMainContext.js:1
+invoke @ WAServiceMainContext.js:1
+u @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+ae @ WAServiceMainContext.js:1
+o @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+g0 @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emitInternal @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+T @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+_emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+subscribeHandler @ WAServiceMainContext.js:1
+ret.subscribeHandler
+index.js:2470 获取图片信息成功 {width: 3072, orientation: "up", type: "jpeg", height: 4096, errMsg: "getImageInfo:ok", …}
+index.js:2481 准备加载图片到 canvas
+index.js:2486 图片加载成功
+index.js:2501 [orient-check] {infoW: 3072, infoH: 4096, orientation: "up", imgW: 3072, imgH: 4096}
+index.js:2589 设置图片状态
+index.js:2613 开始处理图片
+index.js:1009 [perf] pixelizer {"start":1766742237225,"steps":{"scale+getImageData":13,"initWorkImageData":4,"baseCopy":0,"dither":5,"setDataLayout":7,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":171,"requestedWidth":128,"requestedHeight":171,"previewScale":1,"interactive":false,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0,"toneY":0,"worker":false,"renderMs":29},"total":29}
+index.js:2415 onChooseImage 被调用
+index.js:2420 选择图片成功 {tempFiles: Array(1), type: "image", errMsg: "chooseMedia:ok"}
+index.js:2464 图片路径: wxfile://tmp_b8ce3442cfe0b3c9fe86e89585a80573b2c8de119c7e17d9.jpg
+VM75:363 Error: not node js file system!path:/saaa_config.json; go __invokeHandler__ readFile worker? false
+h @ VM75:363
+a.WeixinJSCore.invokeHandler @ VM75:363
+w @ WAServiceMainContext.js:1
+invoke @ WAServiceMainContext.js:1
+invoke @ WAServiceMainContext.js:1
+u @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+ae @ WAServiceMainContext.js:1
+o @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+g0 @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emitInternal @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+T @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+_emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+subscribeHandler @ WAServiceMainContext.js:1
+ret.subscribeHandler
+index.js:2470 获取图片信息成功 {width: 3072, orientation: "up", type: "jpeg", height: 4096, errMsg: "getImageInfo:ok", …}
+index.js:2481 准备加载图片到 canvas
+index.js:2486 图片加载成功
+index.js:2501 [orient-check] {infoW: 3072, infoH: 4096, orientation: "up", imgW: 3072, imgH: 4096}
+index.js:2589 设置图片状态
+index.js:2613 开始处理图片
+index.js:1009 [perf] pixelizer {"start":1766742246406,"steps":{"scale+getImageData":12,"initWorkImageData":4,"baseCopy":0,"dither":5,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":171,"requestedWidth":128,"requestedHeight":171,"previewScale":1,"interactive":false,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0,"toneY":0,"worker":false,"renderMs":22},"total":22}
+index.js:2415 onChooseImage 被调用
+index.js:2420 选择图片成功 {tempFiles: Array(1), type: "image", errMsg: "chooseMedia:ok"}
+index.js:2464 图片路径: wxfile://tmp_9603587d57badf220f88a7c590358b7fce00e70b677a3891.jpg
+index.js:2470 获取图片信息成功 {width: 1260, orientation: "up", type: "jpeg", height: 2800, errMsg: "getImageInfo:ok", …}
+index.js:2481 准备加载图片到 canvas
+index.js:2486 图片加载成功
+index.js:2501 [orient-check] {infoW: 1260, infoH: 2800, orientation: "up", imgW: 1260, imgH: 2800}
+index.js:2589 设置图片状态
+VM75:363 Error: not node js file system!path:/saaa_config.json; go __invokeHandler__ readFile worker? false
+h @ VM75:363
+a.WeixinJSCore.invokeHandler @ VM75:363
+w @ WAServiceMainContext.js:1
+invoke @ WAServiceMainContext.js:1
+invoke @ WAServiceMainContext.js:1
+u @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+ae @ WAServiceMainContext.js:1
+o @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+g0 @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emitInternal @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+T @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+_emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+subscribeHandler @ WAServiceMainContext.js:1
+ret.subscribeHandler
+index.js:2613 开始处理图片
+index.js:1009 [perf] pixelizer {"start":1766742253371,"steps":{"scale+getImageData":8,"initWorkImageData":7,"baseCopy":0,"dither":4,"setDataLayout":8,"putImageData":0,"present":3},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":false,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0,"toneY":0,"worker":false,"renderMs":31},"total":31}
+index.js:844 [worker] info wasm simd self-test ok ok=1 simd=1
+index.js:1009 [perf] pixelizer {"start":1766742254943,"steps":{"workerBaseCopy":0,"workerBasePost":3,"workerRender":49,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.00807810816271548,"toneY":-0.014915017520680252,"worker":true,"renderMs":52},"worker":{"start":57746.1272701025,"steps":{"wasmSetPalette":0.15,"wasmSetBase":0.75,"wasmRender":6.45},"total":26.8,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.00807810816271548,"toneY":-0.014915017520680252,"wasm":"simd"}},"total":52}
+index.js:1009 [perf] pixelizer {"start":1766742255023,"steps":{"workerRender":10,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.04453146046605605,"toneY":-0.010713465073529438,"worker":true,"renderMs":10},"worker":{"start":57808.64534306526,"steps":{"wasmRender":3.93},"total":4.32,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.04453146046605605,"toneY":-0.010713465073529438,"wasm":"simd"}},"total":10}
+index.js:1009 [perf] pixelizer {"start":1766742255042,"steps":{"workerRender":9,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.15487628805226294,"toneY":0.0443267822265625,"worker":true,"renderMs":9},"worker":{"start":57824.962895035744,"steps":{"wasmRender":4.21},"total":4.59,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.15487628805226294,"toneY":0.0443267822265625,"wasm":"simd"}},"total":9}
+index.js:1009 [perf] pixelizer {"start":1766742255061,"steps":{"workerRender":25,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2912313527074353,"toneY":0.14978745404411764,"worker":true,"renderMs":25},"worker":{"start":57844.75242602825,"steps":{"wasmRender":19.46},"total":20.2,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.2912313527074353,"toneY":0.14978745404411764,"wasm":"simd"}},"total":25}
+index.js:1009 [perf] pixelizer {"start":1766742255104,"steps":{"workerRender":8,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.4878810487944505,"toneY":0.22920047535615806,"worker":true,"renderMs":8},"worker":{"start":57887.268364071846,"steps":{"wasmRender":3.99},"total":4.32,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.4878810487944505,"toneY":0.22920047535615806,"wasm":"simd"}},"total":8}
+index.js:1009 [perf] pixelizer {"start":1766742255131,"steps":{"workerRender":9,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.5259121598868535,"toneY":0.23466222426470584,"worker":true,"renderMs":9},"worker":{"start":57913.26555109024,"steps":{"wasmRender":3.87},"total":4.19,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.5259121598868535,"toneY":0.23466222426470584,"wasm":"simd"}},"total":9}
+index.js:1009 [perf] pixelizer {"start":1766742255160,"steps":{"workerRender":7,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.4514280121901939,"toneY":0.11617413689108458,"worker":true,"renderMs":7},"worker":{"start":57942.52628004551,"steps":{"wasmRender":3.8},"total":4.1,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.4514280121901939,"toneY":0.11617413689108458,"wasm":"simd"}},"total":7}
+index.js:1009 [perf] pixelizer {"start":1766742255191,"steps":{"workerRender":7,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.325714111328125,"toneY":-0.016598869772518343,"worker":true,"renderMs":7},"worker":{"start":57974.266176104546,"steps":{"wasmRender":3.94},"total":4.32,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.325714111328125,"toneY":-0.016598869772518343,"wasm":"simd"}},"total":7}
+index.js:1009 [perf] pixelizer {"start":1766742255225,"steps":{"workerRender":7,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.1659117600013469,"toneY":-0.05189334644990806,"worker":true,"renderMs":7},"worker":{"start":58007.56586301327,"steps":{"wasmRender":3.9},"total":4.22,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.1659117600013469,"toneY":-0.05189334644990806,"wasm":"simd"}},"total":7}
+index.js:1009 [perf] pixelizer {"start":1766742255257,"steps":{"workerRender":8,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.04965536183324348,"toneY":-0.045169605928308876,"worker":true,"renderMs":8},"worker":{"start":58040.094249010086,"steps":{"wasmRender":4.11},"total":4.49,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":-0.04965536183324348,"toneY":-0.045169605928308876,"wasm":"simd"}},"total":8}
+index.js:1009 [perf] pixelizer {"start":1766742255291,"steps":{"workerRender":7,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.12985292632004308,"toneY":-0.029202629538143343,"worker":true,"renderMs":7},"worker":{"start":58074.17492604256,"steps":{"wasmRender":3.96},"total":4.31,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":-0.12985292632004308,"toneY":-0.029202629538143343,"wasm":"simd"}},"total":7}
+index.js:1009 [perf] pixelizer {"start":1766742255308,"steps":{"workerRender":7,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.20098519160829742,"toneY":-0.011554493623621376,"worker":true,"renderMs":7},"worker":{"start":58091.11336302757,"steps":{"wasmRender":3.86},"total":4.17,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":-0.20098519160829742,"toneY":-0.011554493623621376,"wasm":"simd"}},"total":7}
+index.js:1009 [perf] pixelizer {"start":1766742255324,"steps":{"workerRender":8,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.2555668271821121,"toneY":0.014073988970588203,"worker":true,"renderMs":8},"worker":{"start":58107.34956109524,"steps":{"wasmRender":4.01},"total":4.47,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":-0.2555668271821121,"toneY":0.014073988970588203,"wasm":"simd"}},"total":8}
+index.js:1009 [perf] pixelizer {"start":1766742255342,"steps":{"workerRender":13,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.3111337595972522,"toneY":0.09222771139705888,"worker":true,"renderMs":13},"worker":{"start":58129.18487405777,"steps":{"wasmRender":3.84},"total":4.07,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":-0.3111337595972522,"toneY":0.09222771139705888,"wasm":"simd"}},"total":13}
+index.js:1009 [perf] pixelizer {"start":1766742255375,"steps":{"workerRender":7,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.30147768217941806,"toneY":0.24054583381204042,"worker":true,"renderMs":7},"worker":{"start":58157.82919704914,"steps":{"wasmRender":3.74},"total":3.93,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":-0.30147768217941806,"toneY":0.24054583381204042,"wasm":"simd"}},"total":7}
+index.js:1009 [perf] pixelizer {"start":1766742255407,"steps":{"workerRender":6,"workerApply":0,"putImageData":1,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.17615840517241377,"toneY":0.4397035486557904,"worker":true,"renderMs":7},"worker":{"start":58189.355186104774,"steps":{"wasmRender":3.98},"total":4.19,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":-0.17615840517241377,"toneY":0.4397035486557904,"wasm":"simd"}},"total":7}
+index.js:1009 [perf] pixelizer {"start":1766742255440,"steps":{"workerRender":8,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.020886125235721975,"toneY":0.5783574721392464,"worker":true,"renderMs":8},"worker":{"start":58222.49346804619,"steps":{"wasmRender":5.45},"total":5.68,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.020886125235721975,"toneY":0.5783574721392464,"wasm":"simd"}},"total":8}
+index.js:1009 [perf] pixelizer {"start":1766742255473,"steps":{"workerRender":7,"workerApply":1,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2281769851158406,"toneY":0.6014682545381433,"worker":true,"renderMs":8},"worker":{"start":58255.86549901962,"steps":{"wasmRender":4.47},"total":4.66,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.2281769851158406,"toneY":0.6014682545381433,"wasm":"simd"}},"total":8}
+index.js:1009 [perf] pixelizer {"start":1766742255506,"steps":{"workerRender":7,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.40256137190193964,"toneY":0.5182755414177389,"worker":true,"renderMs":7},"worker":{"start":58288.84273803234,"steps":{"wasmRender":4.16},"total":4.39,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.40256137190193964,"toneY":0.5182755414177389,"wasm":"simd"}},"total":7}
+index.js:1009 [perf] pixelizer {"start":1766742255541,"steps":{"workerRender":8,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.4386201003502155,"toneY":0.33130062327665444,"worker":true,"renderMs":8},"worker":{"start":58323.530395030975,"steps":{"wasmRender":4.79},"total":5.03,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.4386201003502155,"toneY":0.33130062327665444,"wasm":"simd"}},"total":8}
+index.js:1009 [perf] pixelizer {"start":1766742255573,"steps":{"workerRender":8,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.40650213833512927,"toneY":0.07835747213924638,"worker":true,"renderMs":8},"worker":{"start":58355.83659207821,"steps":{"wasmRender":4.4},"total":4.73,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.40650213833512927,"toneY":0.07835747213924638,"wasm":"simd"}},"total":8}
+index.js:1009 [perf] pixelizer {"start":1766742255606,"steps":{"workerRender":7,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.21438388166756472,"toneY":-0.2195380715762867,"worker":true,"renderMs":7},"worker":{"start":58388.56945705414,"steps":{"wasmRender":4.02},"total":4.32,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.21438388166756472,"toneY":-0.2195380715762867,"wasm":"simd"}},"total":7}
+index.js:1009 [perf] pixelizer {"start":1766742255640,"steps":{"workerRender":7,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.0072910703461746,"toneY":-0.2825631534352022,"worker":true,"renderMs":7},"worker":{"start":58422.9560199976,"steps":{"wasmRender":3.92},"total":4.2,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.0072910703461746,"toneY":-0.2825631534352022,"wasm":"simd"}},"total":7}
+index.js:1009 [perf] pixelizer {"start":1766742255673,"steps":{"workerRender":7,"workerApply":1,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.20413713126346977,"toneY":-0.2241623822380514,"worker":true,"renderMs":8},"worker":{"start":58456.12659204006,"steps":{"wasmRender":4.04},"total":4.55,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":-0.20413713126346977,"toneY":-0.2241623822380514,"wasm":"simd"}},"total":8}
+index.js:1009 [perf] pixelizer {"start":1766742255706,"steps":{"workerRender":7,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.35251306994207976,"toneY":-0.12458172966452197,"worker":true,"renderMs":7},"worker":{"start":58488.63367605209,"steps":{"wasmRender":3.79},"total":4.06,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":-0.35251306994207976,"toneY":-0.12458172966452197,"wasm":"simd"}},"total":7}
+index.js:1009 [perf] pixelizer {"start":1766742255739,"steps":{"workerRender":7,"workerApply":0,"putImageData":0,"present":1},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.3990147557751885,"toneY":0.02247709386488972,"worker":true,"renderMs":8},"worker":{"start":58521.91325902939,"steps":{"wasmRender":4.13},"total":4.46,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":-0.3990147557751885,"toneY":0.02247709386488972,"wasm":"simd"}},"total":8}
+index.js:1009 [perf] pixelizer {"start":1766742255772,"steps":{"workerRender":7,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.31704490924703665,"toneY":0.24726688160615806,"worker":true,"renderMs":7},"worker":{"start":58554.92315506935,"steps":{"wasmRender":3.95},"total":4.33,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":-0.31704490924703665,"toneY":0.24726688160615806,"wasm":"simd"}},"total":7}
+index.js:1009 [perf] pixelizer {"start":1766742255805,"steps":{"workerRender":7,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.11192079741379313,"toneY":0.44810665355009194,"worker":true,"renderMs":7},"worker":{"start":58587.884092092514,"steps":{"wasmRender":3.9},"total":4.17,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":-0.11192079741379313,"toneY":0.44810665355009194,"wasm":"simd"}},"total":7}
+index.js:1009 [perf] pixelizer {"start":1766742255839,"steps":{"workerRender":7,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.20591136011584044,"toneY":0.5035696590647978,"worker":true,"renderMs":7},"worker":{"start":58621.82424902916,"steps":{"wasmRender":3.89},"total":4.18,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.20591136011584044,"toneY":0.5035696590647978,"wasm":"simd"}},"total":7}
+index.js:1009 [perf] pixelizer {"start":1766742255870,"steps":{"workerRender":8,"workerApply":1,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.42443447770743536,"toneY":0.3770994298598346,"worker":true,"renderMs":9},"worker":{"start":58653.22378003597,"steps":{"wasmRender":4.82},"total":5.14,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.42443447770743536,"toneY":0.3770994298598346,"wasm":"simd"}},"total":9}
+index.js:1009 [perf] pixelizer {"start":1766742255905,"steps":{"workerRender":8,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.542266424771013,"toneY":0.1749976663028493,"worker":true,"renderMs":8},"worker":{"start":58687.71513402462,"steps":{"wasmRender":4.41},"total":4.78,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.542266424771013,"toneY":0.1749976663028493,"wasm":"simd"}},"total":8}
+index.js:1009 [perf] pixelizer {"start":1766742255938,"steps":{"workerRender":8,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.5420685866783406,"toneY":-0.11323637120863972,"worker":true,"renderMs":8},"worker":{"start":58721.04351902008,"steps":{"wasmRender":4.8},"total":5.13,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.5420685866783406,"toneY":-0.11323637120863972,"wasm":"simd"}},"total":8}
+index.js:1009 [perf] pixelizer {"start":1766742255971,"steps":{"workerRender":8,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.39862050023572193,"toneY":-0.36155521168428306,"worker":true,"renderMs":9},"worker":{"start":58754.2125300169,"steps":{"wasmRender":4.78},"total":5.13,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.39862050023572193,"toneY":-0.36155521168428306,"wasm":"simd"}},"total":9}
+index.js:1009 [perf] pixelizer {"start":1766742256006,"steps":{"workerRender":8,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.18325142695985996,"toneY":-0.43844784007352944,"worker":true,"renderMs":8},"worker":{"start":58788.31779003143,"steps":{"wasmRender":4.99},"total":5.36,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.18325142695985996,"toneY":-0.43844784007352944,"wasm":"simd"}},"total":8}
+index.js:1009 [perf] pixelizer {"start":1766742256036,"steps":{"workerRender":7,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.052611041891163834,"toneY":-0.30231341193704053,"worker":true,"renderMs":7},"worker":{"start":58818.91284203529,"steps":{"wasmRender":3.8},"total":4.09,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":-0.052611041891163834,"toneY":-0.30231341193704053,"wasm":"simd"}},"total":7}
+index.js:1009 [perf] pixelizer {"start":1766742256070,"steps":{"workerRender":7,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.27704341493803875,"toneY":-0.05483111213235303,"worker":true,"renderMs":7},"worker":{"start":58852.58029007912,"steps":{"wasmRender":3.77},"total":4.13,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":-0.27704341493803875,"toneY":-0.05483111213235303,"wasm":"simd"}},"total":7}
+index.js:1009 [perf] pixelizer {"start":1766742256105,"steps":{"workerRender":7,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.33576428643588363,"toneY":0.05735060747931986,"worker":true,"renderMs":7},"worker":{"start":58887.30148804188,"steps":{"wasmRender":3.73},"total":4.04,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":-0.33576428643588363,"toneY":0.05735060747931986,"wasm":"simd"}},"total":7}
+index.js:1009 [perf] pixelizer {"start":1766742256137,"steps":{"workerRender":7,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.2928071120689655,"toneY":0.20188993566176472,"worker":true,"renderMs":7},"worker":{"start":58919.44237411022,"steps":{"wasmRender":3.73},"total":4.4,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":-0.2928071120689655,"toneY":0.20188993566176472,"wasm":"simd"}},"total":7}
+index.js:1009 [perf] pixelizer {"start":1766742256168,"steps":{"workerRender":8,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.07073964086072193,"toneY":0.35987135943244486,"worker":true,"renderMs":8},"worker":{"start":58950.76560306549,"steps":{"wasmRender":4.71},"total":5.01,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":-0.07073964086072193,"toneY":0.35987135943244486,"wasm":"simd"}},"total":8}
+index.js:1009 [perf] pixelizer {"start":1766742256203,"steps":{"workerRender":7,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.12591215988685356,"toneY":0.3754182703354779,"worker":true,"renderMs":7},"worker":{"start":58985.978988051414,"steps":{"wasmRender":4.02},"total":4.5,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.12591215988685356,"toneY":0.3754182703354779,"wasm":"simd"}},"total":7}
+index.js:1009 [perf] pixelizer {"start":1766742256235,"steps":{"workerRender":7,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.26029484189789875,"toneY":0.30945093491498166,"worker":true,"renderMs":7},"worker":{"start":59017.655551075935,"steps":{"wasmRender":4.13},"total":4.39,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.26029484189789875,"toneY":0.30945093491498166,"wasm":"simd"}},"total":7}
+index.js:1009 [perf] pixelizer {"start":1766742256267,"steps":{"workerRender":12,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":128,"targetHeight":284,"requestedWidth":128,"requestedHeight":284,"previewScale":1,"interactive":false,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2890646046605603,"toneY":0.231719970703125,"worker":true,"renderMs":12},"worker":{"start":59051.59503006935,"steps":{"wasmRender":3.96},"total":4.25,"meta":{"w":128,"h":284,"ditherAlgo":"atkinson","toneX":0.2890646046605603,"toneY":0.231719970703125,"wasm":"simd"}},"total":12}
+index.js:1009 [perf] pixelizer {"start":1766742256611,"steps":{"scale+getImageData":10,"initWorkImageData":10,"workerBaseCopy":0,"workerBasePost":2,"workerRender":8,"workerApply":0,"putImageData":0,"present":52},"meta":{"targetWidth":136,"targetHeight":302,"requestedWidth":136,"requestedHeight":302,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2890646046605603,"toneY":0.231719970703125,"worker":true,"renderMs":82},"worker":{"start":59415.26445710659,"steps":{"wasmSetBase":0.62,"wasmRender":4.88},"total":5.72,"meta":{"w":136,"h":302,"ditherAlgo":"atkinson","toneX":0.2890646046605603,"toneY":0.231719970703125,"wasm":"simd"}},"total":82}
+index.js:1009 [perf] pixelizer {"start":1766742256712,"steps":{"scale+getImageData":7,"initWorkImageData":4,"workerBaseCopy":0,"workerBasePost":2,"workerRender":14,"workerApply":0,"putImageData":0,"present":5},"meta":{"targetWidth":184,"targetHeight":409,"requestedWidth":184,"requestedHeight":409,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2890646046605603,"toneY":0.231719970703125,"worker":true,"renderMs":32},"worker":{"start":59508.97122704983,"steps":{"wasmSetBase":0.89,"wasmRender":8.53},"total":9.67,"meta":{"w":184,"h":409,"ditherAlgo":"atkinson","toneX":0.2890646046605603,"toneY":0.231719970703125,"wasm":"simd"}},"total":32}
+index.js:1009 [perf] pixelizer {"start":1766742256746,"steps":{"scale+getImageData":9,"initWorkImageData":4,"workerBaseCopy":0,"workerBasePost":2,"workerRender":14,"workerApply":1,"putImageData":0,"present":6},"meta":{"targetWidth":216,"targetHeight":480,"requestedWidth":216,"requestedHeight":480,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2890646046605603,"toneY":0.231719970703125,"worker":true,"renderMs":36},"worker":{"start":59545.45909202099,"steps":{"wasmSetBase":0.22,"wasmRender":10.65},"total":11.04,"meta":{"w":216,"h":480,"ditherAlgo":"atkinson","toneX":0.2890646046605603,"toneY":0.231719970703125,"wasm":"simd"}},"total":37}
+index.js:1009 [perf] pixelizer {"start":1766742256784,"steps":{"scale+getImageData":12,"initWorkImageData":4,"workerBaseCopy":1,"workerBasePost":1,"workerRender":26,"workerApply":1,"putImageData":0,"present":7},"meta":{"targetWidth":288,"targetHeight":640,"requestedWidth":288,"requestedHeight":640,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2890646046605603,"toneY":0.231719970703125,"worker":true,"renderMs":52},"worker":{"start":59585.72289407253,"steps":{"wasmSetBase":1.15,"wasmRender":20.39},"total":21.74,"meta":{"w":288,"h":640,"ditherAlgo":"atkinson","toneX":0.2890646046605603,"toneY":0.231719970703125,"wasm":"simd"}},"total":52}
+index.js:1009 [perf] pixelizer {"start":1766742256837,"steps":{"scale+getImageData":13,"initWorkImageData":3,"workerBaseCopy":1,"workerBasePost":2,"workerRender":37,"workerApply":0,"putImageData":0,"present":7},"meta":{"targetWidth":368,"targetHeight":818,"requestedWidth":368,"requestedHeight":818,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2890646046605603,"toneY":0.231719970703125,"worker":true,"renderMs":63},"worker":{"start":59639.20607101917,"steps":{"wasmSetBase":2.18,"wasmRender":30.4},"total":32.79,"meta":{"w":368,"h":818,"ditherAlgo":"atkinson","toneX":0.2890646046605603,"toneY":0.231719970703125,"wasm":"simd"}},"total":63}
+index.js:1009 [perf] pixelizer {"start":1766742256903,"steps":{"scale+getImageData":12,"initWorkImageData":4,"workerBaseCopy":1,"workerBasePost":2,"workerRender":53,"workerApply":1,"putImageData":0,"present":7},"meta":{"targetWidth":428,"targetHeight":951,"requestedWidth":428,"requestedHeight":951,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2890646046605603,"toneY":0.231719970703125,"worker":true,"renderMs":80},"worker":{"start":59712.47476899624,"steps":{"wasmSetBase":0.8,"wasmRender":40.87},"total":41.85,"meta":{"w":428,"h":951,"ditherAlgo":"atkinson","toneX":0.2890646046605603,"toneY":0.231719970703125,"wasm":"simd"}},"total":80}
+index.js:1009 [perf] pixelizer {"start":1766742256986,"steps":{"scale+getImageData":12,"initWorkImageData":4,"workerBaseCopy":1,"workerBasePost":3,"workerRender":49,"workerApply":0,"putImageData":1,"present":6},"meta":{"targetWidth":448,"targetHeight":996,"requestedWidth":448,"requestedHeight":996,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2890646046605603,"toneY":0.231719970703125,"worker":true,"renderMs":76},"worker":{"start":59789.305134058,"steps":{"wasmSetBase":0.61,"wasmRender":44.31},"total":45.25,"meta":{"w":448,"h":996,"ditherAlgo":"atkinson","toneX":0.2890646046605603,"toneY":0.231719970703125,"wasm":"simd"}},"total":76}
+index.js:1009 [perf] pixelizer {"start":1766742257064,"steps":{"scale+getImageData":12,"initWorkImageData":5,"workerBaseCopy":1,"workerBasePost":2,"workerRender":47,"workerApply":0,"putImageData":0,"present":7},"meta":{"targetWidth":440,"targetHeight":978,"requestedWidth":440,"requestedHeight":978,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2890646046605603,"toneY":0.231719970703125,"worker":true,"renderMs":74},"worker":{"start":59867.31377899647,"steps":{"wasmSetBase":0.3,"wasmRender":42.55},"total":43.03,"meta":{"w":440,"h":978,"ditherAlgo":"atkinson","toneX":0.2890646046605603,"toneY":0.231719970703125,"wasm":"simd"}},"total":74}
+index.js:1009 [perf] pixelizer {"start":1766742257139,"steps":{"scale+getImageData":13,"initWorkImageData":4,"workerBaseCopy":0,"workerBasePost":2,"workerRender":31,"workerApply":1,"putImageData":0,"present":6},"meta":{"targetWidth":352,"targetHeight":782,"requestedWidth":352,"requestedHeight":782,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2890646046605603,"toneY":0.231719970703125,"worker":true,"renderMs":57},"worker":{"start":59941.38997709751,"steps":{"wasmSetBase":0.25,"wasmRender":27.36},"total":27.82,"meta":{"w":352,"h":782,"ditherAlgo":"atkinson","toneX":0.2890646046605603,"toneY":0.231719970703125,"wasm":"simd"}},"total":57}
+index.js:1009 [perf] pixelizer {"start":1766742257198,"steps":{"scale+getImageData":8,"initWorkImageData":5,"workerBaseCopy":1,"workerBasePost":1,"workerRender":21,"workerApply":0,"putImageData":0,"present":6},"meta":{"targetWidth":264,"targetHeight":587,"requestedWidth":264,"requestedHeight":587,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2890646046605603,"toneY":0.231719970703125,"worker":true,"renderMs":42},"worker":{"start":59998.085029006004,"steps":{"wasmSetBase":0.13,"wasmRender":15.57},"total":15.88,"meta":{"w":264,"h":587,"ditherAlgo":"atkinson","toneX":0.2890646046605603,"toneY":0.231719970703125,"wasm":"simd"}},"total":42}
+index.js:1009 [perf] pixelizer {"start":1766742257242,"steps":{"scale+getImageData":9,"initWorkImageData":4,"workerBaseCopy":0,"workerBasePost":1,"workerRender":12,"workerApply":0,"putImageData":0,"present":5},"meta":{"targetWidth":192,"targetHeight":427,"requestedWidth":192,"requestedHeight":427,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2890646046605603,"toneY":0.231719970703125,"worker":true,"renderMs":31},"worker":{"start":60039.03159201145,"steps":{"wasmSetBase":0.09,"wasmRender":8.46},"total":8.73,"meta":{"w":192,"h":427,"ditherAlgo":"atkinson","toneX":0.2890646046605603,"toneY":0.231719970703125,"wasm":"simd"}},"total":31}
+index.js:1009 [perf] pixelizer {"start":1766742257276,"steps":{"scale+getImageData":9,"initWorkImageData":6,"workerBaseCopy":0,"workerBasePost":1,"workerRender":30,"workerApply":0,"putImageData":0,"present":6},"meta":{"targetWidth":152,"targetHeight":338,"requestedWidth":152,"requestedHeight":338,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2890646046605603,"toneY":0.231719970703125,"worker":true,"renderMs":52},"worker":{"start":60074.85133099556,"steps":{"wasmSetBase":0.07,"wasmRender":5.61},"total":5.85,"meta":{"w":152,"h":338,"ditherAlgo":"atkinson","toneX":0.2890646046605603,"toneY":0.231719970703125,"wasm":"simd"}},"total":52}
+index.js:1009 [perf] pixelizer {"start":1766742257330,"steps":{"scale+getImageData":9,"initWorkImageData":5,"workerBaseCopy":0,"workerBasePost":1,"workerRender":8,"workerApply":0,"putImageData":0,"present":5},"meta":{"targetWidth":132,"targetHeight":293,"requestedWidth":132,"requestedHeight":293,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2890646046605603,"toneY":0.231719970703125,"worker":true,"renderMs":28},"worker":{"start":60127.86096704006,"steps":{"wasmSetBase":0.06,"wasmRender":4.78},"total":5,"meta":{"w":132,"h":293,"ditherAlgo":"atkinson","toneX":0.2890646046605603,"toneY":0.231719970703125,"wasm":"simd"}},"total":28}
+index.js:1009 [perf] pixelizer {"start":1766742257359,"steps":{"scale+getImageData":8,"initWorkImageData":4,"workerBaseCopy":0,"workerBasePost":1,"workerRender":8,"workerApply":0,"putImageData":0,"present":5},"meta":{"targetWidth":120,"targetHeight":267,"requestedWidth":120,"requestedHeight":267,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2890646046605603,"toneY":0.231719970703125,"worker":true,"renderMs":26},"worker":{"start":60156.07461309433,"steps":{"wasmSetBase":0.07,"wasmRender":3.53},"total":3.99,"meta":{"w":120,"h":267,"ditherAlgo":"atkinson","toneX":0.2890646046605603,"toneY":0.231719970703125,"wasm":"simd"}},"total":26}
+index.js:1009 [perf] pixelizer {"start":1766742257443,"steps":{"scale+getImageData":7,"initWorkImageData":4,"workerBaseCopy":0,"workerBasePost":1,"workerRender":9,"workerApply":0,"putImageData":0,"present":5},"meta":{"targetWidth":136,"targetHeight":302,"requestedWidth":136,"requestedHeight":302,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2890646046605603,"toneY":0.231719970703125,"worker":true,"renderMs":26},"worker":{"start":60238.62648808956,"steps":{"wasmSetBase":0.06,"wasmRender":5.11},"total":5.35,"meta":{"w":136,"h":302,"ditherAlgo":"atkinson","toneX":0.2890646046605603,"toneY":0.231719970703125,"wasm":"simd"}},"total":26}
+index.js:1009 [perf] pixelizer {"start":1766742257478,"steps":{"scale+getImageData":7,"initWorkImageData":4,"workerBaseCopy":0,"workerBasePost":2,"workerRender":11,"workerApply":0,"putImageData":0,"present":5},"meta":{"targetWidth":168,"targetHeight":373,"requestedWidth":168,"requestedHeight":373,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2890646046605603,"toneY":0.231719970703125,"worker":true,"renderMs":29},"worker":{"start":60273.559613108635,"steps":{"wasmSetBase":0.07,"wasmRender":7.9},"total":8.13,"meta":{"w":168,"h":373,"ditherAlgo":"atkinson","toneX":0.2890646046605603,"toneY":0.231719970703125,"wasm":"simd"}},"total":29}
+index.js:1009 [perf] pixelizer {"start":1766742257511,"steps":{"scale+getImageData":7,"initWorkImageData":5,"workerBaseCopy":1,"workerBasePost":1,"workerRender":16,"workerApply":0,"putImageData":0,"present":8},"meta":{"targetWidth":228,"targetHeight":507,"requestedWidth":228,"requestedHeight":507,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2890646046605603,"toneY":0.231719970703125,"worker":true,"renderMs":38},"worker":{"start":60309.071644067764,"steps":{"wasmSetBase":0.11,"wasmRender":12.04},"total":12.31,"meta":{"w":228,"h":507,"ditherAlgo":"atkinson","toneX":0.2890646046605603,"toneY":0.231719970703125,"wasm":"simd"}},"total":38}
+index.js:1009 [perf] pixelizer {"start":1766742257550,"steps":{"scale+getImageData":11,"initWorkImageData":3,"workerBaseCopy":1,"workerBasePost":1,"workerRender":20,"workerApply":0,"putImageData":0,"present":8},"meta":{"targetWidth":252,"targetHeight":560,"requestedWidth":252,"requestedHeight":560,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2890646046605603,"toneY":0.231719970703125,"worker":true,"renderMs":44},"worker":{"start":60350.75211310387,"steps":{"wasmSetBase":0.12,"wasmRender":13.86},"total":14.15,"meta":{"w":252,"h":560,"ditherAlgo":"atkinson","toneX":0.2890646046605603,"toneY":0.231719970703125,"wasm":"simd"}},"total":44}
+index.js:1009 [perf] pixelizer {"start":1766742257596,"steps":{"scale+getImageData":13,"initWorkImageData":4,"workerBaseCopy":1,"workerBasePost":2,"workerRender":30,"workerApply":0,"putImageData":0,"present":5},"meta":{"targetWidth":344,"targetHeight":764,"requestedWidth":344,"requestedHeight":764,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2890646046605603,"toneY":0.231719970703125,"worker":true,"renderMs":55},"worker":{"start":60398.54263305664,"steps":{"wasmSetBase":0.28,"wasmRender":25.99},"total":26.74,"meta":{"w":344,"h":764,"ditherAlgo":"atkinson","toneX":0.2890646046605603,"toneY":0.231719970703125,"wasm":"simd"}},"total":55}
+index.js:1009 [perf] pixelizer {"start":1766742257656,"steps":{"scale+getImageData":13,"initWorkImageData":8,"workerBaseCopy":1,"workerBasePost":2,"workerRender":42,"workerApply":0,"putImageData":0,"present":7},"meta":{"targetWidth":412,"targetHeight":916,"requestedWidth":412,"requestedHeight":916,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2890646046605603,"toneY":0.231719970703125,"worker":true,"renderMs":73},"worker":{"start":60463.504559993744,"steps":{"wasmSetBase":0.28,"wasmRender":36.55},"total":37,"meta":{"w":412,"h":916,"ditherAlgo":"atkinson","toneX":0.2890646046605603,"toneY":0.231719970703125,"wasm":"simd"}},"total":73}
+index.js:1009 [perf] pixelizer {"start":1766742257992,"steps":{"scale+getImageData":6,"initWorkImageData":4,"workerBaseCopy":0,"workerBasePost":1,"workerRender":11,"workerApply":0,"putImageData":0,"present":5},"meta":{"targetWidth":192,"targetHeight":427,"requestedWidth":460,"requestedHeight":1022,"previewScale":0.41739130434782606,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.23862010035021552,"toneY":0.0023085650275734837,"worker":true,"renderMs":27},"worker":{"start":60785.65456008911,"steps":{"wasmSetBase":0.07,"wasmRender":8.44},"total":8.66,"meta":{"w":192,"h":427,"ditherAlgo":"atkinson","toneX":0.23862010035021552,"toneY":0.0023085650275734837,"wasm":"simd"}},"total":27}
+index.js:1009 [perf] pixelizer {"start":1766742258088,"steps":{"workerRender":10,"workerApply":0,"putImageData":1,"present":0},"meta":{"targetWidth":192,"targetHeight":427,"requestedWidth":460,"requestedHeight":1022,"previewScale":0.41739130434782606,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2760585390288255,"toneY":0.003569659064797781,"worker":true,"renderMs":11},"worker":{"start":60870.37180006504,"steps":{"wasmRender":8.07},"total":8.27,"meta":{"w":192,"h":427,"ditherAlgo":"atkinson","toneX":0.2760585390288255,"toneY":0.003569659064797781,"wasm":"simd"}},"total":11}
+index.js:1009 [perf] pixelizer {"start":1766742258104,"steps":{"scale+getImageData":13,"initWorkImageData":5,"workerBaseCopy":0,"workerBasePost":2,"workerRender":14,"workerApply":0,"putImageData":0,"present":7},"meta":{"targetWidth":200,"targetHeight":444,"requestedWidth":460,"requestedHeight":1022,"previewScale":0.43478260869565216,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.378521623282597,"toneY":0.0098724365234375,"worker":true,"renderMs":41},"worker":{"start":60906.009404063225,"steps":{"wasmSetBase":0.08,"wasmRender":11.86},"total":12.1,"meta":{"w":200,"h":444,"ditherAlgo":"atkinson","toneX":0.378521623282597,"toneY":0.0098724365234375,"wasm":"simd"}},"total":41}
+index.js:1009 [perf] pixelizer {"start":1766742258147,"steps":{"workerRender":35,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":200,"targetHeight":444,"requestedWidth":460,"requestedHeight":1022,"previewScale":0.43478260869565216,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.5288681556438577,"toneY":0.03928420122931986,"worker":true,"renderMs":35},"worker":{"start":60931.14539408684,"steps":{"wasmRender":30.52},"total":30.98,"meta":{"w":200,"h":444,"ditherAlgo":"atkinson","toneX":0.5288681556438577,"toneY":0.03928420122931986,"wasm":"simd"}},"total":35}
+index.js:1009 [perf] pixelizer {"start":1766742258184,"steps":{"scale+getImageData":10,"initWorkImageData":4,"workerBaseCopy":0,"workerBasePost":1,"workerRender":12,"workerApply":0,"putImageData":0,"present":6},"meta":{"targetWidth":196,"targetHeight":436,"requestedWidth":460,"requestedHeight":1022,"previewScale":0.4260869565217391,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.6204935008081895,"toneY":0.05441104664522056,"worker":true,"renderMs":33},"worker":{"start":60981.600914001465,"steps":{"wasmSetBase":0.09,"wasmRender":9.47},"total":9.74,"meta":{"w":196,"h":436,"ditherAlgo":"atkinson","toneX":0.6204935008081895,"toneY":0.05441104664522056,"wasm":"simd"}},"total":33}
+index.js:1009 [perf] pixelizer {"start":1766742258220,"steps":{"workerRender":12,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":196,"targetHeight":436,"requestedWidth":460,"requestedHeight":1022,"previewScale":0.4260869565217391,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.46502485604121757,"toneY":-0.06323601217830888,"worker":true,"renderMs":12},"worker":{"start":61002.84549808502,"steps":{"wasmRender":9.29},"total":9.5,"meta":{"w":196,"h":436,"ditherAlgo":"atkinson","toneX":0.46502485604121757,"toneY":-0.06323601217830888,"wasm":"simd"}},"total":12}
+index.js:1009 [perf] pixelizer {"start":1766742258240,"steps":{"workerRender":12,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":196,"targetHeight":436,"requestedWidth":460,"requestedHeight":1022,"previewScale":0.4260869565217391,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.3588171597184806,"toneY":-0.15525458840762862,"worker":true,"renderMs":12},"worker":{"start":61022.7853410244,"steps":{"wasmRender":8.63},"total":8.86,"meta":{"w":196,"h":436,"ditherAlgo":"atkinson","toneX":0.3588171597184806,"toneY":-0.15525458840762862,"wasm":"simd"}},"total":12}
+index.js:1009 [perf] pixelizer {"start":1766742258257,"steps":{"scale+getImageData":9,"initWorkImageData":6,"workerBaseCopy":1,"workerBasePost":1,"workerRender":12,"workerApply":0,"putImageData":1,"present":5},"meta":{"targetWidth":204,"targetHeight":453,"requestedWidth":460,"requestedHeight":1022,"previewScale":0.4434782608695652,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.24098489695581904,"toneY":-0.23676883473115806,"worker":true,"renderMs":35},"worker":{"start":61056.46586203575,"steps":{"wasmSetBase":0.09,"wasmRender":9.3},"total":9.61,"meta":{"w":204,"h":453,"ditherAlgo":"atkinson","toneX":0.24098489695581904,"toneY":-0.23676883473115806,"wasm":"simd"}},"total":35}
+index.js:1009 [perf] pixelizer {"start":1766742258293,"steps":{"workerRender":12,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":204,"targetHeight":453,"requestedWidth":460,"requestedHeight":1022,"previewScale":0.4434782608695652,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.056353864998653025,"toneY":-0.29685076545266553,"worker":true,"renderMs":12},"worker":{"start":61075.76721608639,"steps":{"wasmRender":8.99},"total":9.3,"meta":{"w":204,"h":453,"ditherAlgo":"atkinson","toneX":-0.056353864998653025,"toneY":-0.29685076545266553,"wasm":"simd"}},"total":12}
+index.js:1009 [perf] pixelizer {"start":1766742258312,"steps":{"workerRender":12,"workerApply":1,"putImageData":0,"present":0},"meta":{"targetWidth":204,"targetHeight":453,"requestedWidth":460,"requestedHeight":1022,"previewScale":0.4434782608695652,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.2689655172413793,"toneY":-0.29349024155560666,"worker":true,"renderMs":13},"worker":{"start":61095.01721608639,"steps":{"wasmRender":9.19},"total":9.6,"meta":{"w":204,"h":453,"ditherAlgo":"atkinson","toneX":-0.2689655172413793,"toneY":-0.29349024155560666,"wasm":"simd"}},"total":13}
+index.js:1009 [perf] pixelizer {"start":1766742258338,"steps":{"scale+getImageData":9,"initWorkImageData":4,"workerBaseCopy":0,"workerBasePost":1,"workerRender":14,"workerApply":0,"putImageData":0,"present":5},"meta":{"targetWidth":216,"targetHeight":480,"requestedWidth":460,"requestedHeight":1022,"previewScale":0.46956521739130436,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.4256156658304149,"toneY":-0.23634607651654416,"worker":true,"renderMs":33},"worker":{"start":61135.09461200237,"steps":{"wasmSetBase":0.11,"wasmRender":10.61},"total":10.9,"meta":{"w":216,"h":480,"ditherAlgo":"atkinson","toneX":-0.4256156658304149,"toneY":-0.23634607651654416,"wasm":"simd"}},"total":33}
+index.js:1009 [perf] pixelizer {"start":1766742258373,"steps":{"workerRender":14,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":216,"targetHeight":480,"requestedWidth":460,"requestedHeight":1022,"previewScale":0.46956521739130436,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.48650312752559266,"toneY":-0.19979050580193025,"worker":true,"renderMs":14},"worker":{"start":61156.22180008888,"steps":{"wasmRender":10.05},"total":10.51,"meta":{"w":216,"h":480,"ditherAlgo":"atkinson","toneX":-0.48650312752559266,"toneY":-0.19979050580193025,"wasm":"simd"}},"total":14}
+index.js:1009 [perf] pixelizer {"start":1766742258393,"steps":{"scale+getImageData":7,"initWorkImageData":4,"workerBaseCopy":1,"workerBasePost":1,"workerRender":15,"workerApply":0,"putImageData":0,"present":5},"meta":{"targetWidth":224,"targetHeight":498,"requestedWidth":460,"requestedHeight":1022,"previewScale":0.48695652173913045,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.6074872773269127,"toneY":-0.0909684125114889,"worker":true,"renderMs":33},"worker":{"start":61189.01617503166,"steps":{"wasmSetBase":0.11,"wasmRender":11.46},"total":11.75,"meta":{"w":224,"h":498,"ditherAlgo":"atkinson","toneX":-0.6074872773269127,"toneY":-0.0909684125114889,"wasm":"simd"}},"total":33}
+index.js:1009 [perf] pixelizer {"start":1766742258429,"steps":{"workerRender":16,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":224,"targetHeight":498,"requestedWidth":460,"requestedHeight":1022,"previewScale":0.48695652173913045,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.6794084746262123,"toneY":-0.02121779497931975,"worker":true,"renderMs":16},"worker":{"start":61213.04570603371,"steps":{"wasmRender":11.27},"total":11.56,"meta":{"w":224,"h":498,"ditherAlgo":"atkinson","toneX":-0.6794084746262123,"toneY":-0.02121779497931975,"wasm":"simd"}},"total":16}
+index.js:1009 [perf] pixelizer {"start":1766742258456,"steps":{"workerRender":14,"workerApply":0,"putImageData":0,"present":1},"meta":{"targetWidth":224,"targetHeight":498,"requestedWidth":460,"requestedHeight":1022,"previewScale":0.48695652173913045,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.7101484627559267,"toneY":0.004828060374540422,"worker":true,"renderMs":15},"worker":{"start":61238.630602002144,"steps":{"wasmRender":11.52},"total":11.85,"meta":{"w":224,"h":498,"ditherAlgo":"atkinson","toneX":-0.7101484627559267,"toneY":0.004828060374540422,"wasm":"simd"}},"total":15}
+index.js:1009 [perf] pixelizer {"start":1766742258524,"steps":{"scale+getImageData":7,"initWorkImageData":4,"workerBaseCopy":1,"workerBasePost":1,"workerRender":33,"workerApply":0,"putImageData":0,"present":5},"meta":{"targetWidth":272,"targetHeight":604,"requestedWidth":460,"requestedHeight":1022,"previewScale":0.591304347826087,"interactive":false,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.7093595833613955,"toneY":0.014496747185202219,"worker":true,"renderMs":51},"worker":{"start":61320.28127908707,"steps":{"wasmSetBase":0.2,"wasmRender":17.15},"total":17.6,"meta":{"w":272,"h":604,"ditherAlgo":"atkinson","toneX":-0.7093595833613955,"toneY":0.014496747185202219,"wasm":"simd"}},"total":51}
+index.js:1009 [perf] pixelizer {"start":1766742258670,"steps":{"scale+getImageData":11,"initWorkImageData":4,"workerBaseCopy":0,"workerBasePost":2,"workerRender":53,"workerApply":0,"putImageData":0,"present":7},"meta":{"targetWidth":460,"targetHeight":1022,"requestedWidth":460,"requestedHeight":1022,"previewScale":1,"interactive":false,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.7093595833613955,"toneY":0.014496747185202219,"worker":true,"renderMs":77},"worker":{"start":61472.51445603371,"steps":{"wasmSetBase":0.46,"wasmRender":45.71},"total":46.59,"meta":{"w":460,"h":1022,"ditherAlgo":"atkinson","toneX":-0.7093595833613955,"toneY":0.014496747185202219,"wasm":"simd"}},"total":77}
+index.js:1009 [perf] pixelizer {"start":1766742259592,"steps":{"scale+getImageData":9,"initWorkImageData":4,"workerBaseCopy":0,"workerBasePost":1,"workerRender":15,"workerApply":0,"putImageData":0,"present":8},"meta":{"targetWidth":224,"targetHeight":498,"requestedWidth":460,"requestedHeight":1022,"previewScale":0.48695652173913045,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.6573391092234644,"toneY":0.19768838321461402,"worker":true,"renderMs":37},"worker":{"start":62389.10841405392,"steps":{"wasmSetBase":0.13,"wasmRender":11.33},"total":11.68,"meta":{"w":224,"h":498,"ditherAlgo":"atkinson","toneX":-0.6573391092234644,"toneY":0.19768838321461402,"wasm":"simd"}},"total":38}
+index.js:1009 [perf] pixelizer {"start":1766742259648,"steps":{"workerRender":21,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":224,"targetHeight":498,"requestedWidth":460,"requestedHeight":1022,"previewScale":0.48695652173913045,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.5631522343076509,"toneY":0.19768838321461402,"worker":true,"renderMs":21},"worker":{"start":62430.84367406368,"steps":{"wasmRender":11.38},"total":18.1,"meta":{"w":224,"h":498,"ditherAlgo":"atkinson","toneX":-0.5631522343076509,"toneY":0.19768838321461402,"wasm":"simd"}},"total":21}
+index.js:1009 [perf] pixelizer {"start":1766742259680,"steps":{"workerRender":14,"workerApply":0,"putImageData":1,"present":0},"meta":{"targetWidth":224,"targetHeight":498,"requestedWidth":460,"requestedHeight":1022,"previewScale":0.48695652173913045,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.3523148109172952,"toneY":0.20525045955882348,"worker":true,"renderMs":15},"worker":{"start":62462.49070608616,"steps":{"wasmRender":11.05},"total":11.32,"meta":{"w":224,"h":498,"ditherAlgo":"atkinson","toneX":-0.3523148109172952,"toneY":0.20525045955882348,"wasm":"simd"}},"total":15}
+index.js:1009 [perf] pixelizer {"start":1766742259715,"steps":{"scale+getImageData":7,"initWorkImageData":5,"workerBaseCopy":0,"workerBasePost":1,"workerRender":15,"workerApply":1,"putImageData":0,"present":5},"meta":{"targetWidth":236,"targetHeight":524,"requestedWidth":460,"requestedHeight":1022,"previewScale":0.5130434782608696,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.1103448275862069,"toneY":0.250209135167739,"worker":true,"renderMs":34},"worker":{"start":62510.83456003666,"steps":{"wasmSetBase":0.13,"wasmRender":12.34},"total":12.64,"meta":{"w":236,"h":524,"ditherAlgo":"atkinson","toneX":-0.1103448275862069,"toneY":0.250209135167739,"wasm":"simd"}},"total":34}
+index.js:1009 [perf] pixelizer {"start":1766742259752,"steps":{"workerRender":36,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":236,"targetHeight":524,"requestedWidth":460,"requestedHeight":1022,"previewScale":0.5130434782608696,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.17931055529364226,"toneY":0.3876046573414522,"worker":true,"renderMs":36},"worker":{"start":62534.240133047104,"steps":{"wasmRender":14.73},"total":15.18,"meta":{"w":236,"h":524,"ditherAlgo":"atkinson","toneX":0.17931055529364226,"toneY":0.3876046573414522,"wasm":"simd"}},"total":36}
+index.js:1009 [perf] pixelizer {"start":1766742259806,"steps":{"workerRender":18,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":236,"targetHeight":524,"requestedWidth":460,"requestedHeight":1022,"previewScale":0.5130434782608696,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.3944833689722522,"toneY":0.5287798713235294,"worker":true,"renderMs":18},"worker":{"start":62589.47784101963,"steps":{"wasmRender":13.86},"total":14.12,"meta":{"w":236,"h":524,"ditherAlgo":"atkinson","toneX":0.3944833689722522,"toneY":0.5287798713235294,"wasm":"simd"}},"total":18}
+index.js:1009 [perf] pixelizer {"start":1766742259875,"steps":{"scale+getImageData":8,"initWorkImageData":4,"workerBaseCopy":0,"workerBasePost":2,"workerRender":19,"workerApply":0,"putImageData":0,"present":7},"meta":{"targetWidth":272,"targetHeight":604,"requestedWidth":460,"requestedHeight":1022,"previewScale":0.591304347826087,"interactive":false,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.5024630842537716,"toneY":0.8258379767922794,"worker":true,"renderMs":40},"worker":{"start":62671.56127810478,"steps":{"wasmSetBase":0.13,"wasmRender":16.11},"total":16.41,"meta":{"w":272,"h":604,"ditherAlgo":"atkinson","toneX":0.5024630842537716,"toneY":0.8258379767922794,"wasm":"simd"}},"total":40}
+index.js:1009 [perf] pixelizer {"start":1766742260019,"steps":{"scale+getImageData":15,"initWorkImageData":6,"workerBaseCopy":0,"workerBasePost":3,"workerRender":52,"workerApply":0,"putImageData":0,"present":7},"meta":{"targetWidth":460,"targetHeight":1022,"requestedWidth":460,"requestedHeight":1022,"previewScale":1,"interactive":false,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.5024630842537716,"toneY":0.8258379767922794,"worker":true,"renderMs":83},"worker":{"start":62826.81799709797,"steps":{"wasmSetBase":0.37,"wasmRender":45.83},"total":46.4,"meta":{"w":460,"h":1022,"ditherAlgo":"atkinson","toneX":0.5024630842537716,"toneY":0.8258379767922794,"wasm":"simd"}},"total":83}
+index.js:2415 onChooseImage 被调用
+index.js:2420 选择图片成功 {tempFiles: Array(1), type: "image", errMsg: "chooseMedia:ok"}
+index.js:2464 图片路径: wxfile://tmp_9abb1dea3c0685c050588e8b7472a77c1c45463e413f14b6.jpg
+index.js:2470 获取图片信息成功 {width: 2044, orientation: "up", type: "png", height: 3066, errMsg: "getImageInfo:ok", …}
+index.js:2481 准备加载图片到 canvas
+VM75:363 Error: not node js file system!path:/saaa_config.json; go __invokeHandler__ readFile worker? false
+h @ VM75:363
+a.WeixinJSCore.invokeHandler @ VM75:363
+w @ WAServiceMainContext.js:1
+invoke @ WAServiceMainContext.js:1
+invoke @ WAServiceMainContext.js:1
+u @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+ae @ WAServiceMainContext.js:1
+o @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+g0 @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emitInternal @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+T @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+_emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+subscribeHandler @ WAServiceMainContext.js:1
+ret.subscribeHandler
+index.js:2486 图片加载成功
+index.js:2501 [orient-check] {infoW: 2044, infoH: 3066, orientation: "up", imgW: 2044, imgH: 3066}
+index.js:2589 设置图片状态
+index.js:2613 开始处理图片
+index.js:1009 [perf] pixelizer {"start":1766742266125,"steps":{"scale+getImageData":13,"initWorkImageData":4,"baseCopy":0,"dither":14,"setDataLayout":7,"putImageData":0,"present":18},"meta":{"targetWidth":272,"targetHeight":408,"requestedWidth":460,"requestedHeight":690,"previewScale":0.591304347826087,"interactive":false,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0,"toneY":0,"worker":false,"renderMs":56},"total":56}
+index.js:2415 onChooseImage 被调用
+index.js:2420 选择图片成功 {tempFiles: Array(1), type: "image", errMsg: "chooseMedia:ok"}
+index.js:2464 图片路径: wxfile://tmp_6fe2ae05c0a9fc52f9a11df9321182d23c0dcb1ca949e7ec.jpg
+index.js:2470 获取图片信息成功 {width: 3072, orientation: "up", type: "jpeg", height: 4096, errMsg: "getImageInfo:ok", …}
+index.js:2481 准备加载图片到 canvas
+VM75:363 Error: not node js file system!path:/saaa_config.json; go __invokeHandler__ readFile worker? false
+h @ VM75:363
+a.WeixinJSCore.invokeHandler @ VM75:363
+w @ WAServiceMainContext.js:1
+invoke @ WAServiceMainContext.js:1
+invoke @ WAServiceMainContext.js:1
+u @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+ae @ WAServiceMainContext.js:1
+o @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+g0 @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emitInternal @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+T @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+_emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+subscribeHandler @ WAServiceMainContext.js:1
+ret.subscribeHandler
+index.js:2486 图片加载成功
+index.js:2501 [orient-check] {infoW: 3072, infoH: 4096, orientation: "up", imgW: 3072, imgH: 4096}
+index.js:2589 设置图片状态
+index.js:2613 开始处理图片
+index.js:1009 [perf] pixelizer {"start":1766742273669,"steps":{"scale+getImageData":15,"initWorkImageData":5,"baseCopy":0,"dither":25,"setDataLayout":7,"putImageData":0,"present":10},"meta":{"targetWidth":402,"targetHeight":536,"requestedWidth":460,"requestedHeight":613,"previewScale":0.8739130434782608,"interactive":false,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0,"toneY":0,"worker":false,"renderMs":63},"total":63}
+index.js:1009 [perf] pixelizer {"start":1766742275720,"steps":{"scale+getImageData":14,"initWorkImageData":6,"workerBaseCopy":1,"workerBasePost":2,"workerRender":43,"workerApply":0,"putImageData":0,"present":6},"meta":{"targetWidth":460,"targetHeight":613,"requestedWidth":460,"requestedHeight":613,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.13359585466056045,"toneY":0.046008839326746376,"worker":true,"renderMs":72},"worker":{"start":78529.44804310799,"steps":{"wasmSetBase":0.36,"wasmRender":35.43},"total":35.99,"meta":{"w":460,"h":613,"ditherAlgo":"atkinson","toneX":0.13359585466056045,"toneY":0.046008839326746376,"wasm":"simd"}},"total":73}
+index.js:1009 [perf] pixelizer {"start":1766742275794,"steps":{"scale+getImageData":10,"initWorkImageData":4,"workerBaseCopy":0,"workerBasePost":1,"workerRender":9,"workerApply":0,"putImageData":0,"present":6},"meta":{"targetWidth":196,"targetHeight":261,"requestedWidth":460,"requestedHeight":613,"previewScale":0.4260869565217391,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.014187622070312544,"toneY":0.04811006433823528,"worker":true,"renderMs":30},"worker":{"start":78592.05997002125,"steps":{"wasmSetBase":0.07,"wasmRender":6.06},"total":6.31,"meta":{"w":196,"h":261,"ditherAlgo":"atkinson","toneX":0.014187622070312544,"toneY":0.04811006433823528,"wasm":"simd"}},"total":30}
+index.js:1009 [perf] pixelizer {"start":1766742275829,"steps":{"workerRender":9,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":196,"targetHeight":261,"requestedWidth":460,"requestedHeight":613,"previewScale":0.4260869565217391,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.13458083580280178,"toneY":0.0581916360294118,"worker":true,"renderMs":9},"worker":{"start":78611.6075220108,"steps":{"wasmRender":6.24},"total":6.45,"meta":{"w":196,"h":261,"ditherAlgo":"atkinson","toneX":-0.13458083580280178,"toneY":0.0581916360294118,"wasm":"simd"}},"total":9}
+index.js:1009 [perf] pixelizer {"start":1766742275862,"steps":{"workerRender":10,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":196,"targetHeight":261,"requestedWidth":460,"requestedHeight":613,"previewScale":0.4260869565217391,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.2169450431034483,"toneY":0.06281594669117652,"worker":true,"renderMs":10},"worker":{"start":78645.02309501171,"steps":{"wasmRender":6.63},"total":6.87,"meta":{"w":196,"h":261,"ditherAlgo":"atkinson","toneX":-0.2169450431034483,"toneY":0.06281594669117652,"wasm":"simd"}},"total":10}
+index.js:1009 [perf] pixelizer {"start":1766742275895,"steps":{"scale+getImageData":7,"initWorkImageData":4,"workerBaseCopy":1,"workerBasePost":1,"workerRender":11,"workerApply":0,"putImageData":0,"present":5},"meta":{"targetWidth":204,"targetHeight":272,"requestedWidth":460,"requestedHeight":613,"previewScale":0.4434782608695652,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.2947774952855603,"toneY":0.0665947409237132,"worker":true,"renderMs":29},"worker":{"start":78690.89137601852,"steps":{"wasmSetBase":0.1,"wasmRender":7.59},"total":7.92,"meta":{"w":204,"h":272,"ditherAlgo":"atkinson","toneX":-0.2947774952855603,"toneY":0.0665947409237132,"wasm":"simd"}},"total":29}
+index.js:1009 [perf] pixelizer {"start":1766742275929,"steps":{"workerRender":10,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":204,"targetHeight":272,"requestedWidth":460,"requestedHeight":613,"previewScale":0.4434782608695652,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.34285699252424573,"toneY":0.06827679802389708,"worker":true,"renderMs":10},"worker":{"start":78712.00007402897,"steps":{"wasmRender":6.68},"total":6.99,"meta":{"w":204,"h":272,"ditherAlgo":"atkinson","toneX":-0.34285699252424573,"toneY":0.06827679802389708,"wasm":"simd"}},"total":10}
+index.js:1009 [perf] pixelizer {"start":1766742275961,"steps":{"scale+getImageData":7,"initWorkImageData":4,"workerBaseCopy":0,"workerBasePost":2,"workerRender":11,"workerApply":0,"putImageData":0,"present":6},"meta":{"targetWidth":216,"targetHeight":288,"requestedWidth":460,"requestedHeight":613,"previewScale":0.46956521739130436,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.3753693679283405,"toneY":0.0691169289981618,"worker":true,"renderMs":30},"worker":{"start":78756.83762609959,"steps":{"wasmSetBase":0.1,"wasmRender":8.01},"total":8.3,"meta":{"w":216,"h":288,"ditherAlgo":"atkinson","toneX":-0.3753693679283405,"toneY":0.0691169289981618,"wasm":"simd"}},"total":30}
+index.js:1009 [perf] pixelizer {"start":1766742275996,"steps":{"workerRender":11,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":216,"targetHeight":288,"requestedWidth":460,"requestedHeight":613,"previewScale":0.46956521739130436,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.38502528749663256,"toneY":0.06995526482077208,"worker":true,"renderMs":11},"worker":{"start":78779.00950109959,"steps":{"wasmRender":7.45},"total":7.77,"meta":{"w":216,"h":288,"ditherAlgo":"atkinson","toneX":-0.38502528749663256,"toneY":0.06995526482077208,"wasm":"simd"}},"total":11}
+index.js:1009 [perf] pixelizer {"start":1766742276028,"steps":{"scale+getImageData":7,"initWorkImageData":4,"workerBaseCopy":1,"workerBasePost":1,"workerRender":35,"workerApply":0,"putImageData":0,"present":5},"meta":{"targetWidth":224,"targetHeight":299,"requestedWidth":460,"requestedHeight":613,"previewScale":0.48695652173913045,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.38502528749663256,"toneY":0.07037802303538598,"worker":true,"renderMs":53},"worker":{"start":78824.16809499264,"steps":{"wasmSetBase":0.15,"wasmRender":8.93},"total":9.29,"meta":{"w":224,"h":299,"ditherAlgo":"atkinson","toneX":-0.38502528749663256,"toneY":0.07037802303538598,"wasm":"simd"}},"total":53}
+index.js:1009 [perf] pixelizer {"start":1766742276082,"steps":{"workerRender":12,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":224,"targetHeight":299,"requestedWidth":460,"requestedHeight":613,"previewScale":0.48695652173913045,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.37931023959455823,"toneY":0.07079629337086402,"worker":true,"renderMs":12},"worker":{"start":78864.82299101353,"steps":{"wasmRender":8.33},"total":8.53,"meta":{"w":224,"h":299,"ditherAlgo":"atkinson","toneX":-0.37931023959455823,"toneY":0.07079629337086402,"wasm":"simd"}},"total":12}
+index.js:1009 [perf] pixelizer {"start":1766742276096,"steps":{"scale+getImageData":10,"initWorkImageData":4,"workerBaseCopy":0,"workerBasePost":1,"workerRender":13,"workerApply":0,"putImageData":0,"present":6},"meta":{"targetWidth":236,"targetHeight":315,"requestedWidth":460,"requestedHeight":613,"previewScale":0.5130434782608696,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.3138911806303879,"toneY":0.07079629337086402,"worker":true,"renderMs":35},"worker":{"start":78894.95137608051,"steps":{"wasmSetBase":0.09,"wasmRender":9.06},"total":9.3,"meta":{"w":236,"h":315,"ditherAlgo":"atkinson","toneX":-0.3138911806303879,"toneY":0.07079629337086402,"wasm":"simd"}},"total":35}
+index.js:1009 [perf] pixelizer {"start":1766742276132,"steps":{"workerRender":12,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":236,"targetHeight":315,"requestedWidth":460,"requestedHeight":613,"previewScale":0.5130434782608696,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.1751730030980604,"toneY":0.0846611471737132,"worker":true,"renderMs":12},"worker":{"start":78914.71491801739,"steps":{"wasmRender":8.82},"total":9.03,"meta":{"w":236,"h":315,"ditherAlgo":"atkinson","toneX":-0.1751730030980604,"toneY":0.0846611471737132,"wasm":"simd"}},"total":12}
+index.js:1009 [perf] pixelizer {"start":1766742276151,"steps":{"workerRender":12,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":236,"targetHeight":315,"requestedWidth":460,"requestedHeight":613,"previewScale":0.5130434782608696,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.030936300343480605,"toneY":0.10440961052389708,"worker":true,"renderMs":12},"worker":{"start":78933.67804300785,"steps":{"wasmRender":8.7},"total":9.06,"meta":{"w":236,"h":315,"ditherAlgo":"atkinson","toneX":-0.030936300343480605,"toneY":0.10440961052389708,"wasm":"simd"}},"total":12}
+index.js:1009 [perf] pixelizer {"start":1766742276181,"steps":{"scale+getImageData":7,"initWorkImageData":5,"workerBaseCopy":0,"workerBasePost":1,"workerRender":13,"workerApply":0,"putImageData":0,"present":6},"meta":{"targetWidth":248,"targetHeight":331,"requestedWidth":460,"requestedHeight":613,"previewScale":0.5391304347826087,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.10522250471443972,"toneY":0.13844568589154416,"worker":true,"renderMs":32},"worker":{"start":78977.21726202965,"steps":{"wasmSetBase":0.09,"wasmRender":9.78},"total":10.04,"meta":{"w":248,"h":331,"ditherAlgo":"atkinson","toneX":0.10522250471443972,"toneY":0.13844568589154416,"wasm":"simd"}},"total":32}
+index.js:1009 [perf] pixelizer {"start":1766742276216,"steps":{"workerRender":13,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":248,"targetHeight":331,"requestedWidth":460,"requestedHeight":613,"previewScale":0.5391304347826087,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.21379331391433198,"toneY":0.16407327090992652,"worker":true,"renderMs":13},"worker":{"start":78998.35809504986,"steps":{"wasmRender":10.04},"total":10.41,"meta":{"w":248,"h":331,"ditherAlgo":"atkinson","toneX":0.21379331391433198,"toneY":0.16407327090992652,"wasm":"simd"}},"total":13}
+index.js:1009 [perf] pixelizer {"start":1766742276243,"steps":{"scale+getImageData":7,"initWorkImageData":5,"workerBaseCopy":0,"workerBasePost":1,"workerRender":16,"workerApply":0,"putImageData":0,"present":7},"meta":{"targetWidth":260,"targetHeight":347,"requestedWidth":460,"requestedHeight":613,"previewScale":0.5652173913043478,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2664043558054956,"toneY":0.17289644129136028,"worker":true,"renderMs":36},"worker":{"start":79040.06929302216,"steps":{"wasmSetBase":0.1,"wasmRender":11.44},"total":11.73,"meta":{"w":260,"h":347,"ditherAlgo":"atkinson","toneX":0.2664043558054956,"toneY":0.17289644129136028,"wasm":"simd"}},"total":36}
+index.js:1009 [perf] pixelizer {"start":1766742276284,"steps":{"scale+getImageData":10,"initWorkImageData":4,"workerBaseCopy":1,"workerBasePost":1,"workerRender":37,"workerApply":0,"putImageData":0,"present":6},"meta":{"targetWidth":454,"targetHeight":605,"requestedWidth":460,"requestedHeight":613,"previewScale":0.9869565217391304,"interactive":false,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2855180411503233,"toneY":0.17499587115119486,"worker":true,"renderMs":59},"worker":{"start":79083.3556470871,"steps":{"wasmSetBase":0.23,"wasmRender":33.07},"total":33.46,"meta":{"w":454,"h":605,"ditherAlgo":"atkinson","toneX":0.2855180411503233,"toneY":0.17499587115119486,"wasm":"simd"}},"total":59}
+index.js:1009 [perf] pixelizer {"start":1766742276435,"steps":{"scale+getImageData":10,"initWorkImageData":5,"workerBaseCopy":0,"workerBasePost":2,"workerRender":38,"workerApply":0,"putImageData":0,"present":6},"meta":{"targetWidth":460,"targetHeight":613,"requestedWidth":460,"requestedHeight":613,"previewScale":1,"interactive":false,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.2855180411503233,"toneY":0.17499587115119486,"worker":true,"renderMs":62},"worker":{"start":79235.82752203941,"steps":{"wasmSetBase":0.28,"wasmRender":33.76},"total":34.27,"meta":{"w":460,"h":613,"ditherAlgo":"atkinson","toneX":0.2855180411503233,"toneY":0.17499587115119486,"wasm":"simd"}},"total":62}
+index.js:2415 onChooseImage 被调用
+index.js:2420 选择图片成功 {tempFiles: Array(1), type: "image", errMsg: "chooseMedia:ok"}
+index.js:2464 图片路径: wxfile://tmp_f1303dd4c416aa77f97cfbc2ac1a5a8d28f69cf589a8bde4.jpg
+index.js:2470 获取图片信息成功 {width: 3072, orientation: "up", type: "jpeg", height: 4096, errMsg: "getImageInfo:ok", …}
+index.js:2481 准备加载图片到 canvas
+VM75:363 Error: not node js file system!path:/saaa_config.json; go __invokeHandler__ readFile worker? false
+h @ VM75:363
+a.WeixinJSCore.invokeHandler @ VM75:363
+w @ WAServiceMainContext.js:1
+invoke @ WAServiceMainContext.js:1
+invoke @ WAServiceMainContext.js:1
+u @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+ae @ WAServiceMainContext.js:1
+o @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+g0 @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emitInternal @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+T @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+c.emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+(anonymous) @ WAServiceMainContext.js:1
+_emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+emit @ WAServiceMainContext.js:1
+subscribeHandler @ WAServiceMainContext.js:1
+ret.subscribeHandler
+index.js:2486 图片加载成功
+index.js:2501 [orient-check] {infoW: 3072, infoH: 4096, orientation: "up", imgW: 3072, imgH: 4096}
+index.js:2589 设置图片状态
+index.js:2613 开始处理图片
+index.js:1009 [perf] pixelizer {"start":1766742283636,"steps":{"scale+getImageData":23,"initWorkImageData":4,"baseCopy":0,"dither":30,"putImageData":0,"present":8},"meta":{"targetWidth":454,"targetHeight":605,"requestedWidth":460,"requestedHeight":613,"previewScale":0.9869565217391304,"interactive":false,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0,"toneY":0,"worker":false,"renderMs":67},"total":67}
+index.js:1009 [perf] pixelizer {"start":1766742285292,"steps":{"scale+getImageData":14,"initWorkImageData":8,"workerBaseCopy":0,"workerBasePost":1,"workerRender":18,"workerApply":0,"putImageData":0,"present":7},"meta":{"targetWidth":248,"targetHeight":331,"requestedWidth":460,"requestedHeight":613,"previewScale":0.5391304347826087,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.0005905677532327402,"toneY":0.11911459530101098,"worker":true,"renderMs":48},"worker":{"start":88098.18111205101,"steps":{"wasmSetBase":0.08,"wasmRender":14.98},"total":15.21,"meta":{"w":248,"h":331,"ditherAlgo":"atkinson","toneX":-0.0005905677532327402,"toneY":0.11911459530101098,"wasm":"simd"}},"total":48}
+index.js:1009 [perf] pixelizer {"start":1766742285342,"steps":{"workerRender":12,"workerApply":1,"putImageData":0,"present":0},"meta":{"targetWidth":248,"targetHeight":331,"requestedWidth":460,"requestedHeight":613,"previewScale":0.5391304347826087,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.02029513655037718,"toneY":0.11995562385110292,"worker":true,"renderMs":13},"worker":{"start":88124.62694609165,"steps":{"wasmRender":9.84},"total":10.04,"meta":{"w":248,"h":331,"ditherAlgo":"atkinson","toneX":-0.02029513655037718,"toneY":0.11995562385110292,"wasm":"simd"}},"total":13}
+index.js:1009 [perf] pixelizer {"start":1766742285359,"steps":{"workerRender":14,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":248,"targetHeight":331,"requestedWidth":460,"requestedHeight":613,"previewScale":0.5391304347826087,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.16019665948275863,"toneY":0.14474846335018388,"worker":true,"renderMs":14},"worker":{"start":88141.88850808144,"steps":{"wasmRender":10.85},"total":11.06,"meta":{"w":248,"h":331,"ditherAlgo":"atkinson","toneX":-0.16019665948275863,"toneY":0.14474846335018388,"wasm":"simd"}},"total":14}
+index.js:1009 [perf] pixelizer {"start":1766742285390,"steps":{"scale+getImageData":7,"initWorkImageData":6,"workerBaseCopy":0,"workerBasePost":1,"workerRender":14,"workerApply":1,"putImageData":0,"present":7},"meta":{"targetWidth":260,"targetHeight":347,"requestedWidth":460,"requestedHeight":613,"previewScale":0.5652173913043478,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.28985143201104524,"toneY":0.22920047535615806,"worker":true,"renderMs":36},"worker":{"start":88186.87960207462,"steps":{"wasmSetBase":0.11,"wasmRender":11.29},"total":11.57,"meta":{"w":260,"h":347,"ditherAlgo":"atkinson","toneX":-0.28985143201104524,"toneY":0.22920047535615806,"wasm":"simd"}},"total":36}
+index.js:1009 [perf] pixelizer {"start":1766742285429,"steps":{"workerRender":13,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":260,"targetHeight":347,"requestedWidth":460,"requestedHeight":613,"previewScale":0.5652173913043478,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.40926145356276944,"toneY":0.30104783002068014,"worker":true,"renderMs":13},"worker":{"start":88211.34705007076,"steps":{"wasmRender":10.9},"total":11.1,"meta":{"w":260,"h":347,"ditherAlgo":"atkinson","toneX":-0.40926145356276944,"toneY":0.30104783002068014,"wasm":"simd"}},"total":13}
+index.js:1009 [perf] pixelizer {"start":1766742285458,"steps":{"scale+getImageData":9,"initWorkImageData":5,"workerBaseCopy":0,"workerBasePost":1,"workerRender":15,"workerApply":0,"putImageData":0,"present":6},"meta":{"targetWidth":268,"targetHeight":357,"requestedWidth":460,"requestedHeight":613,"previewScale":0.5826086956521739,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.44669978700835133,"toneY":0.3699556238511029,"worker":true,"renderMs":36},"worker":{"start":88255.74246704578,"steps":{"wasmSetBase":0.09,"wasmRender":12.22},"total":12.47,"meta":{"w":268,"h":357,"ditherAlgo":"atkinson","toneX":-0.44669978700835133,"toneY":0.3699556238511029,"wasm":"simd"}},"total":36}
+index.js:1009 [perf] pixelizer {"start":1766742285496,"steps":{"workerRender":15,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":268,"targetHeight":357,"requestedWidth":460,"requestedHeight":613,"previewScale":0.5826086956521739,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.4498517266635237,"toneY":0.48928653492647056,"worker":true,"renderMs":15},"worker":{"start":88278.8665291071,"steps":{"wasmRender":11.55},"total":11.96,"meta":{"w":268,"h":357,"ditherAlgo":"atkinson","toneX":-0.4498517266635237,"toneY":0.48928653492647056,"wasm":"simd"}},"total":15}
+index.js:1009 [perf] pixelizer {"start":1766742285523,"steps":{"workerRender":15,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":268,"targetHeight":357,"requestedWidth":460,"requestedHeight":613,"previewScale":0.5826086956521739,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.3733989847117457,"toneY":0.6649142994600183,"worker":true,"renderMs":15},"worker":{"start":88305.96189403534,"steps":{"wasmRender":11.68},"total":12.07,"meta":{"w":268,"h":357,"ditherAlgo":"atkinson","toneX":-0.3733989847117457,"toneY":0.6649142994600183,"wasm":"simd"}},"total":15}
+index.js:1009 [perf] pixelizer {"start":1766742285554,"steps":{"scale+getImageData":7,"initWorkImageData":5,"workerBaseCopy":0,"workerBasePost":1,"workerRender":18,"workerApply":0,"putImageData":0,"present":6},"meta":{"targetWidth":280,"targetHeight":373,"requestedWidth":460,"requestedHeight":613,"previewScale":0.6086956521739131,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.2409846864897629,"toneY":0.7304588766659008,"worker":true,"renderMs":37},"worker":{"start":88349.81538307667,"steps":{"wasmSetBase":0.1,"wasmRender":13.81},"total":14.16,"meta":{"w":280,"h":373,"ditherAlgo":"atkinson","toneX":-0.2409846864897629,"toneY":0.7304588766659008,"wasm":"simd"}},"total":37}
+index.js:1009 [perf] pixelizer {"start":1766742285594,"steps":{"workerRender":15,"workerApply":1,"putImageData":0,"present":0},"meta":{"targetWidth":280,"targetHeight":373,"requestedWidth":460,"requestedHeight":613,"previewScale":0.6086956521739131,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.09241438240840516,"toneY":0.7140763226677389,"worker":true,"renderMs":16},"worker":{"start":88376.11928904057,"steps":{"wasmRender":12.96},"total":13.49,"meta":{"w":280,"h":373,"ditherAlgo":"atkinson","toneX":-0.09241438240840516,"toneY":0.7140763226677389,"wasm":"simd"}},"total":16}
+index.js:1009 [perf] pixelizer {"start":1766742285624,"steps":{"scale+getImageData":8,"initWorkImageData":4,"workerBaseCopy":0,"workerBasePost":2,"workerRender":19,"workerApply":1,"putImageData":0,"present":5},"meta":{"targetWidth":288,"targetHeight":384,"requestedWidth":460,"requestedHeight":613,"previewScale":0.6260869565217392,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.03408834523168114,"toneY":0.6060907700482536,"worker":true,"renderMs":39},"worker":{"start":88420.86871600151,"steps":{"wasmSetBase":0.11,"wasmRender":15.52},"total":15.8,"meta":{"w":288,"h":384,"ditherAlgo":"atkinson","toneX":0.03408834523168114,"toneY":0.6060907700482536,"wasm":"simd"}},"total":39}
+index.js:1009 [perf] pixelizer {"start":1766742285665,"steps":{"workerRender":21,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":288,"targetHeight":384,"requestedWidth":460,"requestedHeight":613,"previewScale":0.6260869565217392,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.13379390321928875,"toneY":0.4413856057559743,"worker":true,"renderMs":21},"worker":{"start":88447.72116410732,"steps":{"wasmRender":14.07},"total":18.46,"meta":{"w":288,"h":384,"ditherAlgo":"atkinson","toneX":0.13379390321928875,"toneY":0.4413856057559743,"wasm":"simd"}},"total":21}
+index.js:1009 [perf] pixelizer {"start":1766742285695,"steps":{"workerRender":16,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":288,"targetHeight":384,"requestedWidth":460,"requestedHeight":613,"previewScale":0.6260869565217392,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.17024725552262931,"toneY":0.2485252829159007,"worker":true,"renderMs":16},"worker":{"start":88477.85923707485,"steps":{"wasmRender":13.41},"total":13.62,"meta":{"w":288,"h":384,"ditherAlgo":"atkinson","toneX":0.17024725552262931,"toneY":0.2485252829159007,"wasm":"simd"}},"total":16}
+index.js:1009 [perf] pixelizer {"start":1766742285721,"steps":{"scale+getImageData":7,"initWorkImageData":4,"workerBaseCopy":0,"workerBasePost":1,"workerRender":43,"workerApply":0,"putImageData":0,"present":5},"meta":{"targetWidth":304,"targetHeight":405,"requestedWidth":460,"requestedHeight":613,"previewScale":0.6608695652173913,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.17024725552262931,"toneY":0.16659276625689334,"worker":true,"renderMs":61},"worker":{"start":88516.0488730669,"steps":{"wasmSetBase":0.11,"wasmRender":15.19},"total":15.46,"meta":{"w":304,"h":405,"ditherAlgo":"atkinson","toneX":0.17024725552262931,"toneY":0.16659276625689334,"wasm":"simd"}},"total":61}
+index.js:1009 [perf] pixelizer {"start":1766742285783,"steps":{"workerRender":19,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":304,"targetHeight":405,"requestedWidth":460,"requestedHeight":613,"previewScale":0.6608695652173913,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.12610841948410556,"toneY":0.002728630514705843,"worker":true,"renderMs":19},"worker":{"start":88566.3204870224,"steps":{"wasmRender":14.83},"total":15.05,"meta":{"w":304,"h":405,"ditherAlgo":"atkinson","toneX":0.12610841948410556,"toneY":0.002728630514705843,"wasm":"simd"}},"total":19}
+index.js:1009 [perf] pixelizer {"start":1766742285804,"steps":{"scale+getImageData":11,"initWorkImageData":3,"workerBaseCopy":1,"workerBasePost":1,"workerRender":22,"workerApply":0,"putImageData":0,"present":6},"meta":{"targetWidth":312,"targetHeight":416,"requestedWidth":460,"requestedHeight":613,"previewScale":0.6782608695652174,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.024236113449622954,"toneY":-0.12794225356158084,"worker":true,"renderMs":44},"worker":{"start":88602.84033107758,"steps":{"wasmSetBase":0.11,"wasmRender":18.41},"total":18.68,"meta":{"w":312,"h":416,"ditherAlgo":"atkinson","toneX":0.024236113449622954,"toneY":-0.12794225356158084,"wasm":"simd"}},"total":44}
+index.js:1009 [perf] pixelizer {"start":1766742285850,"steps":{"workerRender":23,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":312,"targetHeight":416,"requestedWidth":460,"requestedHeight":613,"previewScale":0.6782608695652174,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.020493185109105583,"toneY":-0.2073570700252758,"worker":true,"renderMs":23},"worker":{"start":88633.84022700787,"steps":{"wasmRender":19.08},"total":19.39,"meta":{"w":312,"h":416,"ditherAlgo":"atkinson","toneX":-0.020493185109105583,"toneY":-0.2073570700252758,"wasm":"simd"}},"total":23}
+index.js:1009 [perf] pixelizer {"start":1766742285875,"steps":{"workerRender":19,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":312,"targetHeight":416,"requestedWidth":460,"requestedHeight":613,"previewScale":0.6782608695652174,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.026600804822198287,"toneY":-0.23550504796645222,"worker":true,"renderMs":19},"worker":{"start":88657.50751805305,"steps":{"wasmRender":16.06},"total":16.51,"meta":{"w":312,"h":416,"ditherAlgo":"atkinson","toneX":-0.026600804822198287,"toneY":-0.23550504796645222,"wasm":"simd"}},"total":19}
+index.js:1009 [perf] pixelizer {"start":1766742285903,"steps":{"scale+getImageData":8,"initWorkImageData":6,"workerBaseCopy":0,"workerBasePost":2,"workerRender":21,"workerApply":0,"putImageData":0,"present":5},"meta":{"targetWidth":328,"targetHeight":437,"requestedWidth":460,"requestedHeight":613,"previewScale":0.7130434782608696,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.01753792598329751,"toneY":-0.27626217112821694,"worker":true,"renderMs":42},"worker":{"start":88701.70455002785,"steps":{"wasmSetBase":0.13,"wasmRender":17.91},"total":18.2,"meta":{"w":328,"h":437,"ditherAlgo":"atkinson","toneX":0.01753792598329751,"toneY":-0.27626217112821694,"wasm":"simd"}},"total":42}
+index.js:1009 [perf] pixelizer {"start":1766742285948,"steps":{"workerRender":20,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":328,"targetHeight":437,"requestedWidth":460,"requestedHeight":613,"previewScale":0.7130434782608696,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.1255176412648169,"toneY":-0.32122084673713225,"worker":true,"renderMs":20},"worker":{"start":88730.22428905964,"steps":{"wasmRender":17.69},"total":18.2,"meta":{"w":328,"h":437,"ditherAlgo":"atkinson","toneX":0.1255176412648169,"toneY":-0.32122084673713225,"wasm":"simd"}},"total":20}
+index.js:1009 [perf] pixelizer {"start":1766742285969,"steps":{"scale+getImageData":9,"initWorkImageData":4,"workerBaseCopy":1,"workerBasePost":1,"workerRender":23,"workerApply":0,"putImageData":0,"present":5},"meta":{"targetWidth":336,"targetHeight":448,"requestedWidth":460,"requestedHeight":613,"previewScale":0.7304347826086957,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.31743784937365294,"toneY":-0.3371851303998161,"worker":true,"renderMs":43},"worker":{"start":88767.0634560585,"steps":{"wasmSetBase":0.16,"wasmRender":19.22},"total":19.59,"meta":{"w":336,"h":448,"ditherAlgo":"atkinson","toneX":0.31743784937365294,"toneY":-0.3371851303998161,"wasm":"simd"}},"total":43}
+index.js:1009 [perf] pixelizer {"start":1766742286041,"steps":{"scale+getImageData":10,"initWorkImageData":5,"workerBaseCopy":0,"workerBasePost":2,"workerRender":41,"workerApply":1,"putImageData":0,"present":6},"meta":{"targetWidth":454,"targetHeight":605,"requestedWidth":460,"requestedHeight":613,"previewScale":0.9869565217391304,"interactive":false,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.535369873046875,"toneY":-0.07920568129595584,"worker":true,"renderMs":65},"worker":{"start":88841.04022705555,"steps":{"wasmSetBase":0.25,"wasmRender":33.99},"total":34.4,"meta":{"w":454,"h":605,"ditherAlgo":"atkinson","toneX":0.535369873046875,"toneY":-0.07920568129595584,"wasm":"simd"}},"total":65}
+index.js:1009 [perf] pixelizer {"start":1766742286190,"steps":{"scale+getImageData":11,"initWorkImageData":4,"workerBaseCopy":0,"workerBasePost":2,"workerRender":38,"workerApply":0,"putImageData":0,"present":6},"meta":{"targetWidth":460,"targetHeight":613,"requestedWidth":460,"requestedHeight":613,"previewScale":1,"interactive":false,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.535369873046875,"toneY":-0.07920568129595584,"worker":true,"renderMs":61},"worker":{"start":88989.53767502308,"steps":{"wasmSetBase":0.28,"wasmRender":34.45},"total":34.9,"meta":{"w":460,"h":613,"ditherAlgo":"atkinson","toneX":0.535369873046875,"toneY":-0.07920568129595584,"wasm":"simd"}},"total":61}
+index.js:1009 [perf] pixelizer {"start":1766742286378,"steps":{"scale+getImageData":12,"initWorkImageData":5,"workerBaseCopy":1,"workerBasePost":2,"workerRender":46,"workerApply":1,"putImageData":0,"present":8},"meta":{"targetWidth":504,"targetHeight":672,"requestedWidth":504,"requestedHeight":672,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.535369873046875,"toneY":-0.07920568129595584,"worker":true,"renderMs":75},"worker":{"start":89182.39678907394,"steps":{"wasmSetBase":0.25,"wasmRender":41.24},"total":41.67,"meta":{"w":504,"h":672,"ditherAlgo":"atkinson","toneX":0.535369873046875,"toneY":-0.07920568129595584,"wasm":"simd"}},"total":75}
+index.js:1009 [perf] pixelizer {"start":1766742286472,"steps":{"scale+getImageData":12,"initWorkImageData":4,"workerBaseCopy":1,"workerBasePost":2,"workerRender":53,"workerApply":0,"putImageData":0,"present":7},"meta":{"targetWidth":540,"targetHeight":720,"requestedWidth":540,"requestedHeight":720,"previewScale":1,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.535369873046875,"toneY":-0.07920568129595584,"worker":true,"renderMs":79},"worker":{"start":89274.58017408848,"steps":{"wasmSetBase":0.27,"wasmRender":48.33},"total":48.79,"meta":{"w":540,"h":720,"ditherAlgo":"atkinson","toneX":0.535369873046875,"toneY":-0.07920568129595584,"wasm":"simd"}},"total":79}
+index.js:1009 [perf] pixelizer {"start":1766742286552,"steps":{"scale+getImageData":13,"initWorkImageData":4,"workerBaseCopy":2,"workerBasePost":2,"workerRender":73,"workerApply":0,"putImageData":0,"present":7},"meta":{"targetWidth":640,"targetHeight":853,"requestedWidth":700,"requestedHeight":933,"previewScale":0.9142857142857143,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.535369873046875,"toneY":-0.07920568129595584,"worker":true,"renderMs":101},"worker":{"start":89355.67840409279,"steps":{"wasmSetBase":0.9,"wasmRender":67.81},"total":68.91,"meta":{"w":640,"h":853,"ditherAlgo":"atkinson","toneX":0.535369873046875,"toneY":-0.07920568129595584,"wasm":"simd"}},"total":101}
+index.js:1009 [perf] pixelizer {"start":1766742286830,"steps":{"scale+getImageData":18,"initWorkImageData":5,"workerBaseCopy":2,"workerBasePost":4,"workerRender":125,"workerApply":3,"putImageData":0,"present":15},"meta":{"targetWidth":848,"targetHeight":1131,"requestedWidth":848,"requestedHeight":1131,"previewScale":1,"interactive":false,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.535369873046875,"toneY":-0.07920568129595584,"worker":true,"renderMs":172},"worker":{"start":89641.43262207508,"steps":{"wasmSetBase":4.6,"wasmRender":116.13},"total":120.92,"meta":{"w":848,"h":1131,"ditherAlgo":"atkinson","toneX":0.535369873046875,"toneY":-0.07920568129595584,"wasm":"simd"}},"total":172}
+index.js:1009 [perf] pixelizer {"start":1766742287057,"steps":{"scale+getImageData":16,"initWorkImageData":10,"workerBaseCopy":0,"workerBasePost":1,"workerRender":24,"workerApply":0,"putImageData":0,"present":6},"meta":{"targetWidth":192,"targetHeight":256,"requestedWidth":848,"requestedHeight":1131,"previewScale":0.22641509433962265,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.5237435176454741,"toneY":0.08003952923943014,"worker":true,"renderMs":58},"worker":{"start":89881.99491405487,"steps":{"wasmSetBase":0.06,"wasmRender":6.63},"total":6.9,"meta":{"w":192,"h":256,"ditherAlgo":"atkinson","toneX":0.5237435176454741,"toneY":0.08003952923943014,"wasm":"simd"}},"total":58}
+index.js:1009 [perf] pixelizer {"start":1766742287117,"steps":{"workerRender":11,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":192,"targetHeight":256,"requestedWidth":848,"requestedHeight":1131,"previewScale":0.22641509433962265,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.3219713934536639,"toneY":0.08340005313648902,"worker":true,"renderMs":11},"worker":{"start":89899.66902804375,"steps":{"wasmRender":7.26},"total":8.83,"meta":{"w":192,"h":256,"ditherAlgo":"atkinson","toneX":0.3219713934536639,"toneY":0.08340005313648902,"wasm":"simd"}},"total":11}
+index.js:1009 [perf] pixelizer {"start":1766742287134,"steps":{"workerRender":10,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":192,"targetHeight":256,"requestedWidth":848,"requestedHeight":1131,"previewScale":0.22641509433962265,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.17714380724676726,"toneY":0.07962125890395222,"worker":true,"renderMs":10},"worker":{"start":89917.18017399311,"steps":{"wasmRender":6.95},"total":7.15,"meta":{"w":192,"h":256,"ditherAlgo":"atkinson","toneX":0.17714380724676726,"toneY":0.07962125890395222,"wasm":"simd"}},"total":10}
+index.js:1009 [perf] pixelizer {"start":1766742287163,"steps":{"scale+getImageData":8,"initWorkImageData":7,"workerBaseCopy":0,"workerBasePost":2,"workerRender":8,"workerApply":1,"putImageData":0,"present":6},"meta":{"targetWidth":200,"targetHeight":267,"requestedWidth":848,"requestedHeight":1131,"previewScale":0.2358490566037736,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.009261664028825445,"toneY":0.025419347426470562,"worker":true,"renderMs":32},"worker":{"start":89962.25288307667,"steps":{"wasmSetBase":0.07,"wasmRender":6.32},"total":6.58,"meta":{"w":200,"h":267,"ditherAlgo":"atkinson","toneX":0.009261664028825445,"toneY":0.025419347426470562,"wasm":"simd"}},"total":32}
+index.js:1009 [perf] pixelizer {"start":1766742287198,"steps":{"workerRender":10,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":200,"targetHeight":267,"requestedWidth":848,"requestedHeight":1131,"previewScale":0.2358490566037736,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.19881844356142242,"toneY":-0.06113388959099275,"worker":true,"renderMs":10},"worker":{"start":89981.1140280962,"steps":{"wasmRender":6.56},"total":6.88,"meta":{"w":200,"h":267,"ditherAlgo":"atkinson","toneX":-0.19881844356142242,"toneY":-0.06113388959099275,"wasm":"simd"}},"total":10}
+index.js:1009 [perf] pixelizer {"start":1766742287226,"steps":{"scale+getImageData":8,"initWorkImageData":4,"workerBaseCopy":0,"workerBasePost":1,"workerRender":13,"workerApply":0,"putImageData":0,"present":7},"meta":{"targetWidth":208,"targetHeight":277,"requestedWidth":848,"requestedHeight":1131,"previewScale":0.24528301886792453,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.3383254478717672,"toneY":-0.0989487591911764,"worker":true,"renderMs":33},"worker":{"start":90023.54533004761,"steps":{"wasmSetBase":0.08,"wasmRender":8.21},"total":8.51,"meta":{"w":208,"h":277,"ditherAlgo":"atkinson","toneX":-0.3383254478717672,"toneY":-0.0989487591911764,"wasm":"simd"}},"total":33}
+index.js:1009 [perf] pixelizer {"start":1766742287261,"steps":{"workerRender":10,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":208,"targetHeight":277,"requestedWidth":848,"requestedHeight":1131,"previewScale":0.24528301886792453,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.3976349929283405,"toneY":-0.10945308909696694,"worker":true,"renderMs":10},"worker":{"start":90043.82121610641,"steps":{"wasmRender":7.1},"total":7.41,"meta":{"w":208,"h":277,"ditherAlgo":"atkinson","toneX":-0.3976349929283405,"toneY":-0.10945308909696694,"wasm":"simd"}},"total":10}
+index.js:1009 [perf] pixelizer {"start":1766742287281,"steps":{"workerRender":10,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":208,"targetHeight":277,"requestedWidth":848,"requestedHeight":1131,"previewScale":0.24528301886792453,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.5028574976427802,"toneY":-0.12038017721737138,"worker":true,"renderMs":10},"worker":{"start":90063.35595500469,"steps":{"wasmRender":7.04},"total":7.25,"meta":{"w":208,"h":277,"ditherAlgo":"atkinson","toneX":-0.5028574976427802,"toneY":-0.12038017721737138,"wasm":"simd"}},"total":10}
+index.js:1009 [perf] pixelizer {"start":1766742287310,"steps":{"scale+getImageData":7,"initWorkImageData":3,"workerBaseCopy":1,"workerBasePost":1,"workerRender":12,"workerApply":0,"putImageData":0,"present":6},"meta":{"targetWidth":220,"targetHeight":293,"requestedWidth":848,"requestedHeight":1131,"previewScale":0.25943396226415094,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.5929070834455819,"toneY":-0.1350860595703125,"worker":true,"renderMs":30},"worker":{"start":90105.02600705624,"steps":{"wasmSetBase":0.07,"wasmRender":8.82},"total":9.07,"meta":{"w":220,"h":293,"ditherAlgo":"atkinson","toneX":-0.5929070834455819,"toneY":-0.1350860595703125,"wasm":"simd"}},"total":30}
+index.js:1009 [perf] pixelizer {"start":1766742287344,"steps":{"workerRender":11,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":220,"targetHeight":293,"requestedWidth":848,"requestedHeight":1131,"previewScale":0.25943396226415094,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.631921544568292,"toneY":-0.13424592859604778,"worker":true,"renderMs":11},"worker":{"start":90127.07913208008,"steps":{"wasmRender":7.75},"total":8.1,"meta":{"w":220,"h":293,"ditherAlgo":"atkinson","toneX":-0.631921544568292,"toneY":-0.13424592859604778,"wasm":"simd"}},"total":11}
+index.js:1009 [perf] pixelizer {"start":1766742287375,"steps":{"scale+getImageData":7,"initWorkImageData":4,"workerBaseCopy":0,"workerBasePost":2,"workerRender":12,"workerApply":0,"putImageData":0,"present":7},"meta":{"targetWidth":224,"targetHeight":299,"requestedWidth":848,"requestedHeight":1131,"previewScale":0.2641509433962264,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.647094358246902,"toneY":-0.1271012250114889,"worker":true,"renderMs":32},"worker":{"start":90171.55345499516,"steps":{"wasmSetBase":0.07,"wasmRender":8.08},"total":8.89,"meta":{"w":224,"h":299,"ditherAlgo":"atkinson","toneX":-0.647094358246902,"toneY":-0.1271012250114889,"wasm":"simd"}},"total":32}
+index.js:1009 [perf] pixelizer {"start":1766742287410,"steps":{"workerRender":11,"workerApply":0,"putImageData":0,"present":1},"meta":{"targetWidth":224,"targetHeight":299,"requestedWidth":848,"requestedHeight":1131,"previewScale":0.2641509433962264,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.6472906178441541,"toneY":-0.12163947610294112,"worker":true,"renderMs":12},"worker":{"start":90192.79954910278,"steps":{"wasmRender":8.03},"total":8.46,"meta":{"w":224,"h":299,"ditherAlgo":"atkinson","toneX":-0.6472906178441541,"toneY":-0.12163947610294112,"wasm":"simd"}},"total":12}
+index.js:1009 [perf] pixelizer {"start":1766742287428,"steps":{"scale+getImageData":12,"initWorkImageData":4,"workerBaseCopy":1,"workerBasePost":2,"workerRender":37,"workerApply":0,"putImageData":0,"present":7},"meta":{"targetWidth":454,"targetHeight":605,"requestedWidth":848,"requestedHeight":1131,"previewScale":0.535377358490566,"interactive":false,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.6472906178441541,"toneY":-0.11954004624310666,"worker":true,"renderMs":63},"worker":{"start":90230.02105903625,"steps":{"wasmSetBase":0.26,"wasmRender":33.22},"total":33.66,"meta":{"w":454,"h":605,"ditherAlgo":"atkinson","toneX":-0.6472906178441541,"toneY":-0.11954004624310666,"wasm":"simd"}},"total":63}
+index.js:1009 [perf] pixelizer {"start":1766742287578,"steps":{"scale+getImageData":17,"initWorkImageData":6,"workerBaseCopy":2,"workerBasePost":7,"workerRender":139,"workerApply":0,"putImageData":1,"present":8},"meta":{"targetWidth":848,"targetHeight":1131,"requestedWidth":848,"requestedHeight":1131,"previewScale":1,"interactive":false,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.6472906178441541,"toneY":-0.11954004624310666,"worker":true,"renderMs":180},"worker":{"start":90395.7407990694,"steps":{"wasmSetBase":1.06,"wasmRender":108.6},"total":109.86,"meta":{"w":848,"h":1131,"ditherAlgo":"atkinson","toneX":-0.6472906178441541,"toneY":-0.11954004624310666,"wasm":"simd"}},"total":180}
+index.js:1009 [perf] pixelizer {"start":1766742288439,"steps":{"scale+getImageData":12,"initWorkImageData":4,"workerBaseCopy":0,"workerBasePost":2,"workerRender":11,"workerApply":0,"putImageData":0,"present":6},"meta":{"targetWidth":224,"targetHeight":299,"requestedWidth":848,"requestedHeight":1131,"previewScale":0.2641509433962264,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.4898514320110453,"toneY":-0.22626450482536775,"worker":true,"renderMs":35},"worker":{"start":91239.6931951046,"steps":{"wasmSetBase":0.07,"wasmRender":8.23},"total":8.49,"meta":{"w":224,"h":299,"ditherAlgo":"atkinson","toneX":-0.4898514320110453,"toneY":-0.22626450482536775,"wasm":"simd"}},"total":35}
+index.js:1009 [perf] pixelizer {"start":1766742288484,"steps":{"workerRender":12,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":224,"targetHeight":299,"requestedWidth":848,"requestedHeight":1131,"previewScale":0.2641509433962264,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.48650312752559266,"toneY":-0.22626450482536775,"worker":true,"renderMs":12},"worker":{"start":91267.18527805805,"steps":{"wasmRender":7.98},"total":8.33,"meta":{"w":224,"h":299,"ditherAlgo":"atkinson","toneX":-0.48650312752559266,"toneY":-0.22626450482536775,"wasm":"simd"}},"total":12}
+index.js:1009 [perf] pixelizer {"start":1766742288501,"steps":{"workerRender":11,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":224,"targetHeight":299,"requestedWidth":848,"requestedHeight":1131,"previewScale":0.2641509433962264,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.40137960499730607,"toneY":-0.22626450482536775,"worker":true,"renderMs":11},"worker":{"start":91283.65605902672,"steps":{"wasmRender":8.08},"total":8.3,"meta":{"w":224,"h":299,"ditherAlgo":"atkinson","toneX":-0.40137960499730607,"toneY":-0.22626450482536775,"wasm":"simd"}},"total":11}
+index.js:1009 [perf] pixelizer {"start":1766742288521,"steps":{"scale+getImageData":8,"initWorkImageData":5,"workerBaseCopy":0,"workerBasePost":2,"workerRender":11,"workerApply":1,"putImageData":0,"present":5},"meta":{"targetWidth":236,"targetHeight":315,"requestedWidth":848,"requestedHeight":1131,"previewScale":0.2783018867924528,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.19290697821255387,"toneY":-0.22164019416360303,"worker":true,"renderMs":32},"worker":{"start":91318.14897608757,"steps":{"wasmSetBase":0.09,"wasmRender":9.18},"total":9.45,"meta":{"w":236,"h":315,"ditherAlgo":"atkinson","toneX":-0.19290697821255387,"toneY":-0.22164019416360303,"wasm":"simd"}},"total":32}
+index.js:1009 [perf] pixelizer {"start":1766742288556,"steps":{"workerRender":12,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":236,"targetHeight":315,"requestedWidth":848,"requestedHeight":1131,"previewScale":0.2783018867924528,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.1274880244814116,"toneY":-0.2136580523322611,"worker":true,"renderMs":12},"worker":{"start":91338.46361100674,"steps":{"wasmRender":8.98},"total":9.18,"meta":{"w":236,"h":315,"ditherAlgo":"atkinson","toneX":-0.1274880244814116,"toneY":-0.2136580523322611,"wasm":"simd"}},"total":12}
+index.js:1009 [perf] pixelizer {"start":1766742288574,"steps":{"workerRender":13,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":236,"targetHeight":315,"requestedWidth":848,"requestedHeight":1131,"previewScale":0.2783018867924528,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":-0.0011814512055495774,"toneY":-0.10147363999310666,"worker":true,"renderMs":13},"worker":{"start":91356.28418409824,"steps":{"wasmRender":8.86},"total":9.13,"meta":{"w":236,"h":315,"ditherAlgo":"atkinson","toneX":-0.0011814512055495774,"toneY":-0.10147363999310666,"wasm":"simd"}},"total":13}
+index.js:1009 [perf] pixelizer {"start":1766742288605,"steps":{"scale+getImageData":7,"initWorkImageData":5,"workerBaseCopy":0,"workerBasePost":1,"workerRender":14,"workerApply":0,"putImageData":0,"present":6},"meta":{"targetWidth":240,"targetHeight":320,"requestedWidth":848,"requestedHeight":1131,"previewScale":0.2830188679245283,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.10403905408135783,"toneY":0.04726903578814334,"worker":true,"renderMs":33},"worker":{"start":91401.54887199402,"steps":{"wasmSetBase":0.09,"wasmRender":9.9},"total":10.22,"meta":{"w":240,"h":320,"ditherAlgo":"atkinson","toneX":0.10403905408135783,"toneY":0.04726903578814334,"wasm":"simd"}},"total":33}
+index.js:1009 [perf] pixelizer {"start":1766742288640,"steps":{"workerRender":12,"workerApply":0,"putImageData":0,"present":0},"meta":{"targetWidth":240,"targetHeight":320,"requestedWidth":848,"requestedHeight":1131,"previewScale":0.2830188679245283,"interactive":true,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.15014837856950436,"toneY":0.10945308909696694,"worker":true,"renderMs":12},"worker":{"start":91422.78418409824,"steps":{"wasmRender":9.38},"total":9.74,"meta":{"w":240,"h":320,"ditherAlgo":"atkinson","toneX":0.15014837856950436,"toneY":0.10945308909696694,"wasm":"simd"}},"total":12}
+index.js:1009 [perf] pixelizer {"start":1766742288809,"steps":{"scale+getImageData":25,"initWorkImageData":6,"workerBaseCopy":3,"workerBasePost":3,"workerRender":125,"workerApply":1,"putImageData":3,"present":17},"meta":{"targetWidth":848,"targetHeight":1131,"requestedWidth":848,"requestedHeight":1131,"previewScale":1,"interactive":false,"ditherAlgo":"atkinson","paletteKey":"dreamscape8","toneX":0.15014837856950436,"toneY":0.10945308909696694,"worker":true,"renderMs":183},"worker":{"start":91629.34918403625,"steps":{"wasmSetBase":0.76,"wasmRender":116.1},"total":117.05,"meta":{"w":848,"h":1131,"ditherAlgo":"atkinson","toneX":0.15014837856950436,"toneY":0.10945308909696694,"wasm":"simd"}},"total":183}

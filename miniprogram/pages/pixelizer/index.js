@@ -663,6 +663,11 @@ Page({
     this._lastInteractiveRenderAt = 0;
     this._interactionCapPeakWidth = 0;
     this._interactionCapStableCount = 0;
+    this._contentCheckStatus = "idle";
+    this._contentCheckToken = 0;
+    this._contentCheckPromise = null;
+    this._contentCheckSource = "";
+    this._contentCheckError = "";
 
     const safeTopPx = this._safeTop;
     const safeBottomPx = this._safeBottom;
@@ -1773,6 +1778,114 @@ Page({
     this._refineTimer = setTimeout(attempt, delayMs);
   },
 
+  _resetContentCheck() {
+    this._contentCheckToken = (this._contentCheckToken || 0) + 1;
+    this._contentCheckPromise = null;
+    this._contentCheckStatus = "idle";
+    this._contentCheckSource = "";
+    this._contentCheckError = "";
+  },
+
+  _getImageContentType(info, src) {
+    const type = String((info && info.type) || "").toLowerCase();
+    if (type === "png") return "image/png";
+    if (type === "gif") return "image/gif";
+    if (type === "webp") return "image/webp";
+    if (type === "jpg" || type === "jpeg") return "image/jpeg";
+    const lowerSrc = String(src || "").toLowerCase();
+    if (lowerSrc.endsWith(".png")) return "image/png";
+    if (lowerSrc.endsWith(".gif")) return "image/gif";
+    if (lowerSrc.endsWith(".webp")) return "image/webp";
+    if (lowerSrc.endsWith(".jpg") || lowerSrc.endsWith(".jpeg")) return "image/jpeg";
+    return "image/jpeg";
+  },
+
+  _notifyContentReject() {
+    wx.showModal({
+      title: "内容不合规",
+      content: "图片包含违规内容，已禁止保存。",
+      showCancel: false
+    });
+  },
+
+  _notifyContentCheckError() {
+    wx.showToast({ title: "内容安全检测失败", icon: "none" });
+  },
+
+  _startContentCheck(src, info) {
+    if (!src) return null;
+    if (!wx.cloud || typeof wx.cloud.uploadFile !== "function") {
+      this._contentCheckStatus = "unavailable";
+      this._contentCheckError = "cloud unavailable";
+      return null;
+    }
+
+    const token = (this._contentCheckToken = (this._contentCheckToken || 0) + 1);
+    this._contentCheckStatus = "pending";
+    this._contentCheckError = "";
+    this._contentCheckSource = src;
+
+    const contentType = this._getImageContentType(info, src);
+    const ext = contentType.split("/")[1] || "jpg";
+    const rand = Math.random().toString(16).slice(2, 10);
+    const cloudPath = `content-check/${Date.now()}_${rand}.${ext}`;
+
+    const promise = (async () => {
+      try {
+        const upload = await wx.cloud.uploadFile({ cloudPath, filePath: src });
+        if (token !== this._contentCheckToken) return "stale";
+        const fileID = upload && upload.fileID ? upload.fileID : "";
+        if (!fileID) throw new Error("upload failed");
+
+        const res = await wx.cloud.callFunction({
+          name: "contentSecurity",
+          data: { action: "image", fileID, contentType }
+        });
+        const result = res && res.result ? res.result : {};
+        const status = result.status || (result.ok ? "pass" : "error");
+
+        if (token !== this._contentCheckToken) return status;
+        this._contentCheckStatus = status;
+        this._contentCheckError = result.errMsg || "";
+        if (status === "reject") this._notifyContentReject();
+        return status;
+      } catch (err) {
+        if (token === this._contentCheckToken) {
+          this._contentCheckStatus = "error";
+          this._contentCheckError = String(err && err.message ? err.message : err);
+        }
+        return "error";
+      }
+    })();
+
+    this._contentCheckPromise = promise;
+    return promise;
+  },
+
+  async _ensureContentCheckAllowed() {
+    const status = this._contentCheckStatus || "idle";
+    if (status === "pass") return true;
+
+    if (status === "pending" && this._contentCheckPromise) {
+      wx.showToast({ title: "正在内容安全检测", icon: "none" });
+      const finalStatus = await this._contentCheckPromise;
+      if (finalStatus === "pass") return true;
+    }
+
+    if (this._contentCheckStatus === "reject") {
+      this._notifyContentReject();
+      return false;
+    }
+
+    if (this._contentCheckStatus === "unavailable") {
+      wx.showToast({ title: "内容安全未启用", icon: "none" });
+      return false;
+    }
+
+    this._notifyContentCheckError();
+    return false;
+  },
+
   _getInteractiveTargetWidth(baseWidth, isInteracting) {
     if (!isInteracting) return baseWidth;
     const safeBase = Math.max(1, baseWidth || 1);
@@ -2453,6 +2566,7 @@ Page({
         console.error("未获取到图片路径");
         return;
       }
+      this._resetContentCheck();
       const loadToken = (this._imageLoadToken = (this._imageLoadToken || 0) + 1);
 
       const ready = await this._ensureCanvases();
@@ -2477,6 +2591,8 @@ Page({
         });
       });
       if (loadToken !== this._imageLoadToken) return;
+
+      this._startContentCheck(src, info);
 
       console.log("准备加载图片到 canvas");
 
@@ -2629,6 +2745,7 @@ Page({
 
   onCloseImage() {
     if (!this.data.closeEnabled || !this.data.closeShown) return;
+    this._resetContentCheck();
     if (this._initialProcessTimer) {
       clearTimeout(this._initialProcessTimer);
       this._initialProcessTimer = null;
@@ -3263,6 +3380,8 @@ Page({
 
   async onDownload() {
     if (!this.data.canDownload || !this._canvas) return;
+    const allowDownload = await this._ensureContentCheckAllowed();
+    if (!allowDownload) return;
 
     const requestedWidth = typeof this.data.targetWidth === "number" ? this.data.targetWidth : 0;
     const currentW = this._proc.work.w;
