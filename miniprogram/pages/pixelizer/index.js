@@ -52,7 +52,7 @@ const INTERACTION_CAP_STABLE_FRAMES = 2;
 const INTERACTION_CAP_GROWTH = 1.08;
 const INTERACTION_CAP_RECOVER_RATIO = 0.85;
 const INTERACTION_CAP_SLOW_WINDOW_MS = 2000;
-const INTERACTION_SLOW_FRAMES = 2;
+const INTERACTION_SLOW_FRAMES = 3;
 const CONTENT_CHECK_MAX_EDGE = 1024;
 const CONTENT_CHECK_MIN_BYTES = 150 * 1024;
 const CONTENT_CHECK_MAX_BYTES = 300 * 1024;
@@ -499,7 +499,7 @@ Page({
     this._isIOS = String(sys.platform || "").toLowerCase() === "ios";
     const model = String(sys.model || "");
     this._isIPad = !!(this._isIOS && model.toLowerCase().includes("ipad"));
-    this._useGLPreview = !!this._isIPad;
+    this._useGLPreview = !!this._isIOS;
     const perfSetting = wx.getStorageSync("pixelizer_perf");
     const perfConfig = perfSetting && typeof perfSetting === "object" ? perfSetting : null;
     this._perfEnabled =
@@ -667,6 +667,7 @@ Page({
     this._lastInteractiveRenderAt = 0;
     this._interactionCapPeakWidth = 0;
     this._interactionCapStableCount = 0;
+    this._downloadInProgress = false;
     this._contentCheckStatus = "idle";
     this._contentCheckToken = 0;
     this._contentCheckPromise = null;
@@ -2834,6 +2835,7 @@ Page({
 
   onCloseImage() {
     if (!this.data.closeEnabled || !this.data.closeShown) return;
+    this._downloadInProgress = false;
     this._resetContentCheck();
     if (this._initialProcessTimer) {
       clearTimeout(this._initialProcessTimer);
@@ -3469,6 +3471,12 @@ Page({
 
   async onDownload() {
     if (!this.data.canDownload || !this._canvas) return;
+    if (this._downloadInProgress) {
+      wx.showToast({ title: "正在处理，请稍候", icon: "none" });
+      return;
+    }
+    this._downloadInProgress = true;
+    try {
     const allowDownload = await this._ensureContentCheckAllowed();
     if (!allowDownload) return;
 
@@ -3558,6 +3566,9 @@ Page({
         return;
       }
       wx.showToast({ title: "保存失败", icon: "none" });
+    }
+    } finally {
+      this._downloadInProgress = false;
     }
   },
 
