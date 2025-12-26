@@ -103,10 +103,17 @@
           <view class="panel-title">
             <view>调色板</view>
           </view>
-          <scroll-view class="palette-list" scroll-y>
+          <scroll-view
+            class="palette-list"
+            id="paletteList"
+            scroll-y
+            scroll-top="{{paletteScrollTop}}"
+            scroll-with-animation="true"
+          >
             <view
               wx:for="{{paletteList}}"
               wx:key="key"
+              id="palette-{{item.key}}"
               class="palette-btn {{paletteKey === item.key ? 'active' : ''}}"
               data-key="{{item.key}}"
               bindtap="onSelectPalette"

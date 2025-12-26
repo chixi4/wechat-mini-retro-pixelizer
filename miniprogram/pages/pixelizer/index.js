@@ -462,6 +462,7 @@ Page({
 
     paletteKey: "dreamscape8",
     paletteList: [],
+    paletteScrollTop: 0,
 
     canDownload: false,
     fullscreenVisible: false,
@@ -673,6 +674,7 @@ Page({
     this._contentCheckPromise = null;
     this._contentCheckSource = "";
     this._contentCheckError = "";
+    this._paletteScrollInitialized = false;
 
     const safeTopPx = this._safeTop;
     const safeBottomPx = this._safeBottom;
@@ -711,6 +713,7 @@ Page({
     this._syncToneCursorToRect();
     this._updateLayout();
     await this._ensureCanvases();
+    await this._centerPaletteInView();
 
     if (this._layoutAnimReadyTimer) clearTimeout(this._layoutAnimReadyTimer);
     this._layoutAnimReadyTimer = setTimeout(() => {
@@ -1235,6 +1238,29 @@ Page({
     this._slider.rect = sliderRect;
     this._grid.rect = xyRect;
     this._canvasContainerRect = canvasContainerRect;
+  },
+
+  async _centerPaletteInView(force) {
+    if (this._paletteScrollInitialized && !force) return;
+    const key = this.data.paletteKey;
+    if (!key) return;
+
+    await sleep(30);
+
+    const listRect = await selectRect(this, "#paletteList");
+    const itemRect = await selectRect(this, `#palette-${key}`);
+    if (!listRect || !itemRect) return;
+
+    const listHeight = listRect.height || 0;
+    const itemHeight = itemRect.height || 0;
+    if (!listHeight || !itemHeight) return;
+
+    const offsetInView = itemRect.top - listRect.top;
+    const targetTop = offsetInView - (listHeight - itemHeight) / 2;
+    if (!isFinite(targetTop)) return;
+
+    this._paletteScrollInitialized = true;
+    this.setData({ paletteScrollTop: Math.max(0, Math.round(targetTop)) });
   },
 
   _updateLayout() {
