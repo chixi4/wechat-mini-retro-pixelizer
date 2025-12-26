@@ -473,7 +473,8 @@ Page({
 
     mainCanvasCssW: 1,
     mainCanvasCssH: 1,
-    useGLPreview: false
+    useGLPreview: false,
+    previewHoldVisible: false
   },
 
   onLoad() {
@@ -2986,6 +2987,7 @@ Page({
       clearTimeout(this._fullscreenAnimTimer);
       this._fullscreenAnimTimer = null;
     }
+    this._fullscreenPendingOpen = null;
     this._clearCloseHintTimer();
     this._closeHintShown = false;
     this._updateCloseVisibility();
@@ -3008,6 +3010,7 @@ Page({
       fullscreenActive: false,
       fullscreenClosing: false,
       fullscreenAnimating: false,
+      previewHoldVisible: false,
       fullscreenSrc: "",
       fullscreenImageLeft: targetRect.left,
       fullscreenImageTop: targetRect.top,
@@ -3029,8 +3032,21 @@ Page({
       if (this._fullscreenAnimToken !== animToken) return;
       if (!this.data.fullscreenVisible || this.data.fullscreenClosing) return;
 
-      this.setData({ fullscreenActive: true, fullscreenAnimating: true }, () => {
+      const holdPreview = !!this._isIPad;
+      this.setData({ fullscreenActive: true, fullscreenAnimating: true, previewHoldVisible: holdPreview }, () => {
         if (this._fullscreenAnimToken !== animToken) return;
+        if (holdPreview) {
+          const releaseHold = () => {
+            if (this._fullscreenAnimToken !== animToken) return;
+            if (!this.data.fullscreenVisible || this.data.fullscreenClosing) return;
+            if (this.data.previewHoldVisible) this.setData({ previewHoldVisible: false });
+          };
+          if (typeof requestAnimationFrame === "function") {
+            requestAnimationFrame(releaseHold);
+          } else {
+            setTimeout(releaseHold, 16);
+          }
+        }
         const applyTransform = () => {
           if (this._fullscreenAnimToken !== animToken) return;
           this._fullscreenBase = { scale: 1, x: 0, y: 0 };
@@ -3062,20 +3078,59 @@ Page({
       });
 
       if (this._fullscreenAnimToken !== animToken) return;
-      this.setData({ fullscreenSrc: tmp.tempFilePath }, () => {
-        setTimeout(startAnim, 16);
-      });
+      this._fullscreenPendingOpen = { token: animToken, startAnim };
+      this.setData({ fullscreenSrc: tmp.tempFilePath });
     } catch {
       if (this._fullscreenAnimToken !== animToken) return;
+      this._fullscreenPendingOpen = null;
       this.setData({
         fullscreenVisible: false,
         fullscreenActive: false,
         fullscreenClosing: false,
         fullscreenAnimating: false,
+        previewHoldVisible: false,
         fullscreenSrc: ""
       });
       wx.showToast({ title: "预览失败", icon: "none" });
     }
+  },
+
+  onFullscreenImageLoad() {
+    const pending = this._fullscreenPendingOpen;
+    if (!pending) return;
+    if (this._fullscreenAnimToken !== pending.token) {
+      this._fullscreenPendingOpen = null;
+      return;
+    }
+    this._fullscreenPendingOpen = null;
+    if (!this.data.fullscreenVisible || this.data.fullscreenClosing) return;
+
+    const fire = () => {
+      if (this._fullscreenAnimToken !== pending.token) return;
+      pending.startAnim();
+    };
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(fire);
+    } else {
+      setTimeout(fire, 16);
+    }
+  },
+
+  onFullscreenImageError() {
+    const pending = this._fullscreenPendingOpen;
+    if (pending) this._fullscreenPendingOpen = null;
+    if (!this.data.fullscreenVisible || this.data.fullscreenClosing) return;
+
+    this._fullscreenAnimToken = (this._fullscreenAnimToken || 0) + 1;
+    this.setData({
+      fullscreenVisible: false,
+      fullscreenActive: false,
+      fullscreenClosing: false,
+      fullscreenAnimating: false,
+      previewHoldVisible: false,
+      fullscreenSrc: ""
+    });
+    wx.showToast({ title: "预览失败", icon: "none" });
   },
 
   onFullscreenTouchStart(e) {
@@ -3143,6 +3198,7 @@ Page({
       clearTimeout(this._fullscreenAnimTimer);
       this._fullscreenAnimTimer = null;
     }
+    this._fullscreenPendingOpen = null;
     const closeToken = (this._fullscreenAnimToken = (this._fullscreenAnimToken || 0) + 1);
 
     const previewSelector = this.data.useGLPreview ? "#mainGLCanvas" : "#mainCanvas";
@@ -3167,6 +3223,7 @@ Page({
         fullscreenClosing: true,
         fullscreenActive: false,
         fullscreenAnimating: true,
+        previewHoldVisible: false,
         fullscreenImageLeft: targetRect.left,
         fullscreenImageTop: targetRect.top,
         fullscreenImageW: targetRect.width,
@@ -3184,25 +3241,45 @@ Page({
           const duration = 260;
           this._fullscreenCloseTimer = setTimeout(() => {
             if (this._fullscreenAnimToken !== closeToken) return;
-            this._fullscreenCloseTimer = null;
-            this._fullscreenBase = { scale: 1, x: 0, y: 0 };
-            this._fullscreenUser = { scale: 1, x: 0, y: 0 };
-            this._refreshPreviewSurface();
-            this.setData(
-              {
-                fullscreenVisible: false,
-                fullscreenActive: false,
-                fullscreenClosing: false,
-                fullscreenAnimating: false,
-                fullscreenSrc: "",
-                fullscreenScale: 1,
-                fullscreenTranslateX: 0,
-                fullscreenTranslateY: 0
-              },
-              () => {
-                this._showCloseHint();
+              this._fullscreenCloseTimer = null;
+              this._fullscreenBase = { scale: 1, x: 0, y: 0 };
+              this._fullscreenUser = { scale: 1, x: 0, y: 0 };
+              this._refreshPreviewSurface();
+              const finalizeClose = () => {
+                this.setData(
+                  {
+                    fullscreenVisible: false,
+                    fullscreenActive: false,
+                    fullscreenClosing: false,
+                    fullscreenAnimating: false,
+                    previewHoldVisible: false,
+                    fullscreenSrc: "",
+                    fullscreenScale: 1,
+                    fullscreenTranslateX: 0,
+                    fullscreenTranslateY: 0
+                  },
+                  () => {
+                    this._showCloseHint();
+                  }
+                );
+              };
+
+              if (this._isIPad) {
+                this.setData({ previewHoldVisible: true }, () => {
+                  const nextFrame = () => {
+                    if (this._fullscreenAnimToken !== closeToken) return;
+                    finalizeClose();
+                  };
+                  if (typeof requestAnimationFrame === "function") {
+                    requestAnimationFrame(nextFrame);
+                  } else {
+                    setTimeout(nextFrame, 16);
+                  }
+                });
+                return;
               }
-            );
+
+              finalizeClose();
           }, duration);
         }, 16);
       }

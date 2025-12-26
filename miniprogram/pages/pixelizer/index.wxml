@@ -140,14 +140,14 @@
         <canvas
           type="2d"
           id="mainCanvas"
-          class="main-canvas {{useGLPreview ? 'offscreen-canvas' : ''}} {{(fullscreenActive || fullscreenClosing) ? 'is-hidden' : ''}}"
+          class="main-canvas {{useGLPreview ? 'offscreen-canvas' : ''}} {{((fullscreenActive || fullscreenClosing) && !previewHoldVisible) ? 'is-hidden' : ''}}"
           style="width: {{mainCanvasCssW}}px; height: {{mainCanvasCssH}}px;"
           bindtap="onOpenFullscreen"
         ></canvas>
         <canvas
           type="webgl"
           id="mainGLCanvas"
-          class="main-canvas {{!useGLPreview ? 'offscreen-canvas' : ''}} {{(fullscreenActive || fullscreenClosing) ? 'is-hidden' : ''}}"
+          class="main-canvas {{!useGLPreview ? 'offscreen-canvas' : ''}} {{((fullscreenActive || fullscreenClosing) && !previewHoldVisible) ? 'is-hidden' : ''}}"
           style="width: {{mainCanvasCssW}}px; height: {{mainCanvasCssH}}px;"
           bindtap="onOpenFullscreen"
         ></canvas>
@@ -156,7 +156,7 @@
 
       <view
         wx:if="{{hasImage}}"
-        class="close-btn {{closeEnabled ? 'enabled' : ''}} {{closeShown ? 'shown' : ''}} {{fullscreenVisible ? 'is-hidden' : ''}}"
+        class="close-btn {{closeEnabled ? 'enabled' : ''}} {{closeShown ? 'shown' : ''}} {{(!isIPad && fullscreenVisible) ? 'is-hidden' : ''}}"
         catchtap="onCloseImage"
       >
         <view class="close-btn-icon">
@@ -182,11 +182,13 @@
         class="fullscreen-image"
         src="{{fullscreenSrc}}"
         mode="aspectFit"
+        bindload="onFullscreenImageLoad"
+        binderror="onFullscreenImageError"
         bindtouchstart="onFullscreenTouchStart"
         bindtouchmove="onFullscreenTouchMove"
         bindtouchend="onFullscreenTouchEnd"
         bindtap="onFullscreenTap"
-        style="left: {{fullscreenImageLeft}}px; top: {{fullscreenImageTop}}px; width: {{fullscreenImageW}}px; height: {{fullscreenImageH}}px; transform: translate({{fullscreenTranslateX}}px, {{fullscreenTranslateY}}px) scale({{fullscreenScale}});"
+        style="left: {{fullscreenImageLeft}}px; top: {{fullscreenImageTop}}px; width: {{fullscreenImageW}}px; height: {{fullscreenImageH}}px; transform: translate3d({{fullscreenTranslateX}}px, {{fullscreenTranslateY}}px, 0) scale({{fullscreenScale}});"
       ></image>
     </view>
   </view>
