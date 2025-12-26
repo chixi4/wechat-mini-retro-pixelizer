@@ -365,11 +365,19 @@
 .dot {
   width: 10px;
   height: 10px;
-  border: 0;
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .theme-dark .dot {
   border: 0.5px solid #ffffff;
+}
+
+.palette-btn.active .dot {
+  border: 0.5px solid #ffffff;
+}
+
+.theme-dark .palette-btn.active .dot {
+  border: 0.5px solid #000000;
 }
 
 .action-btn {
