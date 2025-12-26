@@ -566,9 +566,10 @@ async function handleMessage(msg) {
     const ex = await ensureWasm();
     if (ex) {
       try {
-        if (paletteKey !== wasm.paletteKey) {
+        const wasmPaletteCacheKey = `${paletteKey}|${ditherAlgo}`;
+        if (wasmPaletteCacheKey !== wasm.paletteKey) {
           perfMeasure("wasmSetPalette", () => {
-            if (!wasmSetPalette(paletteKey, palette)) {
+            if (!wasmSetPalette(wasmPaletteCacheKey, palette)) {
               throw new Error("wasm set_palette failed");
             }
           });
