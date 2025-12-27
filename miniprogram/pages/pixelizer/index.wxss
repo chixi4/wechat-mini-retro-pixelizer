@@ -74,8 +74,8 @@
   justify-content: center;
   align-items: center;
   z-index: 1;
-  --capture-anim-ms: 1000ms;
-  --capture-drop: 64px;
+  --capture-anim-ms: 1200ms;
+  --capture-drop: 160px;
 }
 
 .preview-area.is-hidden {
@@ -272,13 +272,13 @@
     transform: translate3d(0, 0, 0) scale(0.94);
     opacity: 1;
   }
-  76% {
+  70% {
     transform: translate3d(0, 0, 0) scale(0.94);
     opacity: 1;
   }
-  92% {
+  90% {
     transform: translate3d(0, calc(var(--capture-drop, 64px) * 0.7), 0) scale(0.94);
-    opacity: 0.7;
+    opacity: 0.8;
   }
   100% {
     transform: translate3d(0, var(--capture-drop, 34px), 0) scale(0.94);
@@ -966,7 +966,7 @@
     pointer-events: none;
     transition: opacity 0.16s ease-out, height 0.35s cubic-bezier(0.2, 0, 0.2, 1);
     will-change: opacity, height;
-    --capture-drop: 96px;
+    --capture-drop: 240px;
   }
 
   .preview-area.layout-anim {

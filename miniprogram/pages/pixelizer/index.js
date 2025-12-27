@@ -4239,7 +4239,7 @@ Page({
     if (this._downloadInProgress || this._cameraCaptureActive) return;
 
     const token = (this._cameraCaptureToken = (this._cameraCaptureToken || 0) + 1);
-    const animMs = 1000;
+    const animMs = 1200;
     const maxHoldMs = 1200;
 
     this._cameraCaptureActive = true;
