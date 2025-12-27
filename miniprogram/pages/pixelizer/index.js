@@ -3129,9 +3129,13 @@ Page({
         const winH =
           this._sys && this._sys.windowHeight ? Math.max(1, Math.floor(this._sys.windowHeight)) : containerH;
         const maxPreviewH = Math.max(1, Math.floor(winH * 0.4));
+        const previewHeightPx =
+          typeof this.data.previewHeightPx === "number" && this.data.previewHeightPx > 0
+            ? this.data.previewHeightPx
+            : maxPreviewH;
 
         availW = Math.max(1, winW - previewPadding * 2);
-        availH = Math.max(1, maxPreviewH - previewPadding * 2 - previewBorder);
+        availH = Math.max(1, previewHeightPx - previewPadding * 2 - previewBorder);
       }
 
       // 预览尺寸只由容器与纵横比决定
@@ -3319,15 +3323,11 @@ Page({
       let nextMainCanvasCssW = this.data.mainCanvasCssW;
       let nextMainCanvasCssH = this.data.mainCanvasCssH;
       if (this._isMobile) {
-        if (!replacingImage) {
-          const box = this._computeMobilePreviewBox(aspect);
-          nextPreviewHeightPx = box.previewHeightPx;
-          nextMainCanvasCssW = box.displayW;
-          nextMainCanvasCssH = box.displayH;
-          this._lockPreviewHeight = true;
-        } else {
-          this._lockPreviewHeight = false;
-        }
+        const box = this._computeMobilePreviewBox(aspect);
+        nextPreviewHeightPx = box.previewHeightPx;
+        nextMainCanvasCssW = box.displayW;
+        nextMainCanvasCssH = box.displayH;
+        this._lockPreviewHeight = true;
       } else {
         this._lockPreviewHeight = false;
       }
