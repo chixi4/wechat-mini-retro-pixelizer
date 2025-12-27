@@ -2813,6 +2813,7 @@ Page({
     const forceRestart = !!(options && options.forceRestart);
     this._inputMode = "camera";
     this._workerBaseKey = "";
+    this._cancelRefine();
 
     if (forceRestart) {
       this._stopCameraFrames();
@@ -2837,9 +2838,13 @@ Page({
       savedImage.contentCheckError = this._contentCheckError;
     }
 
-    const shouldDelayCamera = this._isMobile && !this.data.hasImage;
     const winH = this._sys && this._sys.windowHeight ? Math.max(1, Math.floor(this._sys.windowHeight)) : 0;
     const defaultPreviewHeightPx = this._isMobile && winH ? Math.floor(winH * 0.4) : 0;
+    const willResizePreview =
+      this._isMobile &&
+      defaultPreviewHeightPx &&
+      defaultPreviewHeightPx !== this.data.previewHeightPx;
+    const shouldDelayCamera = this._isMobile && (!this.data.hasImage || willResizePreview);
     await new Promise((resolve) => {
       const next = {
         hasImage: true,
