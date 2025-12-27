@@ -466,6 +466,54 @@ function ensureWorkBuffer(w, h) {
   return state.workData;
 }
 
+function ensureBaseBuffer(w, h) {
+  const needLen = Math.max(0, (w | 0) * (h | 0) * 4);
+  const detached = state.baseData && state.baseData.buffer && state.baseData.buffer.byteLength === 0;
+  if (!state.baseData || detached || state.baseW !== w || state.baseH !== h || state.baseData.length !== needLen) {
+    state.baseW = w;
+    state.baseH = h;
+    state.baseData = new Uint8ClampedArray(needLen);
+  }
+  return state.baseData;
+}
+
+function scaleRgbaNearest(src, srcW, srcH, destW, destH, dest) {
+  if (!src || !dest || !srcW || !srcH || !destW || !destH) return;
+  if (srcW === destW && srcH === destH) {
+    dest.set(src);
+    return;
+  }
+
+  const safeSrcW = Math.max(1, srcW | 0);
+  const safeSrcH = Math.max(1, srcH | 0);
+  const safeDestW = Math.max(1, destW | 0);
+  const safeDestH = Math.max(1, destH | 0);
+
+  const xStep = ((safeSrcW << 16) / safeDestW) | 0;
+  const yStep = ((safeSrcH << 16) / safeDestH) | 0;
+
+  let yPos = 0;
+  let di = 0;
+  for (let y = 0; y < safeDestH; y += 1) {
+    let sy = yPos >> 16;
+    if (sy >= safeSrcH) sy = safeSrcH - 1;
+    const srcRow = sy * safeSrcW * 4;
+    let xPos = 0;
+    for (let x = 0; x < safeDestW; x += 1) {
+      let sx = xPos >> 16;
+      if (sx >= safeSrcW) sx = safeSrcW - 1;
+      const si = srcRow + (sx << 2);
+      dest[di] = src[si];
+      dest[di + 1] = src[si + 1];
+      dest[di + 2] = src[si + 2];
+      dest[di + 3] = src[si + 3];
+      di += 4;
+      xPos += xStep;
+    }
+    yPos += yStep;
+  }
+}
+
 function ensurePalette(paletteKey) {
   if (paletteKey && paletteKey === state.paletteKey && state.palette) return state.palette;
 
@@ -493,6 +541,135 @@ worker.onMessage((msg) => {
     // keep worker alive even if a render throws
   });
 });
+
+async function renderFromState(data) {
+  const token = data && typeof data.token !== "undefined" ? data.token : null;
+  const perfEnabled = !!(data && data.perf);
+  const perf = perfEnabled ? { start: perfNow(), steps: {} } : null;
+  const perfMeasure = (label, fn) => {
+    if (!perf) return fn();
+    const t = perfNow();
+    const result = fn();
+    perf.steps[label] = +(perfNow() - t).toFixed(2);
+    return result;
+  };
+  const w = state.baseW | 0;
+  const h = state.baseH | 0;
+  const baseData = state.baseData;
+
+  if (!baseData || !w || !h) {
+    postError("rendered", token, "base not ready");
+    return;
+  }
+
+  const toneX = clamp01(Math.abs((data && data.toneX) || 0)) * Math.sign((data && data.toneX) || 0);
+  const toneY = clamp01(Math.abs((data && data.toneY) || 0)) * Math.sign((data && data.toneY) || 0);
+  const ditherAlgo = data && typeof data.ditherAlgo === "string" ? data.ditherAlgo : "atkinson";
+  const serpentine = !!(data && data.serpentine);
+
+  const paletteKey = data && typeof data.paletteKey === "string" ? data.paletteKey : "dreamscape8";
+  const palette = ensurePalette(paletteKey);
+
+  const seed = ((data && data.seed) >>> 0) || ((Date.now() ^ ((w & 65535) << 16) ^ (h & 65535)) >>> 0);
+
+  let workData = ensureWorkBuffer(w, h);
+
+  let usedWasm = false;
+  const ex = await ensureWasm();
+  if (ex) {
+    try {
+      const wasmPaletteCacheKey = `${paletteKey}|${ditherAlgo}`;
+      if (wasmPaletteCacheKey !== wasm.paletteKey) {
+        perfMeasure("wasmSetPalette", () => {
+          if (!wasmSetPalette(wasmPaletteCacheKey, palette)) {
+            throw new Error("wasm set_palette failed");
+          }
+        });
+      }
+
+      const baseKey = state.baseKey || "";
+      if (baseKey !== wasm.baseKey) {
+        perfMeasure("wasmSetBase", () => {
+          if (!wasmSetBase(baseKey, w, h, baseData)) {
+            throw new Error("wasm set_base failed");
+          }
+        });
+      }
+
+      perfMeasure("wasmRender", () => {
+        if (!wasmRenderInto(workData, toneX, toneY, ditherAlgo, serpentine, seed)) {
+          throw new Error("wasm render failed");
+        }
+      });
+
+      usedWasm = true;
+    } catch (e) {
+      wasm.status = "failed";
+      wasm.lastError = e && e.message ? e.message : String(e);
+    }
+  }
+
+  if (!usedWasm) {
+    perfMeasure("baseCopy", () => {
+      workData.set(baseData);
+    });
+
+    const imgData = { data: workData, width: w, height: h };
+
+    if (toneX !== 0 || toneY !== 0) {
+      if (!state.toneStats) {
+        perfMeasure("toneStats", () => {
+          state.toneStats = computeToneStats({ data: baseData, width: w, height: h });
+        });
+      }
+      perfMeasure("toneMap", () => {
+        applyDynamicToneMapping(imgData, toneX, toneY, state.toneStats);
+      });
+    }
+
+    const ditherStart = perf ? perfNow() : 0;
+    switch (ditherAlgo) {
+      case "floyd-steinberg":
+        ditherErrorDiffusion(imgData, palette, "floyd", serpentine);
+        break;
+      case "atkinson":
+        ditherErrorDiffusion(imgData, palette, "atkinson", serpentine);
+        break;
+      case "bayer-4x4":
+        ditherBayer(imgData, palette, 4);
+        break;
+      case "bayer-8x8":
+        ditherBayer(imgData, palette, 8);
+        break;
+      case "random":
+        ditherRandom(imgData, palette);
+        break;
+      default:
+        ditherNearest(imgData, palette);
+        break;
+    }
+    if (perf) {
+      perf.steps.dither = +(perfNow() - ditherStart).toFixed(2);
+    }
+  }
+
+  if (perf) {
+    perf.total = +(perfNow() - perf.start).toFixed(2);
+    perf.meta = { w, h, ditherAlgo, toneX, toneY, wasm: usedWasm ? (wasm.isSimd ? "simd" : "base") : "off" };
+    if (!usedWasm && wasm.lastError) perf.meta.wasmError = wasm.lastError;
+  }
+
+  const payload = { type: "rendered", ok: true, token, w, h, buffer: workData.buffer };
+  if (perf) payload.perf = perf;
+  if (payload.buffer instanceof ArrayBuffer) {
+    worker.postMessage(payload, [payload.buffer]);
+    state.workData = null;
+    state.workW = 0;
+    state.workH = 0;
+  } else {
+    worker.postMessage(payload);
+  }
+}
 
 async function handleMessage(msg) {
   const data = msg || {};
@@ -530,132 +707,49 @@ async function handleMessage(msg) {
     return;
   }
 
-  if (type === "render") {
+  if (type === "renderCamera") {
     const token = data.token;
-    const perfEnabled = !!data.perf;
-    const perf = perfEnabled ? { start: perfNow(), steps: {} } : null;
-    const perfMeasure = (label, fn) => {
-      if (!perf) return fn();
-      const t = perfNow();
-      const result = fn();
-      perf.steps[label] = +(perfNow() - t).toFixed(2);
-      return result;
-    };
-    const w = state.baseW | 0;
-    const h = state.baseH | 0;
-    const baseData = state.baseData;
+    const srcW = Math.max(1, data.srcW | 0);
+    const srcH = Math.max(1, data.srcH | 0);
+    const outW = Math.max(1, data.outW | 0);
+    const outH = Math.max(1, data.outH | 0);
+    const buf = data.buffer;
+    const baseKey = typeof data.baseKey === "string" ? data.baseKey : `camera:${outW}x${outH}`;
 
-    if (!baseData || !w || !h) {
-      postError("rendered", token, "base not ready");
+    if (!buf || typeof buf.byteLength !== "number") {
+      postError("rendered", token, "invalid camera buffer");
       return;
     }
 
-    const toneX = clamp01(Math.abs(data.toneX || 0)) * Math.sign(data.toneX || 0);
-    const toneY = clamp01(Math.abs(data.toneY || 0)) * Math.sign(data.toneY || 0);
-    const ditherAlgo = typeof data.ditherAlgo === "string" ? data.ditherAlgo : "atkinson";
-    const serpentine = !!data.serpentine;
-
-    const paletteKey = typeof data.paletteKey === "string" ? data.paletteKey : "dreamscape8";
-    const palette = ensurePalette(paletteKey);
-
-    const seed = (data.seed >>> 0) || ((Date.now() ^ ((w & 65535) << 16) ^ (h & 65535)) >>> 0);
-
-    let workData = ensureWorkBuffer(w, h);
-
-    let usedWasm = false;
-    const ex = await ensureWasm();
-    if (ex) {
-      try {
-        const wasmPaletteCacheKey = `${paletteKey}|${ditherAlgo}`;
-        if (wasmPaletteCacheKey !== wasm.paletteKey) {
-          perfMeasure("wasmSetPalette", () => {
-            if (!wasmSetPalette(wasmPaletteCacheKey, palette)) {
-              throw new Error("wasm set_palette failed");
-            }
-          });
-        }
-
-        const baseKey = state.baseKey || "";
-        if (baseKey !== wasm.baseKey) {
-          perfMeasure("wasmSetBase", () => {
-            if (!wasmSetBase(baseKey, w, h, baseData)) {
-              throw new Error("wasm set_base failed");
-            }
-          });
-        }
-
-        perfMeasure("wasmRender", () => {
-          if (!wasmRenderInto(workData, toneX, toneY, ditherAlgo, serpentine, seed)) {
-            throw new Error("wasm render failed");
-          }
-        });
-
-        usedWasm = true;
-      } catch (e) {
-        wasm.status = "failed";
-        wasm.lastError = e && e.message ? e.message : String(e);
-      }
+    const expected = srcW * srcH * 4;
+    if (buf.byteLength !== expected) {
+      postError("rendered", token, `camera buffer size mismatch (${buf.byteLength} != ${expected})`);
+      return;
     }
 
-    if (!usedWasm) {
-      perfMeasure("baseCopy", () => {
-        workData.set(baseData);
-      });
-
-      const imgData = { data: workData, width: w, height: h };
-
-      if (toneX !== 0 || toneY !== 0) {
-        if (!state.toneStats) {
-          perfMeasure("toneStats", () => {
-            state.toneStats = computeToneStats({ data: baseData, width: w, height: h });
-          });
-        }
-        perfMeasure("toneMap", () => {
-          applyDynamicToneMapping(imgData, toneX, toneY, state.toneStats);
-        });
-      }
-
-      const ditherStart = perf ? perfNow() : 0;
-      switch (ditherAlgo) {
-        case "floyd-steinberg":
-          ditherErrorDiffusion(imgData, palette, "floyd", serpentine);
-          break;
-        case "atkinson":
-          ditherErrorDiffusion(imgData, palette, "atkinson", serpentine);
-          break;
-        case "bayer-4x4":
-          ditherBayer(imgData, palette, 4);
-          break;
-        case "bayer-8x8":
-          ditherBayer(imgData, palette, 8);
-          break;
-        case "random":
-          ditherRandom(imgData, palette);
-          break;
-        default:
-          ditherNearest(imgData, palette);
-          break;
-      }
-      if (perf) {
-        perf.steps.dither = +(perfNow() - ditherStart).toFixed(2);
-      }
+    try {
+      const src = new Uint8ClampedArray(buf);
+      const base = ensureBaseBuffer(outW, outH);
+      scaleRgbaNearest(src, srcW, srcH, outW, outH, base);
+    } catch (e) {
+      postError("rendered", token, "camera frame scale failed");
+      return;
     }
 
-    if (perf) {
-      perf.total = +(perfNow() - perf.start).toFixed(2);
-      perf.meta = { w, h, ditherAlgo, toneX, toneY, wasm: usedWasm ? (wasm.isSimd ? "simd" : "base") : "off" };
-      if (!usedWasm && wasm.lastError) perf.meta.wasmError = wasm.lastError;
-    }
+    state.baseKey = baseKey;
+    state.toneStats = null;
+    ensureWorkBuffer(outW, outH);
 
-    const payload = { type: "rendered", ok: true, token, w, h, buffer: workData.buffer };
-    if (perf) payload.perf = perf;
-    if (payload.buffer instanceof ArrayBuffer) {
-      worker.postMessage(payload, [payload.buffer]);
-      state.workData = null;
-      state.workW = 0;
-      state.workH = 0;
-    } else {
-      worker.postMessage(payload);
-    }
+    // 每帧更新 base，强制 wasm 重新 set_base（避免使用上一帧）
+    wasm.baseKey = "";
+    ensureWasm();
+
+    await renderFromState(data);
+    return;
+  }
+
+  if (type === "render") {
+    await renderFromState(data);
+    return;
   }
 }

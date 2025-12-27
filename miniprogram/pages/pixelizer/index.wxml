@@ -36,6 +36,7 @@
               circular="false"
               skip-hidden-item-layout
               bindchange="onInputSwiperChange"
+              bindanimationfinish="onInputSwiperAnimationFinish"
             >
               <swiper-item>
                 <view class="upload-slide upload-slide--tap" bindtap="onChooseImage">
@@ -49,27 +50,27 @@
                   <view class="upload-text">相机模式（后摄）
 实时预览滤镜效果
 → 向右滑回上传</view>
-                  <view class="camera-cta-row" wx:if="{{cameraState !== 'running'}}">
+                  <view class="camera-cta-row">
                     <view
                       wx:if="{{cameraState === 'denied'}}"
                       class="btn-ghost"
                       bindtap="onOpenCameraSetting"
                     >去设置开启相机权限</view>
                     <view
-                      wx:if="{{cameraState === 'unsupported'}}"
+                      wx:elif="{{cameraState === 'unsupported'}}"
                       class="btn-ghost"
                       bindtap="onChooseImage"
                     >不支持实时相机，改用拍照上传</view>
                     <view
-                      wx:if="{{cameraState === 'error'}}"
+                      wx:elif="{{cameraState === 'error'}}"
                       class="btn-ghost"
                       bindtap="onRetryCamera"
                     >重试启动相机</view>
                     <view
-                      wx:if="{{cameraState === 'idle'}}"
-                      class="btn-ghost"
-                      bindtap="onRetryCamera"
-                    >启动相机</view>
+                      wx:elif="{{cameraState === 'idle' || cameraState === 'starting'}}"
+                      class="btn-ghost btn-ghost--disabled"
+                    >正在启动相机…</view>
+                    <view wx:else class="btn-ghost btn-ghost--disabled">实时预览中</view>
                   </view>
                 </view>
               </swiper-item>
@@ -225,7 +226,6 @@
       <canvas type="2d" id="workCanvas" class="hidden-canvas"></canvas>
       <canvas type="2d" id="bufferCanvas" class="hidden-canvas"></canvas>
       <canvas type="2d" id="exportCanvas" class="hidden-canvas"></canvas>
-      <canvas type="2d" id="cameraCanvas" class="hidden-canvas"></canvas>
       <camera
         wx:if="{{cameraVisible}}"
         id="camera"

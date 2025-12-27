@@ -176,7 +176,9 @@
   margin-top: 10px;
   display: flex;
   justify-content: center;
+  align-items: center;
   width: 100%;
+  min-height: 32px;
 }
 
 .btn-ghost {
@@ -186,6 +188,10 @@
   font-size: 12px;
   font-weight: 800;
   line-height: 1;
+}
+
+.btn-ghost--disabled {
+  opacity: 0.65;
 }
 
 .theme-dark .btn-ghost {

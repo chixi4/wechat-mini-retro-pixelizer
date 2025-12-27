@@ -691,11 +691,14 @@ Page({
       ctx: null,
       listener: null,
       lastFrameAt: 0,
-      frameImageData: null,
+      renderToken: 0,
+      forceRender: false,
       running: false
     };
     this._cameraFrameIntervalMs = 100;
     this._suppressInputSwiperChange = false;
+    this._pendingInputMode = "";
+    this._pendingInputSwiperIndex = -1;
 
     const safeTopPx = this._safeTop;
     const safeBottomPx = this._safeBottom;
@@ -781,8 +784,7 @@ Page({
       selectCanvas(this, "#mainCanvas"),
       selectCanvas(this, "#workCanvas"),
       selectCanvas(this, "#bufferCanvas"),
-      selectCanvas(this, "#exportCanvas"),
-      selectCanvas(this, "#cameraCanvas")
+      selectCanvas(this, "#exportCanvas")
     ];
     if (needsGL) {
       requests.unshift(selectCanvas(this, "#mainGLCanvas"));
@@ -790,16 +792,15 @@ Page({
 
     const res = await Promise.all(requests);
     const glCanvas = needsGL ? res[0] : null;
-    const [main, work, buffer, exportC, cameraC] = needsGL ? res.slice(1) : res;
+    const [main, work, buffer, exportC] = needsGL ? res.slice(1) : res;
 
-    if (!main || !work || !buffer || !exportC || !cameraC) return false;
+    if (!main || !work || !buffer || !exportC) return false;
 
     this._canvas = {
       main: { node: main.node, ctx: main.node.getContext("2d") },
       work: { node: work.node, ctx: work.node.getContext("2d") },
       buffer: { node: buffer.node, ctx: buffer.node.getContext("2d") },
-      export: { node: exportC.node, ctx: exportC.node.getContext("2d") },
-      camera: { node: cameraC.node, ctx: cameraC.node.getContext("2d") }
+      export: { node: exportC.node, ctx: exportC.node.getContext("2d") }
     };
 
     this._glPreview = null;
@@ -924,6 +925,34 @@ Page({
 
       this._workerRenderJob = { token: processToken, resolve, timer };
       const ok = this._postWorkerMessage({ ...payload, type: "render", token: processToken });
+      if (!ok) {
+        clearTimeout(timer);
+        this._workerRenderJob = null;
+        resolve(null);
+      }
+    });
+  },
+
+  _renderCameraInWorker(processToken, payload) {
+    if (!this._worker) return Promise.resolve(null);
+
+    if (this._workerRenderJob) {
+      // Only 1 render in-flight; coalesce by letting the current one finish.
+      return Promise.resolve(null);
+    }
+
+    return new Promise((resolve) => {
+      const timeoutMs = 8000;
+      const timer = setTimeout(() => {
+        const job = this._workerRenderJob;
+        if (!job || job.token !== processToken) return;
+        this._workerRenderJob = null;
+        resolve(null);
+        this._disposeWorker();
+      }, timeoutMs);
+
+      this._workerRenderJob = { token: processToken, resolve, timer };
+      const ok = this._postWorkerMessage({ ...payload, type: "renderCamera", token: processToken });
       if (!ok) {
         clearTimeout(timer);
         this._workerRenderJob = null;
@@ -1679,6 +1708,10 @@ Page({
 
   _scheduleProcess(options) {
     if (!this.data.hasImage || !this._state.palette || !this._canvas) return;
+    if (this.data.inputMode === "camera") {
+      if (this._camera) this._camera.forceRender = true;
+      return;
+    }
 
     const immediateRequested = !!(options && options.immediate);
     this._pendingProcessOptions = options || null;
@@ -2672,20 +2705,44 @@ Page({
     const nextIndex = current === 1 ? 1 : 0;
     const nextMode = nextIndex === 1 ? "camera" : "image";
 
-    const apply = () => {
+    if (nextIndex === this.data.inputSwiperIndex && nextMode === this.data.inputMode) {
       if (nextMode === "camera") {
         this._enterCameraMode();
       } else {
         this._exitCameraMode();
       }
-    };
-
-    if (nextIndex === this.data.inputSwiperIndex && nextMode === this.data.inputMode) {
-      apply();
       return;
     }
 
-    this.setData({ inputSwiperIndex: nextIndex, inputMode: nextMode }, apply);
+    this._pendingInputSwiperIndex = nextIndex;
+    this._pendingInputMode = nextMode;
+
+    const next = { inputSwiperIndex: nextIndex, inputMode: nextMode };
+    if (nextMode === "camera" && this.data.cameraState === "idle") {
+      next.cameraHint = "滑动结束后自动启动相机…";
+    }
+    this.setData(next);
+  },
+
+  onInputSwiperAnimationFinish(e) {
+    if (this._suppressInputSwiperChange) return;
+    if (!this._pendingInputMode || this._pendingInputSwiperIndex < 0) return;
+
+    const current = e && e.detail && typeof e.detail.current === "number" ? e.detail.current : 0;
+    const finishedIndex = current === 1 ? 1 : 0;
+    if (finishedIndex !== this.data.inputSwiperIndex) return;
+
+    const finishedMode = finishedIndex === 1 ? "camera" : "image";
+    if (finishedMode !== this._pendingInputMode) return;
+
+    this._pendingInputSwiperIndex = -1;
+    this._pendingInputMode = "";
+
+    if (finishedMode === "camera") {
+      this._enterCameraMode();
+    } else {
+      this._exitCameraMode();
+    }
   },
 
   onRetryCamera() {
@@ -2720,6 +2777,7 @@ Page({
   async _enterCameraMode(options) {
     const forceRestart = !!(options && options.forceRestart);
     this._inputMode = "camera";
+    this._workerBaseKey = "";
 
     if (forceRestart) {
       this._stopCameraFrames();
@@ -2770,6 +2828,7 @@ Page({
     }
 
     this._inputMode = "image";
+    this._workerBaseKey = "";
     this._stopCameraFrames();
 
     const restore = this._inputMemory && this._inputMemory.image ? this._inputMemory.image : null;
@@ -2843,22 +2902,20 @@ Page({
       return false;
     }
 
-    const canvas = this._canvas && this._canvas.camera;
-    if (
-      !canvas ||
-      !canvas.ctx ||
-      typeof canvas.ctx.putImageData !== "function" ||
-      typeof canvas.ctx.createImageData !== "function"
-    ) {
-      this.setData({ cameraState: "error", cameraHint: "画布未就绪，无法处理相机画面" });
+    if (!this._worker) {
+      this._initWorker();
+    }
+    if (!this._worker) {
+      this.setData({ cameraState: "unsupported", cameraHint: "无法创建 worker，暂不支持实时相机滤镜" });
       return false;
     }
 
+    this._workerBaseKey = "";
     this._camera.token = (this._camera.token || 0) + 1;
     const token = this._camera.token;
     this._camera.ctx = ctx;
     this._camera.lastFrameAt = 0;
-    this._camera.frameImageData = null;
+    this._camera.forceRender = true;
     this._camera.running = true;
 
     try {
@@ -2881,6 +2938,8 @@ Page({
   _stopCameraFrames() {
     if (!this._camera) return;
     this._camera.token = (this._camera.token || 0) + 1;
+    this._camera.renderToken = (this._camera.renderToken || 0) + 1;
+    this._camera.forceRender = false;
 
     const listener = this._camera.listener;
     if (listener && typeof listener.stop === "function") {
@@ -2894,7 +2953,6 @@ Page({
     this._camera.listener = null;
     this._camera.ctx = null;
     this._camera.running = false;
-    this._camera.frameImageData = null;
   },
 
   _onCameraFrame(token, frame) {
@@ -2905,54 +2963,156 @@ Page({
     const now = perfNow();
     const lastAt = typeof this._camera.lastFrameAt === "number" ? this._camera.lastFrameAt : 0;
     const interval = typeof this._cameraFrameIntervalMs === "number" ? this._cameraFrameIntervalMs : 100;
-    if (now - lastAt < interval) return;
+    const forceRender = !!this._camera.forceRender;
+    if (!forceRender && now - lastAt < interval) return;
+    this._camera.forceRender = false;
     this._camera.lastFrameAt = now;
 
     const w = Math.max(1, Math.floor(frame.width));
     const h = Math.max(1, Math.floor(frame.height));
     const raw = frame.data;
-    let view = null;
+    let buffer = null;
     if (raw instanceof ArrayBuffer) {
-      view = new Uint8ClampedArray(raw);
+      buffer = raw;
     } else if (raw && raw.buffer instanceof ArrayBuffer) {
       const offset = typeof raw.byteOffset === "number" ? raw.byteOffset : 0;
       const length = typeof raw.byteLength === "number" ? raw.byteLength : raw.length;
-      view = new Uint8ClampedArray(raw.buffer, offset, length);
+      if (offset === 0 && length === raw.buffer.byteLength) {
+        buffer = raw.buffer;
+      } else {
+        buffer = raw.buffer.slice(offset, offset + length);
+      }
     }
-    if (!view) return;
+    if (!buffer) return;
+    if (buffer.byteLength !== w * h * 4) return;
 
-    const canvas = this._canvas && this._canvas.camera;
-    if (!canvas || !canvas.node || !canvas.ctx) return;
-
-    if (canvas.node.width !== w) canvas.node.width = w;
-    if (canvas.node.height !== h) canvas.node.height = h;
-
-    const ctx = canvas.ctx;
-    if (!ctx || typeof ctx.putImageData !== "function" || typeof ctx.createImageData !== "function") return;
-
-    let imageData = this._camera.frameImageData;
-    if (!imageData || imageData.width !== w || imageData.height !== h) {
-      imageData = ctx.createImageData(w, h);
-      this._camera.frameImageData = imageData;
+    if (!this._worker) {
+      this._initWorker();
     }
+    if (!this._worker) return;
+    if (this._workerRenderJob) return;
 
-    try {
-      if (view.length !== w * h * 4) return;
-      imageData.data.set(view);
-      ctx.putImageData(imageData, 0, 0);
-    } catch (e) {
-      return;
-    }
+    const aspect = w > 0 ? h / w : 1;
+    const requestedWidth = typeof this.data.targetWidth === "number" ? this.data.targetWidth : 1;
+    const toneX = this._state && typeof this._state.toneX === "number" ? this._state.toneX : 0;
+    const toneY = this._state && typeof this._state.toneY === "number" ? this._state.toneY : 0;
+    const isInteracting = this._isInteracting();
 
-    this._state.originalImage = canvas.node;
-    this._state.imageInfo = { width: w, height: h, orientation: "up", type: "jpeg" };
-    this._state.imageToken += 1;
-
-    if (this.data.cameraState !== "running") {
-      this.setData({ cameraState: "running", cameraHint: "" });
+    const displayWidth = this.data.mainCanvasCssW || 1;
+    const dpr = this._dpr || 2;
+    const clampedDpr = Math.min(dpr, 2);
+    const previewMaxWidth = displayWidth > 10
+      ? Math.max(1, Math.ceil(displayWidth * clampedDpr))
+      : requestedWidth;
+    let effectiveRequestedWidth = isInteracting ? requestedWidth : Math.min(requestedWidth, previewMaxWidth);
+    const isSliderDrag = !!(this.data.sliderDragging && this._interactionMode === "slider");
+    if (isSliderDrag && this._sliderMaxWidth) {
+      effectiveRequestedWidth = Math.min(effectiveRequestedWidth, this._sliderMaxWidth);
     }
 
-    this._scheduleProcess({ immediate: true });
+    const targetWidth = this._getInteractiveTargetWidth(effectiveRequestedWidth, isInteracting);
+    const targetHeight = Math.max(1, Math.round(targetWidth * aspect));
+
+    if (!this._canvas || !this._proc) return;
+    if (!this._canvas.work || !this._canvas.main) return;
+
+    if (!this._proc.work.imageData || this._proc.work.w !== targetWidth || this._proc.work.h !== targetHeight) {
+      this._canvas.work.node.width = targetWidth;
+      this._canvas.work.node.height = targetHeight;
+      const workCtx = this._canvas.work.ctx;
+      this._proc.work.imageData = workCtx.createImageData
+        ? workCtx.createImageData(targetWidth, targetHeight)
+        : workCtx.getImageData(0, 0, targetWidth, targetHeight);
+      this._proc.work.w = targetWidth;
+      this._proc.work.h = targetHeight;
+    }
+
+    this._workerBaseKey = "";
+    const renderToken = (this._camera.renderToken = (this._camera.renderToken || 0) + 1);
+    const perfEnabled = !!this._perfEnabled;
+    const payload = {
+      srcW: w,
+      srcH: h,
+      outW: targetWidth,
+      outH: targetHeight,
+      buffer,
+      baseKey: `camera:${targetWidth}x${targetHeight}`,
+      toneX,
+      toneY,
+      paletteKey: this.data.paletteKey,
+      ditherAlgo: this.data.ditherAlgo,
+      serpentine: this._state && this._state.isSerpentine,
+      perf: perfEnabled
+    };
+
+    this._renderCameraInWorker(renderToken, payload).then((rendered) => {
+      if (!rendered || !rendered.ok || !rendered.buffer) return;
+      if (this.data.inputMode !== "camera") return;
+      if (!this._camera || renderToken !== this._camera.renderToken) return;
+      if (!this._canvas || !this._proc || !this._proc.work || !this._proc.work.imageData) return;
+
+      if (rendered.w !== targetWidth || rendered.h !== targetHeight) return;
+      const expectedLen = targetWidth * targetHeight * 4;
+      if (rendered.buffer.byteLength !== expectedLen) return;
+
+      try {
+        this._proc.work.imageData.data.set(new Uint8ClampedArray(rendered.buffer));
+        this._canvas.work.ctx.putImageData(this._proc.work.imageData, 0, 0);
+      } catch (e) {
+        return;
+      }
+
+      const container = this._canvasContainerRect;
+      const containerW = container && container.width ? Math.max(1, Math.floor(container.width)) : 1000;
+      const containerH = container && container.height ? Math.max(1, Math.floor(container.height)) : 600;
+
+      const previewPadding = 8; // 同 mobile .preview-area padding
+      const previewBorder = 2; // mobile 预览区底边线
+
+      let availW = Math.max(1, containerW - 44);
+      let availH = Math.max(1, containerH - 44);
+
+      if (this._isMobile) {
+        const winW =
+          this._sys && this._sys.windowWidth ? Math.max(1, Math.floor(this._sys.windowWidth)) : containerW;
+        const winH =
+          this._sys && this._sys.windowHeight ? Math.max(1, Math.floor(this._sys.windowHeight)) : containerH;
+        const maxPreviewH = Math.max(1, Math.floor(winH * 0.4));
+
+        availW = Math.max(1, winW - previewPadding * 2);
+        availH = Math.max(1, maxPreviewH - previewPadding * 2 - previewBorder);
+      }
+
+      // 预览尺寸只由容器与纵横比决定
+      let displayW = availW;
+      let displayH = Math.round(displayW * aspect);
+      if (displayH > availH) {
+        displayH = availH;
+        displayW = Math.round(displayH / aspect);
+      }
+      displayW = Math.max(1, Math.floor(displayW));
+      displayH = Math.max(1, Math.floor(displayH));
+
+      const nextData = {};
+      if (displayW !== this.data.mainCanvasCssW) nextData.mainCanvasCssW = displayW;
+      if (displayH !== this.data.mainCanvasCssH) nextData.mainCanvasCssH = displayH;
+
+      const commit = () => {
+        if (this.data.cameraState !== "running") {
+          this.setData({ cameraState: "running", cameraHint: "" });
+        }
+        this._refreshPreviewSurface();
+        if (!this.data.canDownload) {
+          this.setData({ canDownload: true });
+        }
+      };
+
+      if (Object.keys(nextData).length) {
+        this.setData(nextData, commit);
+      } else {
+        commit();
+      }
+    });
   },
 
   async onChooseImage() {
@@ -3863,14 +4023,16 @@ Page({
     this._downloadInProgress = true;
     try {
     if (this.data.inputMode === "camera") {
-      const img = this._state && this._state.originalImage;
-      const info = (this._state && this._state.imageInfo) || {};
-      if (!img) {
+      const workNode = this._canvas && this._canvas.work ? this._canvas.work.node : null;
+      const workW = this._proc && this._proc.work ? this._proc.work.w : 0;
+      const workH = this._proc && this._proc.work ? this._proc.work.h : 0;
+      if (!workNode || !workW || !workH) {
         wx.showToast({ title: "相机未就绪", icon: "none" });
         return;
       }
+      const info = { width: workW, height: workH, orientation: "up", type: "jpeg" };
       this._resetContentCheck();
-      this._startContentCheck("", info, img);
+      this._startContentCheck("", info, workNode);
     }
     const allowDownload = await this._ensureContentCheckAllowed();
     if (!allowDownload) return;
