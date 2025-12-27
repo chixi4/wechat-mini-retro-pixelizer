@@ -1368,9 +1368,10 @@ Page({
 
     let controlsPaddingTopPx = safeTopPx;
     let previewTranslateYPx = 0;
+    let previewHeightPx = 0;
 
     if (this.data.hasImage) {
-      const previewHeightPx =
+      previewHeightPx =
         typeof this.data.previewHeightPx === "number" && this.data.previewHeightPx > 0
           ? this.data.previewHeightPx
           : Math.floor((this._sys.windowHeight || 0) * 0.4);
@@ -1393,15 +1394,20 @@ Page({
     ) {
       this._updateCloseVisibility();
       this._lastHasImage = hasImage;
+      this._lastPreviewHeightPx = previewHeightPx;
       return;
     }
 
+    const prevPreviewHeightPx =
+      typeof this._lastPreviewHeightPx === "number" ? this._lastPreviewHeightPx : previewHeightPx;
     const prevControlsPadding =
       typeof this.data.controlsPaddingTopPx === "number" ? this.data.controlsPaddingTopPx : 0;
     const prevPreviewShift =
       typeof this.data.previewTranslateYPx === "number" ? this.data.previewTranslateYPx : 0;
 
     const needsUpdate = controlsPaddingTopPx !== prevControlsPadding || previewTranslateYPx !== prevPreviewShift;
+    const previewHeightIncreased =
+      hasImage && !isImageTransition && previewHeightPx > prevPreviewHeightPx;
 
     if (needsUpdate) {
       const deltaControls = prevControlsPadding - controlsPaddingTopPx;
@@ -1504,6 +1510,58 @@ Page({
         };
 
         start();
+      } else if (
+        previewHeightIncreased &&
+        this._layoutAnimAllowed &&
+        controlsPaddingTopPx > prevControlsPadding &&
+        previewTranslateYPx === prevPreviewShift
+      ) {
+        const fromPadding = prevControlsPadding;
+        const toPadding = controlsPaddingTopPx;
+        const pushDelta = toPadding - fromPadding;
+        const animMs = LAYOUT_OPEN_ANIM_MS;
+
+        this.setData(
+          {
+            controlsPaddingTopPx: fromPadding,
+            previewTranslateYPx,
+            controlsShiftPx: 0,
+            previewShiftPx: 0,
+            layoutAnimEnabled: false
+          },
+          () => {
+            scheduleRefresh();
+            this._layoutAnimTimer = setTimeout(() => {
+              this._layoutAnimTimer = null;
+              if (!this._layoutAnimAllowed) {
+                this.setData({ controlsShiftPx: 0, previewShiftPx: 0 });
+                return;
+              }
+
+              this.setData({ controlsShiftPx: pushDelta, previewShiftPx: 0, layoutAnimEnabled: true });
+
+              const commitToken = (this._layoutCommitToken = (this._layoutCommitToken || 0) + 1);
+              if (this._layoutCommitTimer) clearTimeout(this._layoutCommitTimer);
+              this._layoutCommitTimer = setTimeout(() => {
+                if (commitToken !== this._layoutCommitToken) return;
+                this._layoutCommitTimer = null;
+                this.setData(
+                  {
+                    controlsPaddingTopPx: toPadding,
+                    previewTranslateYPx,
+                    controlsShiftPx: 0,
+                    previewShiftPx: 0,
+                    layoutAnimEnabled: false
+                  },
+                  () => {
+                    if (!this._layoutAnimAllowed) return;
+                    setTimeout(() => this.setData({ layoutAnimEnabled: true }), 16);
+                  }
+                );
+              }, animMs + 20);
+            }, 16);
+          }
+        );
       } else if (shouldAnimate) {
         this.setData(
           {
@@ -1539,6 +1597,7 @@ Page({
     }
     this._updateCloseVisibility();
     this._lastHasImage = hasImage;
+    this._lastPreviewHeightPx = previewHeightPx;
   },
 
   _updateCloseVisibility() {
