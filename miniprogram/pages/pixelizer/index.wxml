@@ -190,26 +190,31 @@
     </scroll-view>
 
     <view class="preview-area {{layoutAnimEnabled ? 'layout-anim' : ''}}" style="--preview-h: {{previewHeightPx}}px; --preview-shift: {{previewTranslateYPx}}px; transform: translateY({{previewShiftPx}}px);">
-      <view class="canvas-container {{(fullscreenVisible || fullscreenClosing) ? 'fullscreen-transition' : ''}} {{cameraCaptureActive ? 'capture-freeze' : ''}}" id="canvasContainer">
-        <canvas
-          type="2d"
-          id="mainCanvas"
-          class="main-canvas {{useGLPreview ? 'offscreen-canvas' : ''}} {{((fullscreenActive || fullscreenClosing) && !previewHoldVisible) ? 'is-hidden' : ''}}"
+      <view class="canvas-container {{(fullscreenVisible || fullscreenClosing) ? 'fullscreen-transition' : ''}}" id="canvasContainer">
+        <view
+          class="preview-shot {{cameraCaptureActive ? 'is-capturing' : ''}}"
           style="width: {{mainCanvasCssW}}px; height: {{mainCanvasCssH}}px;"
-          bindtap="onPreviewTap"
-        ></canvas>
-        <canvas
-          type="webgl"
-          id="mainGLCanvas"
-          class="main-canvas {{!useGLPreview ? 'offscreen-canvas' : ''}} {{((fullscreenActive || fullscreenClosing) && !previewHoldVisible) ? 'is-hidden' : ''}}"
-          style="width: {{mainCanvasCssW}}px; height: {{mainCanvasCssH}}px;"
-          bindtap="onPreviewTap"
-        ></canvas>
-        <view class="camera-fade {{cameraFadeVisible ? 'visible' : ''}}"></view>
-        <view class="camera-capture {{cameraCaptureActive ? 'active' : ''}}">
-          <view class="camera-capture-flash"></view>
-          <view class="camera-capture-vignette"></view>
+        >
+          <canvas
+            type="2d"
+            id="mainCanvas"
+            class="main-canvas {{useGLPreview ? 'offscreen-canvas' : ''}} {{((fullscreenActive || fullscreenClosing) && !previewHoldVisible) ? 'is-hidden' : ''}}"
+            style="width: {{mainCanvasCssW}}px; height: {{mainCanvasCssH}}px;"
+            bindtap="onPreviewTap"
+          ></canvas>
+          <canvas
+            type="webgl"
+            id="mainGLCanvas"
+            class="main-canvas {{!useGLPreview ? 'offscreen-canvas' : ''}} {{((fullscreenActive || fullscreenClosing) && !previewHoldVisible) ? 'is-hidden' : ''}}"
+            style="width: {{mainCanvasCssW}}px; height: {{mainCanvasCssH}}px;"
+            bindtap="onPreviewTap"
+          ></canvas>
+          <view class="camera-capture {{cameraCaptureActive ? 'active' : ''}}">
+            <view class="camera-capture-flash"></view>
+            <view class="camera-capture-vignette"></view>
+          </view>
         </view>
+        <view class="camera-fade {{cameraFadeVisible ? 'visible' : ''}}"></view>
         <view wx:if="{{!hasImage}}" class="empty-hint">点击左侧上传图片</view>
       </view>
 
