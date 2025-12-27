@@ -128,6 +128,71 @@
   background: #111111;
 }
 
+.upload-area--swiper {
+  padding: 0;
+  display: block;
+  overflow: hidden;
+  height: 120px;
+  min-height: 120px;
+}
+
+.upload-swiper {
+  width: 100%;
+  height: 100%;
+}
+
+.upload-slide {
+  width: 100%;
+  height: 100%;
+  padding: 18px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.upload-slide--tap {
+  cursor: pointer;
+}
+
+.input-mode-pill {
+  font-size: 12px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 2px solid #000000;
+  background: #ffffff;
+  color: #111111;
+}
+
+.theme-dark .input-mode-pill {
+  border-color: #666666;
+  background: #111111;
+  color: #eeeeee;
+}
+
+.camera-cta-row {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.btn-ghost {
+  border: 2px solid #000000;
+  background: transparent;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.theme-dark .btn-ghost {
+  border-color: #666666;
+  color: #eeeeee;
+}
+
 .upload-text {
   font-size: 12px;
   color: #666666;
@@ -455,6 +520,44 @@
   opacity: 0.7;
 }
 
+.camera-overlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.92);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  box-sizing: border-box;
+  text-align: center;
+  pointer-events: none;
+}
+
+.camera-overlay-title {
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+
+.camera-overlay-sub {
+  font-size: 12px;
+  color: #666666;
+  white-space: pre-line;
+  opacity: 0.8;
+}
+
+.theme-dark .camera-overlay-sub {
+  color: #888888;
+}
+
+.theme-dark .camera-overlay {
+  background: rgba(17, 17, 17, 0.92);
+}
+
 .close-btn {
   position: absolute;
   top: 8px;
@@ -606,6 +709,16 @@
   position: fixed;
   left: -9999px;
   top: -9999px;
+}
+
+.camera-offscreen {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  z-index: 0;
 }
 
 @media (max-width: 768px) {

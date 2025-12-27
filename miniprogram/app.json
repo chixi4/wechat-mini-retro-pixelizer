@@ -12,6 +12,9 @@
   "permission": {
     "scope.writePhotosAlbum": {
       "desc": "需要保存图片到相册"
+    },
+    "scope.camera": {
+      "desc": "需要使用相机进行实时预览"
     }
   },
   "style": "v2",

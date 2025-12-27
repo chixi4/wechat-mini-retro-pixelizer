@@ -24,10 +24,56 @@
     >
       <view class="controls-inner {{layoutAnimEnabled ? 'layout-anim' : ''}}" style="transform: translateY({{controlsShiftPx}}px);">
         <view class="panel">
-          <view class="panel-title">上传图片</view>
-          <view class="upload-area" bindtap="onChooseImage">
-            <view class="upload-text">点击或拖拽上传
-支持 JPG, PNG</view>
+          <view class="panel-title">
+            <view>上传图片</view>
+            <view class="input-mode-pill">{{inputMode === 'camera' ? '相机' : '上传'}}</view>
+          </view>
+          <view class="upload-area upload-area--swiper">
+            <swiper
+              class="upload-swiper"
+              current="{{inputSwiperIndex}}"
+              duration="240"
+              circular="false"
+              skip-hidden-item-layout
+              bindchange="onInputSwiperChange"
+            >
+              <swiper-item>
+                <view class="upload-slide upload-slide--tap" bindtap="onChooseImage">
+                  <view class="upload-text">点击或拖拽上传
+支持 JPG, PNG
+← 向左滑出相机</view>
+                </view>
+              </swiper-item>
+              <swiper-item>
+                <view class="upload-slide">
+                  <view class="upload-text">相机模式（后摄）
+实时预览滤镜效果
+→ 向右滑回上传</view>
+                  <view class="camera-cta-row" wx:if="{{cameraState !== 'running'}}">
+                    <view
+                      wx:if="{{cameraState === 'denied'}}"
+                      class="btn-ghost"
+                      bindtap="onOpenCameraSetting"
+                    >去设置开启相机权限</view>
+                    <view
+                      wx:if="{{cameraState === 'unsupported'}}"
+                      class="btn-ghost"
+                      bindtap="onChooseImage"
+                    >不支持实时相机，改用拍照上传</view>
+                    <view
+                      wx:if="{{cameraState === 'error'}}"
+                      class="btn-ghost"
+                      bindtap="onRetryCamera"
+                    >重试启动相机</view>
+                    <view
+                      wx:if="{{cameraState === 'idle'}}"
+                      class="btn-ghost"
+                      bindtap="onRetryCamera"
+                    >启动相机</view>
+                  </view>
+                </view>
+              </swiper-item>
+            </swiper>
           </view>
         </view>
 
@@ -159,6 +205,10 @@
           bindtap="onOpenFullscreen"
         ></canvas>
         <view wx:if="{{!hasImage}}" class="empty-hint">点击左侧上传图片</view>
+        <view wx:if="{{inputMode === 'camera' && cameraState !== 'running'}}" class="camera-overlay">
+          <view class="camera-overlay-title">相机未就绪</view>
+          <view class="camera-overlay-sub">{{cameraHint}}</view>
+        </view>
       </view>
 
       <view
@@ -175,6 +225,16 @@
       <canvas type="2d" id="workCanvas" class="hidden-canvas"></canvas>
       <canvas type="2d" id="bufferCanvas" class="hidden-canvas"></canvas>
       <canvas type="2d" id="exportCanvas" class="hidden-canvas"></canvas>
+      <canvas type="2d" id="cameraCanvas" class="hidden-canvas"></canvas>
+      <camera
+        wx:if="{{cameraVisible}}"
+        id="camera"
+        class="camera-offscreen"
+        device-position="back"
+        resolution="low"
+        flash="off"
+        binderror="onCameraError"
+      ></camera>
     </view>
 
   </view>

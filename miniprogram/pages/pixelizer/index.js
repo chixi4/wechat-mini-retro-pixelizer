@@ -431,6 +431,11 @@ Page({
     closeIconSrc: "/assets/icons/close-light.svg",
     headerVisible: true,
     hasImage: false,
+    inputMode: "image",
+    inputSwiperIndex: 0,
+    cameraVisible: false,
+    cameraState: "idle",
+    cameraHint: "向左滑动进入相机模式",
     closeEnabled: false,
     closeShown: false,
     isIPad: false,
@@ -676,6 +681,22 @@ Page({
     this._contentCheckError = "";
     this._paletteScrollInitialized = false;
 
+    this._inputMode = "image";
+    this._inputMemory = {
+      image: null
+    };
+
+    this._camera = {
+      token: 0,
+      ctx: null,
+      listener: null,
+      lastFrameAt: 0,
+      frameImageData: null,
+      running: false
+    };
+    this._cameraFrameIntervalMs = 100;
+    this._suppressInputSwiperChange = false;
+
     const safeTopPx = this._safeTop;
     const safeBottomPx = this._safeBottom;
     const previewHeightPx = this._isMobile ? Math.floor((sys.windowHeight || 0) * 0.4) : 0;
@@ -760,7 +781,8 @@ Page({
       selectCanvas(this, "#mainCanvas"),
       selectCanvas(this, "#workCanvas"),
       selectCanvas(this, "#bufferCanvas"),
-      selectCanvas(this, "#exportCanvas")
+      selectCanvas(this, "#exportCanvas"),
+      selectCanvas(this, "#cameraCanvas")
     ];
     if (needsGL) {
       requests.unshift(selectCanvas(this, "#mainGLCanvas"));
@@ -768,15 +790,16 @@ Page({
 
     const res = await Promise.all(requests);
     const glCanvas = needsGL ? res[0] : null;
-    const [main, work, buffer, exportC] = needsGL ? res.slice(1) : res;
+    const [main, work, buffer, exportC, cameraC] = needsGL ? res.slice(1) : res;
 
-    if (!main || !work || !buffer || !exportC) return false;
+    if (!main || !work || !buffer || !exportC || !cameraC) return false;
 
     this._canvas = {
       main: { node: main.node, ctx: main.node.getContext("2d") },
       work: { node: work.node, ctx: work.node.getContext("2d") },
       buffer: { node: buffer.node, ctx: buffer.node.getContext("2d") },
-      export: { node: exportC.node, ctx: exportC.node.getContext("2d") }
+      export: { node: exportC.node, ctx: exportC.node.getContext("2d") },
+      camera: { node: cameraC.node, ctx: cameraC.node.getContext("2d") }
     };
 
     this._glPreview = null;
@@ -1039,6 +1062,7 @@ Page({
     if (this._windowResizeHandler && wx.offWindowResize) {
       wx.offWindowResize(this._windowResizeHandler);
     }
+    this._stopCameraFrames();
     if (this._interactionMode === "tone") {
       this._commitInteractionCapCache();
     }
@@ -1924,7 +1948,7 @@ Page({
   },
 
   _startContentCheck(src, info, img) {
-    if (!src) return null;
+    if (!img && !src) return null;
     if (!wx.cloud || typeof wx.cloud.uploadFile !== "function") {
       this._contentCheckStatus = "unavailable";
       this._contentCheckError = "cloud unavailable";
@@ -1934,7 +1958,7 @@ Page({
     const token = (this._contentCheckToken = (this._contentCheckToken || 0) + 1);
     this._contentCheckStatus = "pending";
     this._contentCheckError = "";
-    this._contentCheckSource = src;
+    this._contentCheckSource = src || "camera";
 
     const promise = (async () => {
       try {
@@ -1942,6 +1966,7 @@ Page({
         if (token !== this._contentCheckToken) return "stale";
 
         const filePath = prepared && prepared.filePath ? prepared.filePath : src;
+        if (!filePath) throw new Error("missing filePath");
         const contentType =
           prepared && prepared.contentType ? prepared.contentType : this._getImageContentType(info, src);
         const extRaw = contentType.split("/")[1] || "jpg";
@@ -2641,8 +2666,303 @@ Page({
     }
   },
 
+  onInputSwiperChange(e) {
+    if (this._suppressInputSwiperChange) return;
+    const current = e && e.detail && typeof e.detail.current === "number" ? e.detail.current : 0;
+    const nextIndex = current === 1 ? 1 : 0;
+    const nextMode = nextIndex === 1 ? "camera" : "image";
+
+    const apply = () => {
+      if (nextMode === "camera") {
+        this._enterCameraMode();
+      } else {
+        this._exitCameraMode();
+      }
+    };
+
+    if (nextIndex === this.data.inputSwiperIndex && nextMode === this.data.inputMode) {
+      apply();
+      return;
+    }
+
+    this.setData({ inputSwiperIndex: nextIndex, inputMode: nextMode }, apply);
+  },
+
+  onRetryCamera() {
+    if (this.data.inputMode !== "camera") return;
+    this._enterCameraMode({ forceRestart: true });
+  },
+
+  onOpenCameraSetting() {
+    if (!wx.openSetting) return;
+    wx.openSetting({
+      success: (res) => {
+        const ok = !!(res && res.authSetting && res.authSetting["scope.camera"]);
+        if (ok) {
+          this._enterCameraMode({ forceRestart: true });
+        }
+      }
+    });
+  },
+
+  onCameraError(e) {
+    const msg = String((e && e.detail && e.detail.errMsg) || "");
+    console.error("camera error", msg, e);
+    this._stopCameraFrames();
+
+    const lower = msg.toLowerCase();
+    const denied = lower.includes("auth") || lower.includes("authorize") || lower.includes("permission") || lower.includes("deny");
+    const nextState = denied ? "denied" : "error";
+    const nextHint = denied ? "未获得相机权限\n请在设置中开启后重试" : "相机启动失败\n可尝试重试";
+    this.setData({ cameraState: nextState, cameraHint: nextHint });
+  },
+
+  async _enterCameraMode(options) {
+    const forceRestart = !!(options && options.forceRestart);
+    this._inputMode = "camera";
+
+    if (forceRestart) {
+      this._stopCameraFrames();
+    }
+
+    const ready = await this._ensureCanvases();
+    if (!ready) {
+      this.setData({
+        hasImage: true,
+        canDownload: false,
+        cameraVisible: false,
+        cameraState: "error",
+        cameraHint: "页面未就绪，请稍后重试"
+      });
+      this._updateLayout();
+      return;
+    }
+
+    const savedImage = this._inputMemory && this._inputMemory.image ? this._inputMemory.image : null;
+    if (savedImage && savedImage.src && this._contentCheckSource === savedImage.src) {
+      savedImage.contentCheckStatus = this._contentCheckStatus;
+      savedImage.contentCheckError = this._contentCheckError;
+    }
+
+    await new Promise((resolve) => {
+      this.setData(
+        {
+          hasImage: true,
+          canDownload: false,
+          cameraVisible: true,
+          cameraState: "starting",
+          cameraHint: "正在启动相机…"
+        },
+        resolve
+      );
+    });
+    this._updateLayout();
+
+    await sleep(30);
+    const started = await this._startCameraFrames();
+    if (!started) return;
+  },
+
+  _exitCameraMode() {
+    if (this._inputMode !== "camera" && this.data.inputMode !== "camera") {
+      this._stopCameraFrames();
+      return;
+    }
+
+    this._inputMode = "image";
+    this._stopCameraFrames();
+
+    const restore = this._inputMemory && this._inputMemory.image ? this._inputMemory.image : null;
+    const hasRestore = !!(restore && restore.img);
+
+    const next = {
+      cameraVisible: false,
+      cameraState: "idle",
+      cameraHint: "向左滑动进入相机模式"
+    };
+
+    if (hasRestore) {
+      const restoreSrc = restore.src || "";
+      const sameSource =
+        !!restoreSrc &&
+        this._contentCheckSource === restoreSrc &&
+        (this._contentCheckStatus === "pass" ||
+          this._contentCheckStatus === "pending" ||
+          this._contentCheckStatus === "reject");
+
+      if (!sameSource) {
+        if (restoreSrc && (restore.contentCheckStatus === "pass" || restore.contentCheckStatus === "reject")) {
+          this._contentCheckStatus = restore.contentCheckStatus;
+          this._contentCheckError = restore.contentCheckError || "";
+          this._contentCheckSource = restoreSrc;
+          this._contentCheckPromise = null;
+        } else {
+          this._resetContentCheck();
+          this._startContentCheck(restoreSrc, restore.info, restore.img);
+        }
+      }
+
+      this._state.imageToken += 1;
+      this._state.originalImage = restore.img;
+      this._state.imageInfo = restore.info;
+      this._lastRenderKey = "";
+
+      next.hasImage = true;
+      next.canDownload = false;
+
+      this.setData(next, () => {
+        this._updateLayout();
+        this._scheduleProcess({ immediate: true });
+      });
+      return;
+    }
+
+    this._resetContentCheck();
+    this._state.imageToken += 1;
+    this._state.originalImage = null;
+    this._state.imageInfo = null;
+    this._lastRenderKey = "";
+
+    next.hasImage = false;
+    next.canDownload = false;
+
+    this.setData(next, () => this._updateLayout());
+  },
+
+  async _startCameraFrames() {
+    this._stopCameraFrames();
+
+    if (!wx.createCameraContext) {
+      this.setData({ cameraState: "unsupported", cameraHint: "当前微信版本不支持相机组件" });
+      return false;
+    }
+
+    const ctx = wx.createCameraContext();
+    if (!ctx || typeof ctx.onCameraFrame !== "function") {
+      this.setData({ cameraState: "unsupported", cameraHint: "当前基础库不支持实时相机帧" });
+      return false;
+    }
+
+    const canvas = this._canvas && this._canvas.camera;
+    if (
+      !canvas ||
+      !canvas.ctx ||
+      typeof canvas.ctx.putImageData !== "function" ||
+      typeof canvas.ctx.createImageData !== "function"
+    ) {
+      this.setData({ cameraState: "error", cameraHint: "画布未就绪，无法处理相机画面" });
+      return false;
+    }
+
+    this._camera.token = (this._camera.token || 0) + 1;
+    const token = this._camera.token;
+    this._camera.ctx = ctx;
+    this._camera.lastFrameAt = 0;
+    this._camera.frameImageData = null;
+    this._camera.running = true;
+
+    try {
+      const listener = ctx.onCameraFrame((frame) => this._onCameraFrame(token, frame));
+      this._camera.listener = listener;
+      if (!listener || typeof listener.start !== "function") {
+        throw new Error("camera frame listener unavailable");
+      }
+      listener.start();
+    } catch (err) {
+      console.error("start camera frame error", err);
+      this._stopCameraFrames();
+      this.setData({ cameraState: "error", cameraHint: "相机启动失败\n可尝试重试" });
+      return false;
+    }
+
+    return true;
+  },
+
+  _stopCameraFrames() {
+    if (!this._camera) return;
+    this._camera.token = (this._camera.token || 0) + 1;
+
+    const listener = this._camera.listener;
+    if (listener && typeof listener.stop === "function") {
+      try {
+        listener.stop();
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    this._camera.listener = null;
+    this._camera.ctx = null;
+    this._camera.running = false;
+    this._camera.frameImageData = null;
+  },
+
+  _onCameraFrame(token, frame) {
+    if (!this._camera || token !== this._camera.token) return;
+    if (this.data.inputMode !== "camera") return;
+    if (!frame || !frame.data || !frame.width || !frame.height) return;
+
+    const now = perfNow();
+    const lastAt = typeof this._camera.lastFrameAt === "number" ? this._camera.lastFrameAt : 0;
+    const interval = typeof this._cameraFrameIntervalMs === "number" ? this._cameraFrameIntervalMs : 100;
+    if (now - lastAt < interval) return;
+    this._camera.lastFrameAt = now;
+
+    const w = Math.max(1, Math.floor(frame.width));
+    const h = Math.max(1, Math.floor(frame.height));
+    const raw = frame.data;
+    let view = null;
+    if (raw instanceof ArrayBuffer) {
+      view = new Uint8ClampedArray(raw);
+    } else if (raw && raw.buffer instanceof ArrayBuffer) {
+      const offset = typeof raw.byteOffset === "number" ? raw.byteOffset : 0;
+      const length = typeof raw.byteLength === "number" ? raw.byteLength : raw.length;
+      view = new Uint8ClampedArray(raw.buffer, offset, length);
+    }
+    if (!view) return;
+
+    const canvas = this._canvas && this._canvas.camera;
+    if (!canvas || !canvas.node || !canvas.ctx) return;
+
+    if (canvas.node.width !== w) canvas.node.width = w;
+    if (canvas.node.height !== h) canvas.node.height = h;
+
+    const ctx = canvas.ctx;
+    if (!ctx || typeof ctx.putImageData !== "function" || typeof ctx.createImageData !== "function") return;
+
+    let imageData = this._camera.frameImageData;
+    if (!imageData || imageData.width !== w || imageData.height !== h) {
+      imageData = ctx.createImageData(w, h);
+      this._camera.frameImageData = imageData;
+    }
+
+    try {
+      if (view.length !== w * h * 4) return;
+      imageData.data.set(view);
+      ctx.putImageData(imageData, 0, 0);
+    } catch (e) {
+      return;
+    }
+
+    this._state.originalImage = canvas.node;
+    this._state.imageInfo = { width: w, height: h, orientation: "up", type: "jpeg" };
+    this._state.imageToken += 1;
+
+    if (this.data.cameraState !== "running") {
+      this.setData({ cameraState: "running", cameraHint: "" });
+    }
+
+    this._scheduleProcess({ immediate: true });
+  },
+
   async onChooseImage() {
     console.log("onChooseImage 被调用");
+
+    const resumeCameraAfter = this.data.inputMode === "camera";
+    if (resumeCameraAfter) {
+      this._stopCameraFrames();
+      this.setData({ cameraVisible: false, cameraState: "idle", cameraHint: "向左滑动进入相机模式" });
+    }
 
     try {
       const chooseRes = await new Promise((resolve, reject) => {
@@ -2731,6 +3051,15 @@ Page({
       this._forceMainThreadToken = this._state.imageToken;
       this._startContentCheck(src, info, img);
 
+      this._inputMode = "image";
+      this._inputMemory.image = {
+        src,
+        info,
+        img,
+        contentCheckStatus: this._contentCheckStatus,
+        contentCheckError: this._contentCheckError
+      };
+
       this._proc.scaled = { token: 0, w: 0, h: 0, data: null };
       this._proc.toneStats = { token: 0, w: 0, h: 0, stats: null };
       this._proc.work = { w: 0, h: 0, imageData: null };
@@ -2818,9 +3147,15 @@ Page({
       this._clearCloseHintTimer();
       this._updateCloseVisibility();
 
+      this._suppressInputSwiperChange = true;
       this.setData(
         {
           hasImage: true,
+          inputMode: "image",
+          inputSwiperIndex: 0,
+          cameraVisible: false,
+          cameraState: "idle",
+          cameraHint: "向左滑动进入相机模式",
           canDownload: false,
           previewHeightPx: nextPreviewHeightPx,
           mainCanvasCssW: nextMainCanvasCssW,
@@ -2835,6 +3170,7 @@ Page({
           ...openingLayout
         },
         async () => {
+          this._suppressInputSwiperChange = false;
           console.log("开始处理图片");
           this._updateLayout();
           await sleep(50);
@@ -2853,6 +3189,11 @@ Page({
       console.error("上传图片过程出错", e);
       if (String(e && e.errMsg).includes("cancel")) {
         console.log("用户取消选择图片");
+        if (resumeCameraAfter) {
+          this.setData({ cameraVisible: true, cameraState: "starting", cameraHint: "正在启动相机…" }, () => {
+            this._startCameraFrames();
+          });
+        }
         return;
       }
       wx.showToast({ title: "选择图片失败: " + (e.errMsg || e.message || "未知错误"), icon: "none", duration: 3000 });
@@ -2861,6 +3202,15 @@ Page({
 
   onCloseImage() {
     if (!this.data.closeEnabled || !this.data.closeShown) return;
+    if (this.data.inputMode === "camera") {
+      this._stopCameraFrames();
+      this._suppressInputSwiperChange = true;
+      this.setData({ inputMode: "image", inputSwiperIndex: 0 }, () => {
+        this._suppressInputSwiperChange = false;
+        this._exitCameraMode();
+      });
+      return;
+    }
     this._downloadInProgress = false;
     this._resetContentCheck();
     if (this._initialProcessTimer) {
@@ -2913,6 +3263,10 @@ Page({
     this._state.originalImage = null;
     this._state.imageInfo = null;
     this._forceMainThreadToken = null;
+
+    if (this._inputMemory) {
+      this._inputMemory.image = null;
+    }
     this._fullscreenBase = { scale: 1, x: 0, y: 0 };
     this._fullscreenUser = { scale: 1, x: 0, y: 0 };
 
@@ -2953,6 +3307,11 @@ Page({
     const headerVisible = this._isMobile ? true : this.data.headerVisible;
     this.setData({
       hasImage: false,
+      inputMode: "image",
+      inputSwiperIndex: 0,
+      cameraVisible: false,
+      cameraState: "idle",
+      cameraHint: "向左滑动进入相机模式",
       canDownload: false,
       headerVisible,
       fullscreenVisible: false,
@@ -3503,6 +3862,16 @@ Page({
     }
     this._downloadInProgress = true;
     try {
+    if (this.data.inputMode === "camera") {
+      const img = this._state && this._state.originalImage;
+      const info = (this._state && this._state.imageInfo) || {};
+      if (!img) {
+        wx.showToast({ title: "相机未就绪", icon: "none" });
+        return;
+      }
+      this._resetContentCheck();
+      this._startContentCheck("", info, img);
+    }
     const allowDownload = await this._ensureContentCheckAllowed();
     if (!allowDownload) return;
 
