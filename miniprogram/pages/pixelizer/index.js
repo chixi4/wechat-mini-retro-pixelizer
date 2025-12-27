@@ -4217,6 +4217,19 @@ Page({
     this.setData({ paletteKey: key }, () => this._scheduleProcess({ immediate: true }));
   },
 
+  onPreviewTap() {
+    if (this.data.inputMode === "camera") {
+      this.onDownload();
+      return;
+    }
+    this.onOpenFullscreen();
+  },
+
+  onCameraCaptureTap(e) {
+    if (this.data.inputMode !== "camera") return;
+    this.onDownload();
+  },
+
   async onDownload() {
     if (!this.data.canDownload || !this._canvas) return;
     if (this._downloadInProgress) {
@@ -4242,7 +4255,12 @@ Page({
 
     const requestedWidth = typeof this.data.targetWidth === "number" ? this.data.targetWidth : 0;
     const currentW = this._proc.work.w;
-    if (!this._isInteracting() && requestedWidth > 0 && currentW !== requestedWidth) {
+    if (
+      this.data.inputMode !== "camera" &&
+      !this._isInteracting() &&
+      requestedWidth > 0 &&
+      currentW !== requestedWidth
+    ) {
       this._clearInteractionConstraints(true);
       await this._scheduleProcessAndWait({ immediate: true, fullRes: true });
     }

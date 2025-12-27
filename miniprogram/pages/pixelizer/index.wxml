@@ -47,7 +47,7 @@
                 </view>
               </swiper-item>
               <swiper-item>
-                <view class="upload-slide">
+                <view class="upload-slide" bindtap="onCameraCaptureTap">
                   <view class="upload-text">
                     <view>点击拍摄</view>
                     <view>或点击预览窗也可以拍摄</view>
@@ -59,17 +59,17 @@
                     <view
                       wx:if="{{cameraState === 'denied'}}"
                       class="btn-ghost"
-                      bindtap="onOpenCameraSetting"
+                      catchtap="onOpenCameraSetting"
                     >去设置开启相机权限</view>
                     <view
                       wx:elif="{{cameraState === 'unsupported'}}"
                       class="btn-ghost"
-                      bindtap="onChooseImage"
+                      catchtap="onChooseImage"
                     >不支持实时相机，改用拍照上传</view>
                     <view
                       wx:elif="{{cameraState === 'error'}}"
                       class="btn-ghost"
-                      bindtap="onRetryCamera"
+                      catchtap="onRetryCamera"
                     >重试启动相机</view>
                   </view>
                 </view>
@@ -196,14 +196,14 @@
           id="mainCanvas"
           class="main-canvas {{useGLPreview ? 'offscreen-canvas' : ''}} {{((fullscreenActive || fullscreenClosing) && !previewHoldVisible) ? 'is-hidden' : ''}}"
           style="width: {{mainCanvasCssW}}px; height: {{mainCanvasCssH}}px;"
-          bindtap="onOpenFullscreen"
+          bindtap="onPreviewTap"
         ></canvas>
         <canvas
           type="webgl"
           id="mainGLCanvas"
           class="main-canvas {{!useGLPreview ? 'offscreen-canvas' : ''}} {{((fullscreenActive || fullscreenClosing) && !previewHoldVisible) ? 'is-hidden' : ''}}"
           style="width: {{mainCanvasCssW}}px; height: {{mainCanvasCssH}}px;"
-          bindtap="onOpenFullscreen"
+          bindtap="onPreviewTap"
         ></canvas>
         <view class="camera-fade {{cameraFadeVisible ? 'visible' : ''}}"></view>
         <view wx:if="{{!hasImage}}" class="empty-hint">点击左侧上传图片</view>

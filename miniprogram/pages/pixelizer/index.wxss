@@ -118,7 +118,7 @@
 }
 
 .panel-title--switch .panel-title-label {
-  color: #9a9a9a;
+  color: #b5b5b5;
   transition: color 0.16s ease-out;
 }
 
@@ -127,7 +127,7 @@
 }
 
 .theme-dark .panel-title--switch .panel-title-label {
-  color: #777777;
+  color: #6b6b6b;
 }
 
 .theme-dark .panel-title--switch .panel-title-label.is-active {
