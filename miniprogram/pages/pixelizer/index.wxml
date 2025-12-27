@@ -252,7 +252,19 @@
   >
     <view class="fullscreen-backdrop" catchtap="onCloseFullscreen"></view>
     <view class="fullscreen-stage">
+      <canvas
+        wx:if="{{!useGLPreview}}"
+        type="2d"
+        id="fullscreenViewCanvas"
+        class="fullscreen-image"
+        bindtouchstart="onFullscreenTouchStart"
+        bindtouchmove="onFullscreenTouchMove"
+        bindtouchend="onFullscreenTouchEnd"
+        bindtap="onFullscreenTap"
+        style="left: {{fullscreenImageLeft}}px; top: {{fullscreenImageTop}}px; width: {{fullscreenImageW}}px; height: {{fullscreenImageH}}px; transform: translate3d({{fullscreenTranslateX}}px, {{fullscreenTranslateY}}px, 0) scale({{fullscreenScale}});"
+      ></canvas>
       <image
+        wx:else
         class="fullscreen-image"
         src="{{fullscreenSrc}}"
         mode="aspectFit"

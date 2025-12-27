@@ -975,7 +975,11 @@ Page({
     const sys = this._sys || {};
     const vw = typeof sys.windowWidth === "number" ? sys.windowWidth : 0;
     const vh = typeof sys.windowHeight === "number" ? sys.windowHeight : 0;
-    const dpr = typeof this._dpr === "number" && isFinite(this._dpr) && this._dpr > 0 ? this._dpr : 1;
+    const rawDpr =
+      typeof this._dpr === "number" && isFinite(this._dpr) && this._dpr > 0 ? this._dpr : 1;
+    const dprRounded = Math.round(rawDpr);
+    const dpr = Math.abs(rawDpr - dprRounded) < 1e-3 ? dprRounded : rawDpr;
+    const dprInt = Number.isInteger(dpr) ? dpr : null;
 
     const fallbackW = this._proc && this._proc.work && this._proc.work.w ? this._proc.work.w : 0;
     const fallbackH = this._proc && this._proc.work && this._proc.work.h ? this._proc.work.h : 0;
@@ -1016,13 +1020,56 @@ Page({
     const fitLeft = (vw - fitW) / 2;
     const fitTop = (vh - fitH) / 2;
 
+    // Android fullscreen uses a <canvas> (same scaling behavior as the preview), so we can keep
+    // the normal aspect-fit size without generating an upscaled bitmap file.
+    if (!this.data.useGLPreview) {
+      let width;
+      let height;
+      if (imgAspect > viewAspect) {
+        width = Math.max(1, Math.floor(vw));
+        height = Math.max(1, Math.round(width / imgAspect));
+        if (height > vh) {
+          height = Math.max(1, Math.floor(vh));
+          width = Math.max(1, Math.round(height * imgAspect));
+        }
+      } else {
+        height = Math.max(1, Math.floor(vh));
+        width = Math.max(1, Math.round(height * imgAspect));
+        if (width > vw) {
+          width = Math.max(1, Math.floor(vw));
+          height = Math.max(1, Math.round(width / imgAspect));
+        }
+      }
+      const left = Math.round((vw - width) / 2);
+      const top = Math.round((vh - height) / 2);
+      return {
+        rect: { left, top, width, height },
+        scale: 1,
+        pixelW: safeW,
+        pixelH: safeH,
+        mode: "canvas",
+        dpr
+      };
+    }
+
     // For pixel-art, avoid <image> scaling (bilinear on iOS) by exporting a pre-upscaled bitmap
     // and matching its CSS box exactly (1:1 in device pixels).
     const fitPxW = Math.max(1, Math.floor(fitW * dpr));
     const fitPxH = Math.max(1, Math.floor(fitH * dpr));
     const maxScaleByView = Math.floor(Math.min(fitPxW / safeW, fitPxH / safeH));
     const maxScaleByCanvas = Math.max(1, Math.floor(CANVAS_2D_MAX_DIM / Math.max(safeW, safeH)));
-    const scale = Math.max(1, Math.min(maxScaleByView, maxScaleByCanvas));
+    let scale = Math.max(1, Math.min(maxScaleByView, maxScaleByCanvas));
+
+    if (dprInt) {
+      // On some Android devices, layout/paint may quantize `px` to integers, so make the computed
+      // CSS width/height integers by ensuring `pixelW / dpr` and `pixelH / dpr` are exact.
+      for (let s = scale; s >= 1; s -= 1) {
+        if ((safeW * s) % dprInt === 0 && (safeH * s) % dprInt === 0) {
+          scale = s;
+          break;
+        }
+      }
+    }
 
     const quantize = (value) => Math.round(value * dpr) / dpr;
 
@@ -1031,8 +1078,8 @@ Page({
       const pixelH = safeH * scale;
       const width = pixelW / dpr;
       const height = pixelH / dpr;
-      const left = quantize((vw - width) / 2);
-      const top = quantize((vh - height) / 2);
+      const left = dprInt ? Math.round((vw - width) / 2) : quantize((vw - width) / 2);
+      const top = dprInt ? Math.round((vh - height) / 2) : quantize((vh - height) / 2);
       return { rect: { left, top, width, height }, scale, pixelW, pixelH, mode: "nearest", dpr };
     }
 
@@ -4489,18 +4536,23 @@ Page({
     const animToken = (this._fullscreenAnimToken = (this._fullscreenAnimToken || 0) + 1);
     const transformData = this._getFullscreenTransformData();
 
-    this.setData({
-      fullscreenVisible: true,
-      fullscreenActive: false,
-      fullscreenClosing: false,
-      fullscreenAnimating: false,
-      previewHoldVisible: false,
-      fullscreenSrc: "",
-      fullscreenImageLeft: targetRect.left,
-      fullscreenImageTop: targetRect.top,
-      fullscreenImageW: targetRect.width,
-      fullscreenImageH: targetRect.height,
-      ...transformData
+    await new Promise((resolve) => {
+      this.setData(
+        {
+          fullscreenVisible: true,
+          fullscreenActive: false,
+          fullscreenClosing: false,
+          fullscreenAnimating: false,
+          previewHoldVisible: false,
+          fullscreenSrc: "",
+          fullscreenImageLeft: targetRect.left,
+          fullscreenImageTop: targetRect.top,
+          fullscreenImageW: targetRect.width,
+          fullscreenImageH: targetRect.height,
+          ...transformData
+        },
+        resolve
+      );
     });
 
     this._fullscreenTouch = {
@@ -4552,6 +4604,48 @@ Page({
     };
 
     try {
+      if (!this.data.useGLPreview) {
+        const viewCanvas = await selectCanvas(this, "#fullscreenViewCanvas");
+        const node = viewCanvas && viewCanvas.node ? viewCanvas.node : null;
+        if (!node || typeof node.getContext !== "function") {
+          throw new Error("missing fullscreen view canvas");
+        }
+
+        const srcW = this._proc.work.w;
+        const srcH = this._proc.work.h;
+        if (!srcW || !srcH) throw new Error("missing work size");
+
+        node.width = srcW;
+        node.height = srcH;
+        const ctx = node.getContext("2d");
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.imageSmoothingEnabled = false;
+        if (typeof ctx.imageSmoothingQuality === "string") {
+          ctx.imageSmoothingQuality = "low";
+        }
+        ctx.clearRect(0, 0, srcW, srcH);
+
+        const workImageData = this._proc.work.imageData;
+        if (workImageData && workImageData.data && typeof ctx.putImageData === "function") {
+          ctx.putImageData(workImageData, 0, 0);
+        } else {
+          ctx.drawImage(this._canvas.work.node, 0, 0, srcW, srcH);
+        }
+
+        if (this._fullscreenAnimToken !== animToken) return;
+
+        const fire = () => {
+          if (this._fullscreenAnimToken !== animToken) return;
+          startAnim();
+        };
+        if (typeof requestAnimationFrame === "function") {
+          requestAnimationFrame(fire);
+        } else {
+          setTimeout(fire, 16);
+        }
+        return;
+      }
+
       let tempFilePath = "";
 
       if (fit.mode === "nearest" && this._canvas.fullscreen) {
@@ -4753,7 +4847,7 @@ Page({
         fullscreenClosing: true,
         fullscreenActive: false,
         fullscreenAnimating: true,
-        previewHoldVisible: false,
+        previewHoldVisible: true,
         fullscreenImageLeft: targetRect.left,
         fullscreenImageTop: targetRect.top,
         fullscreenImageW: targetRect.width,
