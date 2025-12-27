@@ -74,6 +74,7 @@
   justify-content: center;
   align-items: center;
   z-index: 1;
+  --capture-bleed: 0px;
 }
 
 .preview-area.is-hidden {
@@ -157,10 +158,10 @@
 
 .camera-capture {
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
+  left: calc(-1 * var(--capture-bleed, 0px));
+  right: calc(-1 * var(--capture-bleed, 0px));
+  top: calc(-1 * var(--capture-bleed, 0px));
+  bottom: calc(-1 * var(--capture-bleed, 0px));
   pointer-events: none;
   opacity: 0;
   z-index: 14;
@@ -171,8 +172,7 @@
 }
 
 .camera-capture-flash,
-.camera-capture-vignette,
-.camera-capture-frame {
+.camera-capture-vignette {
   position: absolute;
   left: 0;
   right: 0;
@@ -189,15 +189,6 @@
   background: radial-gradient(circle at center, rgba(0, 0, 0, 0) 48%, rgba(0, 0, 0, 0.28) 100%);
 }
 
-.camera-capture-frame {
-  left: 12px;
-  right: 12px;
-  top: 12px;
-  bottom: 12px;
-  border: 2px solid rgba(255, 255, 255, 0.55);
-  box-sizing: border-box;
-}
-
 .theme-dark .camera-capture-flash {
   background: rgba(245, 245, 245, 0.9);
 }
@@ -206,20 +197,12 @@
   background: radial-gradient(circle at center, rgba(0, 0, 0, 0) 46%, rgba(0, 0, 0, 0.36) 100%);
 }
 
-.theme-dark .camera-capture-frame {
-  border-color: rgba(255, 255, 255, 0.38);
-}
-
 .camera-capture.active .camera-capture-flash {
   animation: capture-flash 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .camera-capture.active .camera-capture-vignette {
   animation: capture-vignette 520ms cubic-bezier(0.2, 0, 0.2, 1) both;
-}
-
-.camera-capture.active .camera-capture-frame {
-  animation: capture-frame 520ms cubic-bezier(0.18, 0.9, 0.25, 1) both;
 }
 
 .canvas-container.capture-freeze .main-canvas {
@@ -258,25 +241,6 @@
   70% {
     opacity: 0.18;
     transform: scale(1.01);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1);
-  }
-}
-
-@keyframes capture-frame {
-  0% {
-    opacity: 0;
-    transform: scale(1.03);
-  }
-  22% {
-    opacity: 0.65;
-    transform: scale(1);
-  }
-  60% {
-    opacity: 0.25;
-    transform: scale(0.995);
   }
   100% {
     opacity: 0;
@@ -979,6 +943,7 @@
     pointer-events: none;
     transition: opacity 0.16s ease-out, height 0.35s cubic-bezier(0.2, 0, 0.2, 1);
     will-change: opacity, height;
+    --capture-bleed: 8px;
   }
 
   .preview-area.layout-anim {

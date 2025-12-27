@@ -209,7 +209,6 @@
         <view class="camera-capture {{cameraCaptureActive ? 'active' : ''}}">
           <view class="camera-capture-flash"></view>
           <view class="camera-capture-vignette"></view>
-          <view class="camera-capture-frame"></view>
         </view>
         <view wx:if="{{!hasImage}}" class="empty-hint">点击左侧上传图片</view>
       </view>
