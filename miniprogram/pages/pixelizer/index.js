@@ -2452,9 +2452,13 @@ Page({
           const winH =
             this._sys && this._sys.windowHeight ? Math.max(1, Math.floor(this._sys.windowHeight)) : containerH;
           const maxPreviewH = Math.max(1, Math.floor(winH * 0.4));
+          const previewHeightPx =
+            typeof this.data.previewHeightPx === "number" && this.data.previewHeightPx > 0
+              ? this.data.previewHeightPx
+              : maxPreviewH;
 
           availW = Math.max(1, winW - previewPadding * 2);
-          availH = Math.max(1, maxPreviewH - previewPadding * 2 - previewBorder);
+          availH = Math.max(1, previewHeightPx - previewPadding * 2 - previewBorder);
         }
 
         // 预览尺寸只由容器与图片纵横比决定，避免拖动“像素尺寸”时预览大小跳变
@@ -2629,9 +2633,13 @@ Page({
       const winW = this._sys && this._sys.windowWidth ? Math.max(1, Math.floor(this._sys.windowWidth)) : containerW;
       const winH = this._sys && this._sys.windowHeight ? Math.max(1, Math.floor(this._sys.windowHeight)) : containerH;
       const maxPreviewH = Math.max(1, Math.floor(winH * 0.4));
+      const previewHeightPx =
+        typeof this.data.previewHeightPx === "number" && this.data.previewHeightPx > 0
+          ? this.data.previewHeightPx
+          : maxPreviewH;
 
       availW = Math.max(1, winW - previewPadding * 2);
-      availH = Math.max(1, maxPreviewH - previewPadding * 2 - previewBorder);
+      availH = Math.max(1, previewHeightPx - previewPadding * 2 - previewBorder);
     }
 
     // 预览尺寸只由容器与图片纵横比决定，避免拖动“像素尺寸”时预览大小跳变
@@ -2830,15 +2838,21 @@ Page({
     }
 
     const shouldDelayCamera = this._isMobile && !this.data.hasImage;
+    const winH = this._sys && this._sys.windowHeight ? Math.max(1, Math.floor(this._sys.windowHeight)) : 0;
+    const defaultPreviewHeightPx = this._isMobile && winH ? Math.floor(winH * 0.4) : 0;
     await new Promise((resolve) => {
+      const next = {
+        hasImage: true,
+        canDownload: false,
+        cameraVisible: !shouldDelayCamera,
+        cameraState: "starting",
+        cameraHint: "正在启动相机…"
+      };
+      if (this._isMobile && defaultPreviewHeightPx && defaultPreviewHeightPx !== this.data.previewHeightPx) {
+        next.previewHeightPx = defaultPreviewHeightPx;
+      }
       this.setData(
-        {
-          hasImage: true,
-          canDownload: false,
-          cameraVisible: !shouldDelayCamera,
-          cameraState: "starting",
-          cameraHint: "正在启动相机…"
-        },
+        next,
         resolve
       );
     });
@@ -2907,6 +2921,19 @@ Page({
 
       next.hasImage = true;
       next.canDownload = false;
+
+      if (this._isMobile) {
+        const info = restore.info || {};
+        const oriented = getOrientedSize(restore.img, info);
+        const aspect = oriented.width > 0 ? oriented.height / oriented.width : 1;
+        const box = this._computeMobilePreviewBox(aspect);
+        next.previewHeightPx = box.previewHeightPx;
+        next.mainCanvasCssW = box.displayW;
+        next.mainCanvasCssH = box.displayH;
+        this._lockPreviewHeight = true;
+      } else {
+        this._lockPreviewHeight = false;
+      }
 
       this.setData(next, () => {
         this._updateLayout();
@@ -3333,22 +3360,30 @@ Page({
       }
 
       const headerVisible = true;
-      const openingLayout = {};
-      if (this._isMobile && !replacingImage) {
+      const layoutOverrides = {};
+      if (this._isMobile) {
         const headerHeightPx = this._headerRect ? this._headerRect.height || 0 : 0;
         const safeTopPx = this._safeTop || 0;
         const headerOffset = headerVisible ? headerHeightPx : 0;
         const toPaddingTopPx = safeTopPx + nextPreviewHeightPx + headerOffset;
-        const fromPaddingTopPx =
-          typeof this.data.controlsPaddingTopPx === "number" ? this.data.controlsPaddingTopPx : 0;
         const previewTranslateYPx = headerOffset;
-        const previewShiftPx = fromPaddingTopPx - toPaddingTopPx; // start "rolled up"
 
-        openingLayout.controlsPaddingTopPx = fromPaddingTopPx;
-        openingLayout.previewTranslateYPx = previewTranslateYPx;
-        openingLayout.controlsShiftPx = 0;
-        openingLayout.previewShiftPx = previewShiftPx;
-        openingLayout.layoutAnimEnabled = false;
+        if (!replacingImage) {
+          const fromPaddingTopPx =
+            typeof this.data.controlsPaddingTopPx === "number" ? this.data.controlsPaddingTopPx : 0;
+          const previewShiftPx = fromPaddingTopPx - toPaddingTopPx; // start "rolled up"
+
+          layoutOverrides.controlsPaddingTopPx = fromPaddingTopPx;
+          layoutOverrides.previewTranslateYPx = previewTranslateYPx;
+          layoutOverrides.controlsShiftPx = 0;
+          layoutOverrides.previewShiftPx = previewShiftPx;
+          layoutOverrides.layoutAnimEnabled = false;
+        } else {
+          layoutOverrides.controlsPaddingTopPx = toPaddingTopPx;
+          layoutOverrides.previewTranslateYPx = previewTranslateYPx;
+          layoutOverrides.controlsShiftPx = 0;
+          layoutOverrides.previewShiftPx = 0;
+        }
       }
 
       console.log("设置图片状态");
@@ -3378,7 +3413,7 @@ Page({
           fullscreenAnimating: false,
           fullscreenSrc: "",
           controlsScrollTop: 0,
-          ...openingLayout
+          ...layoutOverrides
         },
         async () => {
           this._suppressInputSwiperChange = false;
