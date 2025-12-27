@@ -435,6 +435,7 @@ Page({
     inputMode: "image",
     inputSwiperIndex: 0,
     cameraVisible: false,
+    cameraFadeVisible: false,
     cameraState: "idle",
     cameraHint: "向左滑动进入相机模式",
     closeEnabled: false,
@@ -2911,8 +2912,9 @@ Page({
         hasImage: true,
         canDownload: false,
         cameraVisible: !shouldDelayCamera,
+        cameraFadeVisible: true,
         cameraState: "starting",
-        cameraHint: "正在启动相机…"
+        cameraHint: "正在启动相机……"
       };
       if (this._isMobile && defaultPreviewHeightPx && defaultPreviewHeightPx !== this.data.previewHeightPx) {
         next.previewHeightPx = defaultPreviewHeightPx;
@@ -2957,6 +2959,7 @@ Page({
 
     const next = {
       cameraVisible: false,
+      cameraFadeVisible: true,
       cameraState: "idle",
       cameraHint: "向左滑动进入相机模式"
     };
@@ -3008,6 +3011,13 @@ Page({
         this._lockPreviewHeight = false;
       }
 
+      const fadeOut = () => {
+        if (this.data.inputMode === "camera") return;
+        if (this.data.cameraFadeVisible) {
+          this.setData({ cameraFadeVisible: false });
+        }
+      };
+
       this.setData(next, () => {
         this._updateLayout();
         if (this._pendingPreviewBox) {
@@ -3028,9 +3038,15 @@ Page({
               }
             );
           };
-          this._scheduleProcessAndWait({ immediate: true }).then(applyPendingBox, applyPendingBox);
+          this._scheduleProcessAndWait({ immediate: true }).then(() => {
+            applyPendingBox();
+            fadeOut();
+          }, () => {
+            applyPendingBox();
+            fadeOut();
+          });
         } else {
-          this._scheduleProcess({ immediate: true });
+          this._scheduleProcessAndWait({ immediate: true }).then(fadeOut, fadeOut);
         }
       });
       return;
@@ -3045,7 +3061,12 @@ Page({
     next.hasImage = false;
     next.canDownload = false;
 
-    this.setData(next, () => this._updateLayout());
+    this.setData(next, () => {
+      this._updateLayout();
+      if (this.data.cameraFadeVisible) {
+        this.setData({ cameraFadeVisible: false });
+      }
+    });
   },
 
   async _startCameraFrames() {
@@ -3274,8 +3295,16 @@ Page({
       if (displayH !== this.data.mainCanvasCssH) nextData.mainCanvasCssH = displayH;
 
       const commit = () => {
+        const next = {};
         if (this.data.cameraState !== "running") {
-          this.setData({ cameraState: "running", cameraHint: "" });
+          next.cameraState = "running";
+          next.cameraHint = "";
+        }
+        if (this.data.cameraFadeVisible) {
+          next.cameraFadeVisible = false;
+        }
+        if (Object.keys(next).length) {
+          this.setData(next);
         }
         this._refreshPreviewSurface();
         if (!this.data.canDownload) {
@@ -3524,7 +3553,7 @@ Page({
       if (String(e && e.errMsg).includes("cancel")) {
         console.log("用户取消选择图片");
         if (resumeCameraAfter) {
-          this.setData({ cameraVisible: true, cameraState: "starting", cameraHint: "正在启动相机…" }, () => {
+          this.setData({ cameraVisible: true, cameraState: "starting", cameraHint: "正在启动相机……" }, () => {
             this._startCameraFrames();
           });
         }
