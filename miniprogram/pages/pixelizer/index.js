@@ -3367,7 +3367,6 @@ Page({
         const headerOffset = headerVisible ? headerHeightPx : 0;
         const toPaddingTopPx = safeTopPx + nextPreviewHeightPx + headerOffset;
         const previewTranslateYPx = headerOffset;
-
         if (!replacingImage) {
           const fromPaddingTopPx =
             typeof this.data.controlsPaddingTopPx === "number" ? this.data.controlsPaddingTopPx : 0;
@@ -3378,11 +3377,6 @@ Page({
           layoutOverrides.controlsShiftPx = 0;
           layoutOverrides.previewShiftPx = previewShiftPx;
           layoutOverrides.layoutAnimEnabled = false;
-        } else {
-          layoutOverrides.controlsPaddingTopPx = toPaddingTopPx;
-          layoutOverrides.previewTranslateYPx = previewTranslateYPx;
-          layoutOverrides.controlsShiftPx = 0;
-          layoutOverrides.previewShiftPx = 0;
         }
       }
 

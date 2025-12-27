@@ -804,13 +804,14 @@
     overflow: hidden;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.16s ease-out;
-    will-change: opacity;
+    transition: opacity 0.16s ease-out, height 0.35s cubic-bezier(0.2, 0, 0.2, 1);
+    will-change: opacity, height;
   }
 
   .preview-area.layout-anim {
-    transition: opacity 0.16s ease-out, transform 0.35s cubic-bezier(0.2, 0, 0.2, 1);
-    will-change: transform, opacity;
+    transition: opacity 0.16s ease-out, transform 0.35s cubic-bezier(0.2, 0, 0.2, 1),
+      height 0.35s cubic-bezier(0.2, 0, 0.2, 1);
+    will-change: transform, opacity, height;
   }
 
   .main.has-image .preview-area {
