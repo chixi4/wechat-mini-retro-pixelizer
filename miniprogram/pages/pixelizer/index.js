@@ -4239,7 +4239,7 @@ Page({
     if (this._downloadInProgress || this._cameraCaptureActive) return;
 
     const token = (this._cameraCaptureToken = (this._cameraCaptureToken || 0) + 1);
-    const animMs = 720;
+    const animMs = 1000;
     const maxHoldMs = 1200;
 
     this._cameraCaptureActive = true;
@@ -4281,6 +4281,7 @@ Page({
     const opts = options && options.currentTarget ? {} : options || {};
     const silent = !!opts.silent;
     if (!this.data.canDownload || !this._canvas) return;
+    const isCamera = this.data.inputMode === "camera";
     if (this._downloadInProgress) {
       if (!silent) {
         wx.showToast({ title: "正在处理，请稍候", icon: "none" });
@@ -4289,7 +4290,7 @@ Page({
     }
     this._downloadInProgress = true;
     try {
-      if (this.data.inputMode === "camera") {
+      if (isCamera) {
         const workNode = this._canvas && this._canvas.work ? this._canvas.work.node : null;
         const workW = this._proc && this._proc.work ? this._proc.work.w : 0;
         const workH = this._proc && this._proc.work ? this._proc.work.h : 0;
@@ -4299,12 +4300,11 @@ Page({
           }
           return;
         }
-        const info = { width: workW, height: workH, orientation: "up", type: "jpeg" };
-        this._resetContentCheck();
-        this._startContentCheck("", info, workNode, { silent });
       }
-      const allowDownload = await this._ensureContentCheckAllowed({ silent });
-      if (!allowDownload) return;
+      if (!isCamera) {
+        const allowDownload = await this._ensureContentCheckAllowed({ silent });
+        if (!allowDownload) return;
+      }
       const requestedWidth = typeof this.data.targetWidth === "number" ? this.data.targetWidth : 0;
       const currentW = this._proc.work.w;
       if (
