@@ -232,6 +232,7 @@
       <canvas type="2d" id="workCanvas" class="hidden-canvas"></canvas>
       <canvas type="2d" id="bufferCanvas" class="hidden-canvas"></canvas>
       <canvas type="2d" id="exportCanvas" class="hidden-canvas"></canvas>
+      <canvas type="2d" id="fullscreenCanvas" class="hidden-canvas"></canvas>
       <camera
         wx:if="{{cameraVisible}}"
         id="camera"

@@ -792,7 +792,8 @@ Page({
       selectCanvas(this, "#mainCanvas"),
       selectCanvas(this, "#workCanvas"),
       selectCanvas(this, "#bufferCanvas"),
-      selectCanvas(this, "#exportCanvas")
+      selectCanvas(this, "#exportCanvas"),
+      selectCanvas(this, "#fullscreenCanvas")
     ];
     if (needsGL) {
       requests.unshift(selectCanvas(this, "#mainGLCanvas"));
@@ -800,15 +801,16 @@ Page({
 
     const res = await Promise.all(requests);
     const glCanvas = needsGL ? res[0] : null;
-    const [main, work, buffer, exportC] = needsGL ? res.slice(1) : res;
+    const [main, work, buffer, exportC, fullscreen] = needsGL ? res.slice(1) : res;
 
-    if (!main || !work || !buffer || !exportC) return false;
+    if (!main || !work || !buffer || !exportC || !fullscreen) return false;
 
     this._canvas = {
       main: { node: main.node, ctx: main.node.getContext("2d") },
       work: { node: work.node, ctx: work.node.getContext("2d") },
       buffer: { node: buffer.node, ctx: buffer.node.getContext("2d") },
-      export: { node: exportC.node, ctx: exportC.node.getContext("2d") }
+      export: { node: exportC.node, ctx: exportC.node.getContext("2d") },
+      fullscreen: { node: fullscreen.node, ctx: fullscreen.node.getContext("2d") }
     };
 
     this._glPreview = null;
@@ -969,19 +971,14 @@ Page({
     });
   },
 
-  _getFullscreenTargetRect() {
+  _computeFullscreenFit() {
     const sys = this._sys || {};
     const vw = typeof sys.windowWidth === "number" ? sys.windowWidth : 0;
     const vh = typeof sys.windowHeight === "number" ? sys.windowHeight : 0;
+    const dpr = typeof this._dpr === "number" && isFinite(this._dpr) && this._dpr > 0 ? this._dpr : 1;
 
     const fallbackW = this._proc && this._proc.work && this._proc.work.w ? this._proc.work.w : 0;
     const fallbackH = this._proc && this._proc.work && this._proc.work.h ? this._proc.work.h : 0;
-
-    if (!vw || !vh) {
-      const width = fallbackW || 1;
-      const height = fallbackH || 1;
-      return { left: 0, top: 0, width, height };
-    }
 
     const imgW =
       fallbackW ||
@@ -990,23 +987,68 @@ Page({
       fallbackH ||
       (this._canvas && this._canvas.main && this._canvas.main.node ? this._canvas.main.node.height : 0);
 
-    if (!imgW || !imgH) return { left: 0, top: 0, width: vw, height: vh };
+    const safeW = imgW || 1;
+    const safeH = imgH || 1;
 
-    const imgAspect = imgW / imgH;
-    const viewAspect = vw / vh;
-    let width;
-    let height;
-    if (imgAspect > viewAspect) {
-      width = vw;
-      height = vw / imgAspect;
-    } else {
-      height = vh;
-      width = vh * imgAspect;
+    if (!vw || !vh) {
+      return {
+        rect: { left: 0, top: 0, width: safeW, height: safeH },
+        scale: 1,
+        pixelW: safeW,
+        pixelH: safeH,
+        mode: "fit",
+        dpr
+      };
     }
 
-    const left = (vw - width) / 2;
-    const top = (vh - height) / 2;
-    return { left, top, width, height };
+    // Base fullscreen layout: aspect-fit into the viewport (CSS px).
+    const imgAspect = safeW / safeH;
+    const viewAspect = vw / vh;
+    let fitW;
+    let fitH;
+    if (imgAspect > viewAspect) {
+      fitW = vw;
+      fitH = vw / imgAspect;
+    } else {
+      fitH = vh;
+      fitW = vh * imgAspect;
+    }
+    const fitLeft = (vw - fitW) / 2;
+    const fitTop = (vh - fitH) / 2;
+
+    // For pixel-art, avoid <image> scaling (bilinear on iOS) by exporting a pre-upscaled bitmap
+    // and matching its CSS box exactly (1:1 in device pixels).
+    const fitPxW = Math.max(1, Math.floor(fitW * dpr));
+    const fitPxH = Math.max(1, Math.floor(fitH * dpr));
+    const maxScaleByView = Math.floor(Math.min(fitPxW / safeW, fitPxH / safeH));
+    const maxScaleByCanvas = Math.max(1, Math.floor(CANVAS_2D_MAX_DIM / Math.max(safeW, safeH)));
+    const scale = Math.max(1, Math.min(maxScaleByView, maxScaleByCanvas));
+
+    const quantize = (value) => Math.round(value * dpr) / dpr;
+
+    if (maxScaleByView >= 1) {
+      const pixelW = safeW * scale;
+      const pixelH = safeH * scale;
+      const width = pixelW / dpr;
+      const height = pixelH / dpr;
+      const left = quantize((vw - width) / 2);
+      const top = quantize((vh - height) / 2);
+      return { rect: { left, top, width, height }, scale, pixelW, pixelH, mode: "nearest", dpr };
+    }
+
+    // Downscale case: keep the original aspect-fit behavior.
+    return {
+      rect: { left: fitLeft, top: fitTop, width: fitW, height: fitH },
+      scale: 1,
+      pixelW: safeW,
+      pixelH: safeH,
+      mode: "fit",
+      dpr
+    };
+  },
+
+  _getFullscreenTargetRect() {
+    return this._computeFullscreenFit().rect;
   },
 
   _computeFullscreenInvertTransform(fromRect, targetRect) {
@@ -4435,7 +4477,8 @@ Page({
 
     const previewSelector = this.data.useGLPreview ? "#mainGLCanvas" : "#mainCanvas";
     const previewRect = await selectRect(this, previewSelector);
-    const targetRect = this._getFullscreenTargetRect();
+    const fit = this._computeFullscreenFit();
+    const targetRect = fit.rect;
     const fromRect =
       previewRect && previewRect.width > 0 && previewRect.height > 0 ? previewRect : targetRect;
     const invert = this._computeFullscreenInvertTransform(fromRect, targetRect);
@@ -4509,18 +4552,64 @@ Page({
     };
 
     try {
-      const tmp = await new Promise((resolve, reject) => {
-        wx.canvasToTempFilePath({
-          canvas: this._canvas.work.node,
-          fileType: "png",
-          success: resolve,
-          fail: reject
+      let tempFilePath = "";
+
+      if (fit.mode === "nearest" && this._canvas.fullscreen) {
+        const srcW = this._proc.work.w;
+        const srcH = this._proc.work.h;
+        const scale = fit.scale || 1;
+        const outW = fit.pixelW || srcW;
+        const outH = fit.pixelH || srcH;
+
+        const snapCanvas = this._canvas.fullscreen;
+        snapCanvas.node.width = outW;
+        snapCanvas.node.height = outH;
+
+        const snapCtx = snapCanvas.ctx;
+        snapCtx.setTransform(1, 0, 0, 1, 0, 0);
+        snapCtx.imageSmoothingEnabled = false;
+        if (typeof snapCtx.imageSmoothingQuality === "string") {
+          snapCtx.imageSmoothingQuality = "low";
+        }
+        snapCtx.clearRect(0, 0, outW, outH);
+
+        const workImageData = this._proc.work.imageData;
+        if (workImageData && workImageData.data && scale > 1 && snapCtx.createImageData) {
+          const scaledData = snapCtx.createImageData(outW, outH);
+          scaleImageDataNearest(workImageData.data, srcW, srcH, scale, scaledData.data);
+          snapCtx.putImageData(scaledData, 0, 0);
+        } else if (workImageData && workImageData.data && scale === 1) {
+          snapCtx.putImageData(workImageData, 0, 0);
+        } else {
+          snapCtx.drawImage(this._canvas.work.node, 0, 0, outW, outH);
+        }
+
+        const tmp = await new Promise((resolve, reject) => {
+          wx.canvasToTempFilePath({
+            canvas: snapCanvas.node,
+            fileType: "png",
+            success: resolve,
+            fail: reject
+          });
         });
-      });
+        tempFilePath = tmp && tmp.tempFilePath ? tmp.tempFilePath : "";
+      } else {
+        const tmp = await new Promise((resolve, reject) => {
+          wx.canvasToTempFilePath({
+            canvas: this._canvas.work.node,
+            fileType: "png",
+            success: resolve,
+            fail: reject
+          });
+        });
+        tempFilePath = tmp && tmp.tempFilePath ? tmp.tempFilePath : "";
+      }
+
+      if (!tempFilePath) throw new Error("tempFilePath empty");
 
       if (this._fullscreenAnimToken !== animToken) return;
       this._fullscreenPendingOpen = { token: animToken, startAnim };
-      this.setData({ fullscreenSrc: tmp.tempFilePath });
+      this.setData({ fullscreenSrc: tempFilePath });
     } catch {
       if (this._fullscreenAnimToken !== animToken) return;
       this._fullscreenPendingOpen = null;
