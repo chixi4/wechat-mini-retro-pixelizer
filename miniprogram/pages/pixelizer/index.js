@@ -436,6 +436,7 @@ Page({
     inputSwiperIndex: 0,
     cameraVisible: false,
     cameraFadeVisible: false,
+    cameraCaptureActive: false,
     cameraState: "idle",
     cameraHint: "向左滑动进入相机模式",
     closeEnabled: false,
@@ -701,6 +702,8 @@ Page({
       running: false
     };
     this._cameraFrameIntervalMs = 100;
+    this._cameraCaptureActive = false;
+    this._cameraCaptureToken = 0;
     this._suppressInputSwiperChange = false;
     this._pendingInputMode = "";
     this._pendingInputSwiperIndex = -1;
@@ -1097,6 +1100,8 @@ Page({
       wx.offWindowResize(this._windowResizeHandler);
     }
     this._stopCameraFrames();
+    this._cameraCaptureToken = (this._cameraCaptureToken || 0) + 1;
+    this._cameraCaptureActive = false;
     if (this._interactionMode === "tone") {
       this._commitInteractionCapCache();
     }
@@ -2068,7 +2073,7 @@ Page({
     wx.showToast({ title: "内容安全检测失败", icon: "none" });
   },
 
-  _startContentCheck(src, info, img) {
+  _startContentCheck(src, info, img, options) {
     if (!img && !src) return null;
     if (!wx.cloud || typeof wx.cloud.uploadFile !== "function") {
       this._contentCheckStatus = "unavailable";
@@ -2076,6 +2081,7 @@ Page({
       return null;
     }
 
+    const silent = !!(options && options.silent);
     const token = (this._contentCheckToken = (this._contentCheckToken || 0) + 1);
     this._contentCheckStatus = "pending";
     this._contentCheckError = "";
@@ -2110,7 +2116,7 @@ Page({
         if (token !== this._contentCheckToken) return status;
         this._contentCheckStatus = status;
         this._contentCheckError = result.errMsg || "";
-        if (status === "reject") this._notifyContentReject();
+        if (status === "reject" && !silent) this._notifyContentReject();
         return status;
       } catch (err) {
         if (token === this._contentCheckToken) {
@@ -2125,27 +2131,28 @@ Page({
     return promise;
   },
 
-  async _ensureContentCheckAllowed() {
+  async _ensureContentCheckAllowed(options) {
+    const silent = !!(options && options.silent);
     const status = this._contentCheckStatus || "idle";
     if (status === "pass") return true;
 
     if (status === "pending" && this._contentCheckPromise) {
-      wx.showToast({ title: "正在内容安全检测", icon: "none" });
+      if (!silent) wx.showToast({ title: "正在内容安全检测", icon: "none" });
       const finalStatus = await this._contentCheckPromise;
       if (finalStatus === "pass") return true;
     }
 
     if (this._contentCheckStatus === "reject") {
-      this._notifyContentReject();
+      if (!silent) this._notifyContentReject();
       return false;
     }
 
     if (this._contentCheckStatus === "unavailable") {
-      wx.showToast({ title: "内容安全未启用", icon: "none" });
+      if (!silent) wx.showToast({ title: "内容安全未启用", icon: "none" });
       return false;
     }
 
-    this._notifyContentCheckError();
+    if (!silent) this._notifyContentCheckError();
     return false;
   },
 
@@ -2873,6 +2880,8 @@ Page({
   async _enterCameraMode(options) {
     const forceRestart = !!(options && options.forceRestart);
     this._inputMode = "camera";
+    this._cameraCaptureToken = (this._cameraCaptureToken || 0) + 1;
+    this._cameraCaptureActive = false;
     this._workerBaseKey = "";
     this._pendingPreviewBox = null;
     this._cancelRefine();
@@ -2913,6 +2922,7 @@ Page({
         canDownload: false,
         cameraVisible: !shouldDelayCamera,
         cameraFadeVisible: true,
+        cameraCaptureActive: false,
         cameraState: "starting",
         cameraHint: "正在启动相机……"
       };
@@ -2950,6 +2960,8 @@ Page({
 
     const wasCamera = this._inputMode === "camera" || this.data.inputMode === "camera";
     this._inputMode = "image";
+    this._cameraCaptureToken = (this._cameraCaptureToken || 0) + 1;
+    this._cameraCaptureActive = false;
     this._workerBaseKey = "";
     this._stopCameraFrames();
     this._pendingPreviewBox = null;
@@ -2960,6 +2972,7 @@ Page({
     const next = {
       cameraVisible: false,
       cameraFadeVisible: true,
+      cameraCaptureActive: false,
       cameraState: "idle",
       cameraHint: "向左滑动进入相机模式"
     };
@@ -3151,6 +3164,7 @@ Page({
   _onCameraFrame(token, frame) {
     if (!this._camera || token !== this._camera.token) return;
     if (this.data.inputMode !== "camera") return;
+    if (this._cameraCaptureActive) return;
     if (!frame || !frame.data || !frame.width || !frame.height) return;
 
     const now = perfNow();
@@ -3242,6 +3256,7 @@ Page({
       if (!rendered || !rendered.ok || !rendered.buffer) return;
       if (this.data.inputMode !== "camera") return;
       if (!this._camera || renderToken !== this._camera.renderToken) return;
+      if (this._cameraCaptureActive) return;
       if (!this._canvas || !this._proc || !this._proc.work || !this._proc.work.imageData) return;
 
       if (rendered.w !== targetWidth || rendered.h !== targetHeight) return;
@@ -4217,134 +4232,177 @@ Page({
     this.setData({ paletteKey: key }, () => this._scheduleProcess({ immediate: true }));
   },
 
+  async _triggerCameraCapture() {
+    if (this.data.inputMode !== "camera") return;
+    if (!this.data.canDownload || !this._canvas) return;
+    if (this.data.cameraState !== "running") return;
+    if (this._downloadInProgress || this._cameraCaptureActive) return;
+
+    const token = (this._cameraCaptureToken = (this._cameraCaptureToken || 0) + 1);
+    const animMs = 520;
+    const maxHoldMs = 1200;
+
+    this._cameraCaptureActive = true;
+    this.setData({ cameraCaptureActive: true });
+
+    const savePromise = this.onDownload({ silent: true });
+    const settleSave = Promise.resolve(savePromise).catch(() => null);
+
+    await Promise.race([
+      Promise.all([settleSave, sleep(animMs)]),
+      sleep(maxHoldMs)
+    ]);
+
+    if (this._cameraCaptureToken !== token) return;
+    this._cameraCaptureActive = false;
+
+    const finalize = () => {
+      if (this._cameraCaptureToken !== token) return;
+      if (this._camera) this._camera.forceRender = true;
+    };
+
+    this.setData({ cameraCaptureActive: false }, finalize);
+  },
+
   onPreviewTap() {
     if (this.data.inputMode === "camera") {
-      this.onDownload();
+      this._triggerCameraCapture();
       return;
     }
     this.onOpenFullscreen();
   },
 
-  onCameraCaptureTap(e) {
+  onCameraCaptureTap() {
     if (this.data.inputMode !== "camera") return;
-    this.onDownload();
+    this._triggerCameraCapture();
   },
 
-  async onDownload() {
+  async onDownload(options) {
+    const opts = options && options.currentTarget ? {} : options || {};
+    const silent = !!opts.silent;
     if (!this.data.canDownload || !this._canvas) return;
     if (this._downloadInProgress) {
-      wx.showToast({ title: "正在处理，请稍候", icon: "none" });
+      if (!silent) {
+        wx.showToast({ title: "正在处理，请稍候", icon: "none" });
+      }
       return;
     }
     this._downloadInProgress = true;
     try {
-    if (this.data.inputMode === "camera") {
-      const workNode = this._canvas && this._canvas.work ? this._canvas.work.node : null;
-      const workW = this._proc && this._proc.work ? this._proc.work.w : 0;
-      const workH = this._proc && this._proc.work ? this._proc.work.h : 0;
-      if (!workNode || !workW || !workH) {
-        wx.showToast({ title: "相机未就绪", icon: "none" });
-        return;
+      if (this.data.inputMode === "camera") {
+        const workNode = this._canvas && this._canvas.work ? this._canvas.work.node : null;
+        const workW = this._proc && this._proc.work ? this._proc.work.w : 0;
+        const workH = this._proc && this._proc.work ? this._proc.work.h : 0;
+        if (!workNode || !workW || !workH) {
+          if (!silent) {
+            wx.showToast({ title: "相机未就绪", icon: "none" });
+          }
+          return;
+        }
+        const info = { width: workW, height: workH, orientation: "up", type: "jpeg" };
+        this._resetContentCheck();
+        this._startContentCheck("", info, workNode, { silent });
       }
-      const info = { width: workW, height: workH, orientation: "up", type: "jpeg" };
-      this._resetContentCheck();
-      this._startContentCheck("", info, workNode);
-    }
-    const allowDownload = await this._ensureContentCheckAllowed();
-    if (!allowDownload) return;
+      const allowDownload = await this._ensureContentCheckAllowed({ silent });
+      if (!allowDownload) return;
+      const requestedWidth = typeof this.data.targetWidth === "number" ? this.data.targetWidth : 0;
+      const currentW = this._proc.work.w;
+      if (
+        this.data.inputMode !== "camera" &&
+        !this._isInteracting() &&
+        requestedWidth > 0 &&
+        currentW !== requestedWidth
+      ) {
+        this._clearInteractionConstraints(true);
+        await this._scheduleProcessAndWait({ immediate: true, fullRes: true });
+      }
 
-    const requestedWidth = typeof this.data.targetWidth === "number" ? this.data.targetWidth : 0;
-    const currentW = this._proc.work.w;
-    if (
-      this.data.inputMode !== "camera" &&
-      !this._isInteracting() &&
-      requestedWidth > 0 &&
-      currentW !== requestedWidth
-    ) {
-      this._clearInteractionConstraints(true);
-      await this._scheduleProcessAndWait({ immediate: true, fullRes: true });
-    }
-
-    const w = this._proc.work.w;
-    const h = this._proc.work.h;
-    if (!w || !h) return;
+      const w = this._proc.work.w;
+      const h = this._proc.work.h;
+      if (!w || !h) return;
 
       const minWidth = 4096;
-    let outputScale = Math.ceil(minWidth / w);
-    if (outputScale < 1) outputScale = 1;
+      let outputScale = Math.ceil(minWidth / w);
+      if (outputScale < 1) outputScale = 1;
 
-    const maxOutputScale = Math.max(1, Math.floor(EXPORT_FILE_MAX_DIM / Math.max(w, h)));
-    if (outputScale > maxOutputScale) outputScale = maxOutputScale;
+      const maxOutputScale = Math.max(1, Math.floor(EXPORT_FILE_MAX_DIM / Math.max(w, h)));
+      if (outputScale > maxOutputScale) outputScale = maxOutputScale;
 
-    const maxCanvasScale = Math.max(1, Math.floor(CANVAS_2D_MAX_DIM / Math.max(w, h)));
-    const drawScale = Math.max(1, Math.min(outputScale, maxCanvasScale));
+      const maxCanvasScale = Math.max(1, Math.floor(CANVAS_2D_MAX_DIM / Math.max(w, h)));
+      const drawScale = Math.max(1, Math.min(outputScale, maxCanvasScale));
 
-    const canvasW = w * drawScale;
-    const canvasH = h * drawScale;
-    const exportW = w * outputScale;
-    const exportH = h * outputScale;
+      const canvasW = w * drawScale;
+      const canvasH = h * drawScale;
+      const exportW = w * outputScale;
+      const exportH = h * outputScale;
 
-    const exportCanvas = this._canvas.export;
-    exportCanvas.node.width = canvasW;
-    exportCanvas.node.height = canvasH;
-    const exportCtx = exportCanvas.ctx;
-    exportCtx.setTransform(1, 0, 0, 1, 0, 0);
-    exportCtx.imageSmoothingEnabled = false;
-    if (typeof exportCtx.imageSmoothingQuality === "string") {
-      exportCtx.imageSmoothingQuality = "low";
-    }
-    exportCtx.clearRect(0, 0, canvasW, canvasH);
-
-    const workImageData = this._proc.work.imageData;
-    if (workImageData && workImageData.data && drawScale > 1 && exportCtx.createImageData) {
-      const scaledData = exportCtx.createImageData(canvasW, canvasH);
-      scaleImageDataNearest(workImageData.data, w, h, drawScale, scaledData.data);
-      exportCtx.putImageData(scaledData, 0, 0);
-    } else if (workImageData && workImageData.data && drawScale === 1) {
-      exportCtx.putImageData(workImageData, 0, 0);
-    } else {
-      exportCtx.drawImage(this._canvas.work.node, 0, 0, canvasW, canvasH);
-    }
-
-    try {
-      const tmp = await new Promise((resolve, reject) => {
-        const options = {
-          canvas: exportCanvas.node,
-          fileType: "png",
-          success: resolve,
-          fail: reject
-        };
-        if (exportW !== canvasW || exportH !== canvasH) {
-          options.destWidth = exportW;
-          options.destHeight = exportH;
-        }
-        wx.canvasToTempFilePath(options);
-      });
-
-      const filePath = tmp.tempFilePath;
-      await new Promise((resolve, reject) => {
-        wx.saveImageToPhotosAlbum({
-          filePath,
-          success: resolve,
-          fail: reject
-        });
-      });
-
-      wx.showToast({ title: "已保存到相册", icon: "success" });
-    } catch (err) {
-      const msg = String(err && err.errMsg);
-      if (msg.includes("auth") || msg.includes("authorize") || msg.includes("deny")) {
-        wx.showModal({
-          title: "需要相册权限",
-          content: "请在设置中允许保存到相册。",
-          success: (res) => {
-            if (res.confirm) wx.openSetting();
-          }
-        });
-        return;
+      const exportCanvas = this._canvas.export;
+      exportCanvas.node.width = canvasW;
+      exportCanvas.node.height = canvasH;
+      const exportCtx = exportCanvas.ctx;
+      exportCtx.setTransform(1, 0, 0, 1, 0, 0);
+      exportCtx.imageSmoothingEnabled = false;
+      if (typeof exportCtx.imageSmoothingQuality === "string") {
+        exportCtx.imageSmoothingQuality = "low";
       }
-      wx.showToast({ title: "保存失败", icon: "none" });
-    }
+      exportCtx.clearRect(0, 0, canvasW, canvasH);
+
+      const workImageData = this._proc.work.imageData;
+      if (workImageData && workImageData.data && drawScale > 1 && exportCtx.createImageData) {
+        const scaledData = exportCtx.createImageData(canvasW, canvasH);
+        scaleImageDataNearest(workImageData.data, w, h, drawScale, scaledData.data);
+        exportCtx.putImageData(scaledData, 0, 0);
+      } else if (workImageData && workImageData.data && drawScale === 1) {
+        exportCtx.putImageData(workImageData, 0, 0);
+      } else {
+        exportCtx.drawImage(this._canvas.work.node, 0, 0, canvasW, canvasH);
+      }
+
+      try {
+        const tmp = await new Promise((resolve, reject) => {
+          const options = {
+            canvas: exportCanvas.node,
+            fileType: "png",
+            success: resolve,
+            fail: reject
+          };
+          if (exportW !== canvasW || exportH !== canvasH) {
+            options.destWidth = exportW;
+            options.destHeight = exportH;
+          }
+          wx.canvasToTempFilePath(options);
+        });
+
+        const filePath = tmp.tempFilePath;
+        await new Promise((resolve, reject) => {
+          wx.saveImageToPhotosAlbum({
+            filePath,
+            success: resolve,
+            fail: reject
+          });
+        });
+
+        if (!silent) {
+          wx.showToast({ title: "已保存到相册", icon: "success" });
+        }
+      } catch (err) {
+        const msg = String(err && err.errMsg);
+        if (msg.includes("auth") || msg.includes("authorize") || msg.includes("deny")) {
+          if (!silent) {
+            wx.showModal({
+              title: "需要相册权限",
+              content: "请在设置中允许保存到相册。",
+              success: (res) => {
+                if (res.confirm) wx.openSetting();
+              }
+            });
+          }
+          return;
+        }
+        if (!silent) {
+          wx.showToast({ title: "保存失败", icon: "none" });
+        }
+      }
     } finally {
       this._downloadInProgress = false;
     }
