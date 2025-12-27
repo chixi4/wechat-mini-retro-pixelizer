@@ -638,6 +638,7 @@ Page({
     this._fullscreenPreviewRect = null;
     this._layoutAnimTimer = null;
     this._layoutCommitTimer = null;
+    this._pendingPreviewBox = null;
     this._layoutCommitToken = 0;
     this._layoutOpening = false;
     this._layoutOpeningTargetPaddingTopPx = 0;
@@ -2813,6 +2814,7 @@ Page({
     const forceRestart = !!(options && options.forceRestart);
     this._inputMode = "camera";
     this._workerBaseKey = "";
+    this._pendingPreviewBox = null;
     this._cancelRefine();
 
     if (forceRestart) {
@@ -2885,9 +2887,11 @@ Page({
       return;
     }
 
+    const wasCamera = this._inputMode === "camera" || this.data.inputMode === "camera";
     this._inputMode = "image";
     this._workerBaseKey = "";
     this._stopCameraFrames();
+    this._pendingPreviewBox = null;
 
     const restore = this._inputMemory && this._inputMemory.image ? this._inputMemory.image : null;
     const hasRestore = !!(restore && restore.img);
@@ -2926,15 +2930,20 @@ Page({
 
       next.hasImage = true;
       next.canDownload = false;
+      const deferPreviewBox = this._isMobile && wasCamera;
 
       if (this._isMobile) {
         const info = restore.info || {};
         const oriented = getOrientedSize(restore.img, info);
         const aspect = oriented.width > 0 ? oriented.height / oriented.width : 1;
         const box = this._computeMobilePreviewBox(aspect);
-        next.previewHeightPx = box.previewHeightPx;
-        next.mainCanvasCssW = box.displayW;
-        next.mainCanvasCssH = box.displayH;
+        if (deferPreviewBox) {
+          this._pendingPreviewBox = box;
+        } else {
+          next.previewHeightPx = box.previewHeightPx;
+          next.mainCanvasCssW = box.displayW;
+          next.mainCanvasCssH = box.displayH;
+        }
         this._lockPreviewHeight = true;
       } else {
         this._lockPreviewHeight = false;
@@ -2942,7 +2951,28 @@ Page({
 
       this.setData(next, () => {
         this._updateLayout();
-        this._scheduleProcess({ immediate: true });
+        if (this._pendingPreviewBox) {
+          const applyPendingBox = () => {
+            const pendingBox = this._pendingPreviewBox;
+            this._pendingPreviewBox = null;
+            if (!pendingBox) return;
+            if (this._inputMode !== "image" || this.data.inputMode !== "image") return;
+            this.setData(
+              {
+                previewHeightPx: pendingBox.previewHeightPx,
+                mainCanvasCssW: pendingBox.displayW,
+                mainCanvasCssH: pendingBox.displayH
+              },
+              () => {
+                this._updateLayout();
+                this._refreshPreviewSurface();
+              }
+            );
+          };
+          this._scheduleProcessAndWait({ immediate: true }).then(applyPendingBox, applyPendingBox);
+        } else {
+          this._scheduleProcess({ immediate: true });
+        }
       });
       return;
     }

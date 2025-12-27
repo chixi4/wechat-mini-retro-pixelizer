@@ -755,7 +755,7 @@
     left: 0;
     right: 0;
     height: var(--safe-top, env(safe-area-inset-top));
-    background: #ffffff;
+    background: #f5f5f5;
     z-index: 150;
     pointer-events: none;
   }
@@ -827,7 +827,7 @@
 
   .theme-dark .main.has-image .preview-area {
     border-bottom-color: #666666;
-    background: #111111;
+    background: #1a1a1a;
   }
 
   .main.has-image .canvas-container {
