@@ -4241,6 +4241,7 @@ Page({
     const token = (this._cameraCaptureToken = (this._cameraCaptureToken || 0) + 1);
     const animMs = 1200;
     const maxHoldMs = 1200;
+    const recoveryDelayMs = 240;
 
     this._cameraCaptureActive = true;
     this.setData({ cameraCaptureActive: true });
@@ -4254,6 +4255,10 @@ Page({
     ]);
 
     if (this._cameraCaptureToken !== token) return;
+    if (recoveryDelayMs > 0) {
+      await sleep(recoveryDelayMs);
+      if (this._cameraCaptureToken !== token) return;
+    }
     this._cameraCaptureActive = false;
 
     const finalize = () => {
