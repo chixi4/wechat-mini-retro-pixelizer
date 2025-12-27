@@ -565,8 +565,8 @@ Page({
 
     this._slider = {
       min: 32,
-      max: 1024,
-      baseMax: 1024,
+      max: 640,
+      baseMax: 640,
       step: 4,
       dragging: false,
       rect: null,

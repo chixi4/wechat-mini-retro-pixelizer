@@ -369,15 +369,15 @@
 }
 
 .theme-dark .dot {
-  border: 0.5px solid #ffffff;
+  border: 1px solid #ffffff;
 }
 
 .palette-btn.active .dot {
-  border: 0.5px solid #ffffff;
+  border: 1px solid #ffffff;
 }
 
 .theme-dark .palette-btn.active .dot {
-  border: 0.5px solid #000000;
+  border: 1px solid #000000;
 }
 
 .action-btn {
