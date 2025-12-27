@@ -57,6 +57,7 @@ const CONTENT_CHECK_MAX_EDGE = 1024;
 const CONTENT_CHECK_MIN_BYTES = 150 * 1024;
 const CONTENT_CHECK_MAX_BYTES = 300 * 1024;
 const CONTENT_CHECK_QUALITY_STEPS = [0.82, 0.72, 0.62, 0.52];
+const LAYOUT_OPEN_ANIM_MS = 350;
 
 function compileShader(gl, type, source) {
   const shader = gl.createShader(type);
@@ -641,6 +642,8 @@ Page({
     this._layoutOpening = false;
     this._layoutOpeningTargetPaddingTopPx = 0;
     this._layoutOpeningTargetPreviewTranslateYPx = 0;
+    this._layoutOpeningPromise = null;
+    this._layoutOpeningResolve = null;
     this._layoutAnimReadyTimer = null;
     this._layoutAnimAllowed = false;
     this._lastHasImage = false;
@@ -1316,6 +1319,30 @@ Page({
     this.setData({ paletteScrollTop: Math.max(0, Math.round(targetTop)) });
   },
 
+  _beginLayoutOpening() {
+    if (this._layoutOpening && this._layoutOpeningPromise) return;
+    if (this._layoutOpeningResolve) {
+      const resolve = this._layoutOpeningResolve;
+      this._layoutOpeningResolve = null;
+      this._layoutOpeningPromise = null;
+      resolve();
+    }
+    this._layoutOpening = true;
+    this._layoutOpeningPromise = new Promise((resolve) => {
+      this._layoutOpeningResolve = resolve;
+    });
+  },
+
+  _finishLayoutOpening() {
+    this._layoutOpening = false;
+    if (this._layoutOpeningResolve) {
+      const resolve = this._layoutOpeningResolve;
+      this._layoutOpeningResolve = null;
+      this._layoutOpeningPromise = null;
+      resolve();
+    }
+  },
+
   _updateLayout() {
     if (!this._isMobile) {
       this.setData({
@@ -1399,7 +1426,7 @@ Page({
         this._layoutCommitTimer = null;
       }
       this._layoutCommitToken = (this._layoutCommitToken || 0) + 1;
-      this._layoutOpening = false;
+      this._finishLayoutOpening();
 
       // Opening the mobile preview uses a different sequencing:
       // keep the old padding during the roll-down so we don't expose a big blank area.
@@ -1408,16 +1435,16 @@ Page({
         const toPadding = controlsPaddingTopPx;
         const pushDelta = toPadding - fromPadding;
         const startPreviewShift = fromPadding - toPadding; // negative => preview starts "rolled up"
-        const animMs = 350; // match WXSS transition duration
+        const animMs = LAYOUT_OPEN_ANIM_MS;
 
         const start = () => {
-          this._layoutOpening = true;
+          this._beginLayoutOpening();
           this._layoutOpeningTargetPaddingTopPx = toPadding;
           this._layoutOpeningTargetPreviewTranslateYPx = previewTranslateYPx;
 
           scheduleRefresh();
           if (!this._layoutAnimAllowed) {
-            this._layoutOpening = false;
+            this._finishLayoutOpening();
             this.setData({
               controlsPaddingTopPx: toPadding,
               previewTranslateYPx,
@@ -1441,7 +1468,7 @@ Page({
               this._layoutAnimTimer = setTimeout(() => {
                 this._layoutAnimTimer = null;
                 if (!this._layoutAnimAllowed) {
-                  this._layoutOpening = false;
+                  this._finishLayoutOpening();
                   this.setData({ controlsShiftPx: 0, previewShiftPx: 0 });
                   return;
                 }
@@ -1464,7 +1491,7 @@ Page({
                       layoutAnimEnabled: false
                     },
                     () => {
-                      this._layoutOpening = false;
+                      this._finishLayoutOpening();
                       if (!this._layoutAnimAllowed) return;
                       setTimeout(() => this.setData({ layoutAnimEnabled: true }), 16);
                     }
@@ -2802,12 +2829,13 @@ Page({
       savedImage.contentCheckError = this._contentCheckError;
     }
 
+    const shouldDelayCamera = this._isMobile && !this.data.hasImage;
     await new Promise((resolve) => {
       this.setData(
         {
           hasImage: true,
           canDownload: false,
-          cameraVisible: true,
+          cameraVisible: !shouldDelayCamera,
           cameraState: "starting",
           cameraHint: "正在启动相机…"
         },
@@ -2816,7 +2844,18 @@ Page({
     });
     this._updateLayout();
 
+    if (shouldDelayCamera) {
+      if (this._layoutOpeningPromise) {
+        await this._layoutOpeningPromise;
+      } else {
+        await sleep(LAYOUT_OPEN_ANIM_MS + 40);
+      }
+      if (this._inputMode !== "camera" || this.data.inputMode !== "camera") return;
+      await new Promise((resolve) => this.setData({ cameraVisible: true }, resolve));
+    }
+
     await sleep(30);
+    if (this._inputMode !== "camera" || this.data.inputMode !== "camera") return;
     const started = await this._startCameraFrames();
     if (!started) return;
   },
@@ -2953,6 +2992,18 @@ Page({
     this._camera.listener = null;
     this._camera.ctx = null;
     this._camera.running = false;
+
+    if (this._workerRenderJob && typeof this._workerRenderJob.resolve === "function") {
+      if (this._workerRenderJob.timer) {
+        clearTimeout(this._workerRenderJob.timer);
+      }
+      try {
+        this._workerRenderJob.resolve(null);
+      } catch (e) {
+        // ignore
+      }
+      this._workerRenderJob = null;
+    }
   },
 
   _onCameraFrame(token, frame) {
@@ -3394,7 +3445,7 @@ Page({
       this._updateSliderUI();
     }
     this._layoutCommitToken = (this._layoutCommitToken || 0) + 1;
-    this._layoutOpening = false;
+    this._finishLayoutOpening();
     if (this._fullscreenCloseTimer) {
       clearTimeout(this._fullscreenCloseTimer);
       this._fullscreenCloseTimer = null;

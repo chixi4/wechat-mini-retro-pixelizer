@@ -485,9 +485,17 @@
   z-index: 1;
 }
 
+.canvas-container.fullscreen-transition {
+  border-color: transparent;
+}
+
 .theme-dark .canvas-container {
   background: #1a1a1a;
   border-color: #666666;
+}
+
+.theme-dark .canvas-container.fullscreen-transition {
+  border-color: transparent;
 }
 
 .main-canvas {

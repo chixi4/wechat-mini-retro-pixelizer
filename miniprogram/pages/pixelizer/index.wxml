@@ -190,7 +190,7 @@
     </scroll-view>
 
     <view class="preview-area {{layoutAnimEnabled ? 'layout-anim' : ''}}" style="--preview-h: {{previewHeightPx}}px; --preview-shift: {{previewTranslateYPx}}px; transform: translateY({{previewShiftPx}}px);">
-      <view class="canvas-container" id="canvasContainer">
+      <view class="canvas-container {{(fullscreenVisible || fullscreenClosing) ? 'fullscreen-transition' : ''}}" id="canvasContainer">
         <canvas
           type="2d"
           id="mainCanvas"
