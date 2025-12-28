@@ -5,7 +5,7 @@ const PALETTES = {
   },
   "skin-red-pollen8": {
     name: "Pollen8",
-    colors: ["#73464c", "#ab5675", "#ee6a7c", "#ffa7a5", "#ffe07e", "#ffe7d6", "#72dcbb", "#34acba"]
+    colors: ["#6b2629", "#a4373f", "#d85a5a", "#ffa7a5", "#ffe07e", "#ffe7d6", "#72dcbb", "#34acba"]
   },
   "skin-hero-kodak-yellow": { name: "Kodak Yellow Tone", colors: ["#f7cd45", "#060606"] },
   "blue-tone": { name: "Blue Tone", colors: ["#0101fb", "#060606"] },

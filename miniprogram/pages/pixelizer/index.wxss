@@ -1134,7 +1134,7 @@
 .page.skin-red .btn-toggle.active {
   background: #d12b2b;
   border-color: #8f1a1a;
-  color: #f6a3a3;
+  color: #ffffff;
 }
 
 .page.skin-red .action-btn {
@@ -1165,13 +1165,17 @@
 .page.skin-red .palette-btn {
   background: #fbf1dd;
   border-color: #b11d1d;
-  color: #1a0f0f;
+  color: #8f1a1a;
 }
 
 .page.skin-red .palette-btn.active {
   background: #d12b2b;
   border-color: #8f1a1a;
-  color: #f6a3a3;
+  color: #ffffff;
+}
+
+.page.skin-red .palette-btn.active .palette-count {
+  color: #ffffff;
 }
 
 .page.skin-red .close-btn {
@@ -1264,7 +1268,7 @@
 }
 
 .page.skin-hero .slider-thumb-dot {
-  background: #d12b2b;
+  background: #f7c33c;
   border-color: #0c0c0c;
 }
 
