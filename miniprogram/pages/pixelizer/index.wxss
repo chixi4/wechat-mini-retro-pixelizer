@@ -1085,6 +1085,23 @@
   border-bottom-color: #b11d1d;
 }
 
+.page.skin-red.theme-dark .main.has-image .preview-area {
+  background: #fbf1dd;
+  border-bottom-color: #b11d1d;
+}
+
+.page.skin-red .camera-fade {
+  background: #fbf1dd;
+}
+
+.page.skin-red .camera-capture-flash {
+  background: rgba(251, 241, 221, 0.68);
+}
+
+.page.skin-red .camera-capture-vignette {
+  background: radial-gradient(circle at center, rgba(251, 241, 221, 0) 48%, rgba(251, 241, 221, 0.22) 100%);
+}
+
 .page.skin-red .panel {
   background: #fbf1dd;
   border-color: #b11d1d;
@@ -1168,6 +1185,10 @@
   color: #8f1a1a;
 }
 
+.page.skin-red .dot {
+  border-color: rgba(177, 29, 29, 0.35);
+}
+
 .page.skin-red .palette-btn.active {
   background: #d12b2b;
   border-color: #8f1a1a;
@@ -1176,6 +1197,10 @@
 
 .page.skin-red .palette-btn.active .palette-count {
   color: #ffffff;
+}
+
+.page.skin-red .palette-btn.active .dot {
+  border-color: #ffffff;
 }
 
 .page.skin-red .close-btn {
@@ -1292,6 +1317,10 @@
   background: #0c0c0c;
   border-color: #0c0c0c;
   color: #f7c33c;
+}
+
+.page.skin-hero .dot {
+  border-color: rgba(12, 12, 12, 0.18);
 }
 
 .page.skin-hero .palette-btn.active .dot {
