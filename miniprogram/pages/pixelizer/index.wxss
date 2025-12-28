@@ -1308,6 +1308,7 @@
   border-width: 2px;
   border-color: #0c0c0c;
   font-weight: 900;
+  padding: 7px 8px;
 }
 
 .page.skin-hero .grid-buttons .btn-toggle:nth-child(1),
