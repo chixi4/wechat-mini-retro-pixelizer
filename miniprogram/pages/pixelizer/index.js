@@ -58,6 +58,84 @@ const CONTENT_CHECK_MIN_BYTES = 150 * 1024;
 const CONTENT_CHECK_MAX_BYTES = 300 * 1024;
 const CONTENT_CHECK_QUALITY_STEPS = [0.82, 0.72, 0.62, 0.52];
 const LAYOUT_OPEN_ANIM_MS = 350;
+const SKIN_STORAGE_KEY = "pixelizer_skin_v1";
+const SKIN_PALETTE_PREFIX = "skin-";
+const SKINS = [
+  { key: "default", name: "默认（白）", desc: "经典简洁", exclusivePaletteKey: "dreamscape8" },
+  { key: "red", name: "复古红", desc: "红白复古风", exclusivePaletteKey: "skin-red-pollen8" },
+  { key: "hero", name: "街机黄", desc: "黑黄街机风", exclusivePaletteKey: "skin-hero-kodak-yellow" }
+];
+
+function coerceSkinKey(raw) {
+  const key = typeof raw === "string" ? raw : "";
+  return SKINS.some((skin) => skin.key === key) ? key : SKINS[0].key;
+}
+
+function getSkinByKey(key) {
+  const idx = SKINS.findIndex((skin) => skin.key === key);
+  return idx >= 0 ? SKINS[idx] : SKINS[0];
+}
+
+function getSkinIndexByKey(key) {
+  const idx = SKINS.findIndex((skin) => skin.key === key);
+  return idx >= 0 ? idx : 0;
+}
+
+function coercePaletteKey(raw) {
+  const key = typeof raw === "string" ? raw : "";
+  return PALETTES[key] ? key : "dreamscape8";
+}
+
+function buildSkinListData() {
+  return SKINS.map((skin) => ({
+    key: skin.key,
+    headerClass: `header-skin-slide--${skin.key}`
+  }));
+}
+
+function isSkinExclusivePaletteKey(key) {
+  return typeof key === "string" && key.startsWith(SKIN_PALETTE_PREFIX);
+}
+
+function getExclusivePaletteKeyForSkin(skinKey) {
+  const skin = getSkinByKey(skinKey);
+  return coercePaletteKey(skin && skin.exclusivePaletteKey ? skin.exclusivePaletteKey : "dreamscape8");
+}
+
+function getDefaultDitherAlgoForSkin(skinKey) {
+  const key = coerceSkinKey(skinKey);
+  if (key === "red") return "bayer-4x4";
+  if (key === "hero") return "none";
+  return "atkinson";
+}
+
+function buildAllPaletteListData() {
+  return getSortedPalettes()
+    .filter((p) => !isSkinExclusivePaletteKey(p.key))
+    .map((p) => ({
+      key: p.key,
+      name: p.name,
+      count: p.colors.length,
+      colors: p.colors
+    }));
+}
+
+function buildPaletteListForSkin(skinKey, allPaletteList) {
+  const all = Array.isArray(allPaletteList) ? allPaletteList : [];
+  const exclusiveKey = getExclusivePaletteKeyForSkin(skinKey);
+  const exclusiveEntry = PALETTES[exclusiveKey];
+  const pinned = exclusiveEntry
+    ? {
+        key: exclusiveKey,
+        name: exclusiveEntry.name,
+        count: exclusiveEntry.colors.length,
+        colors: exclusiveEntry.colors
+      }
+    : null;
+
+  const rest = all.filter((p) => p && p.key !== exclusiveKey);
+  return pinned ? [pinned, ...rest] : rest;
+}
 
 function compileShader(gl, type, source) {
   const shader = gl.createShader(type);
@@ -430,6 +508,10 @@ Page({
   data: {
     themeClass: "theme-light",
     closeIconSrc: "/assets/icons/close-light.svg",
+    skinKey: "default",
+    skinClass: "skin-default",
+    skinIndex: 0,
+    skinList: [],
     headerVisible: true,
     hasImage: false,
     inputMode: "image",
@@ -470,7 +552,6 @@ Page({
 
     paletteKey: "dreamscape8",
     paletteList: [],
-    paletteScrollTop: 0,
 
     canDownload: false,
     fullscreenVisible: false,
@@ -546,19 +627,28 @@ Page({
     const theme = this._resolveSystemTheme(sys);
     this._theme = theme;
 
-    const paletteList = getSortedPalettes().map((p) => ({
-      key: p.key,
-      name: p.name,
-      count: p.colors.length,
-      colors: p.colors
-    }));
+    const storedSkinKey = (() => {
+      try {
+        return wx.getStorageSync(SKIN_STORAGE_KEY);
+      } catch (e) {
+        return "";
+      }
+    })();
+    const initialSkinKey = coerceSkinKey(storedSkinKey);
+    const initialSkinIndex = getSkinIndexByKey(initialSkinKey);
+    const skinList = buildSkinListData();
+    const allPaletteList = buildAllPaletteListData();
+    this._allPaletteList = allPaletteList;
+    const initialPaletteKey = getExclusivePaletteKeyForSkin(initialSkinKey);
+    const paletteList = buildPaletteListForSkin(initialSkinKey, allPaletteList);
+    const initialDitherAlgo = getDefaultDitherAlgoForSkin(initialSkinKey);
 
     this._state = {
       imageToken: 0,
       originalImage: null,
       imageInfo: null,
-      paletteKey: "dreamscape8",
-      palette: hexToRgb(PALETTES.dreamscape8.colors),
+      paletteKey: initialPaletteKey,
+      palette: hexToRgb(PALETTES[initialPaletteKey].colors),
       isSerpentine: true,
       toneX: 0,
       toneY: 0
@@ -685,7 +775,7 @@ Page({
     this._contentCheckPromise = null;
     this._contentCheckSource = "";
     this._contentCheckError = "";
-    this._paletteScrollInitialized = false;
+    this._pendingSkinSwiperIndex = -1;
 
     this._inputMode = "image";
     this._inputMemory = {
@@ -711,12 +801,18 @@ Page({
     const safeTopPx = this._safeTop;
     const safeBottomPx = this._safeBottom;
     const previewHeightPx = this._isMobile ? Math.floor((sys.windowHeight || 0) * 0.4) : 0;
-    const controlsPaddingTopPx = this._isMobile ? 15 + safeTopPx : 0;
+    const controlsPaddingTopPx = this._isMobile ? safeTopPx + 56 : 0;
     const navPad = this._calcNavPadding(sys);
     this.setData({
       themeClass: theme === "dark" ? "theme-dark" : "theme-light",
       closeIconSrc: theme === "dark" ? "/assets/icons/close-dark.svg" : "/assets/icons/close-light.svg",
+      skinKey: initialSkinKey,
+      skinClass: `skin-${initialSkinKey}`,
+      skinIndex: initialSkinIndex,
+      skinList,
+      paletteKey: initialPaletteKey,
       paletteList,
+      ditherAlgo: initialDitherAlgo,
       safeTopPx,
       safeBottomPx,
       isIPad: this._isIPad,
@@ -745,7 +841,6 @@ Page({
     this._syncToneCursorToRect();
     this._updateLayout();
     await this._ensureCanvases();
-    await this._centerPaletteInView();
 
     if (this._layoutAnimReadyTimer) clearTimeout(this._layoutAnimReadyTimer);
     this._layoutAnimReadyTimer = setTimeout(() => {
@@ -1392,29 +1487,6 @@ Page({
     this._canvasContainerRect = canvasContainerRect;
   },
 
-  async _centerPaletteInView(force) {
-    if (this._paletteScrollInitialized && !force) return;
-    const key = this.data.paletteKey;
-    if (!key) return;
-
-    await sleep(30);
-
-    const listRect = await selectRect(this, "#paletteList");
-    const itemRect = await selectRect(this, `#palette-${key}`);
-    if (!listRect || !itemRect) return;
-
-    const listHeight = listRect.height || 0;
-    const itemHeight = itemRect.height || 0;
-    if (!listHeight || !itemHeight) return;
-
-    const offsetInView = itemRect.top - listRect.top;
-    const targetTop = offsetInView - (listHeight - itemHeight) / 2;
-    if (!isFinite(targetTop)) return;
-
-    this._paletteScrollInitialized = true;
-    this.setData({ paletteScrollTop: Math.max(0, Math.round(targetTop)) });
-  },
-
   _beginLayoutOpening() {
     if (this._layoutOpening && this._layoutOpeningPromise) return;
     if (this._layoutOpeningResolve) {
@@ -1459,9 +1531,8 @@ Page({
     const isOpening = isImageTransition && hasImage;
 
     const headerHeightPx = this._headerRect ? this._headerRect.height || 0 : 0;
-    const safeTopPx = this._safeTop || 0;
 
-    let controlsPaddingTopPx = safeTopPx;
+    let controlsPaddingTopPx = 0;
     let previewTranslateYPx = 0;
     let previewHeightPx = 0;
 
@@ -1473,9 +1544,9 @@ Page({
 
       const headerOffset = this.data.headerVisible ? headerHeightPx : 0;
       previewTranslateYPx = headerOffset;
-      controlsPaddingTopPx = safeTopPx + previewHeightPx + headerOffset;
+      controlsPaddingTopPx = previewHeightPx + headerOffset;
     } else {
-      if (this.data.headerVisible) controlsPaddingTopPx = safeTopPx + headerHeightPx;
+      if (this.data.headerVisible) controlsPaddingTopPx = headerHeightPx;
     }
 
     // If we are in the middle of the "open preview" transition, ignore redundant layout recalcs
@@ -3590,9 +3661,8 @@ Page({
       const layoutOverrides = {};
       if (this._isMobile) {
         const headerHeightPx = this._headerRect ? this._headerRect.height || 0 : 0;
-        const safeTopPx = this._safeTop || 0;
         const headerOffset = headerVisible ? headerHeightPx : 0;
-        const toPaddingTopPx = safeTopPx + nextPreviewHeightPx + headerOffset;
+        const toPaddingTopPx = nextPreviewHeightPx + headerOffset;
         const previewTranslateYPx = headerOffset;
         if (!replacingImage) {
           const fromPaddingTopPx =
@@ -4311,14 +4381,95 @@ Page({
 
   onSelectPalette(e) {
     const key = e && e.currentTarget && e.currentTarget.dataset ? e.currentTarget.dataset.key : null;
-    if (!key || key === this.data.paletteKey) return;
-    const paletteEntry = PALETTES[key];
-    if (!paletteEntry) return;
+    this._applyPaletteKey(key, { immediate: true, center: true });
+  },
 
-    this._state.paletteKey = key;
+  onHeaderSkinSwiperChange(e) {
+    const current = e && e.detail && typeof e.detail.current === "number" ? e.detail.current : 0;
+    const total = SKINS.length;
+    if (!total) return;
+    const nextIndex = Math.min(total - 1, Math.max(0, Math.round(current)));
+    if (nextIndex === this.data.skinIndex) return;
+    this._pendingSkinSwiperIndex = nextIndex;
+    this.setData({ skinIndex: nextIndex });
+  },
+
+  onHeaderSkinSwiperAnimationFinish(e) {
+    if (typeof this._pendingSkinSwiperIndex !== "number" || this._pendingSkinSwiperIndex < 0) return;
+    const current = e && e.detail && typeof e.detail.current === "number" ? e.detail.current : this._pendingSkinSwiperIndex;
+    const total = SKINS.length;
+    if (!total) return;
+    const finishedIndex = Math.min(total - 1, Math.max(0, Math.round(current)));
+    const nextIndex = finishedIndex === this._pendingSkinSwiperIndex ? this._pendingSkinSwiperIndex : finishedIndex;
+    this._pendingSkinSwiperIndex = -1;
+    this._applySkinByIndex(nextIndex);
+  },
+
+  _applySkinByIndex(index) {
+    const raw = typeof index === "number" && isFinite(index) ? index : 0;
+    const safeIndex = Math.min(SKINS.length - 1, Math.max(0, Math.round(raw)));
+    const skin = SKINS[safeIndex] || SKINS[0];
+    if (!skin) return;
+    this._applySkin(skin.key);
+  },
+
+  _applySkin(key) {
+    const safeKey = coerceSkinKey(key);
+    const skinIndex = getSkinIndexByKey(safeKey);
+    const allPaletteList = Array.isArray(this._allPaletteList) ? this._allPaletteList : buildAllPaletteListData();
+    this._allPaletteList = allPaletteList;
+    const paletteList = buildPaletteListForSkin(safeKey, allPaletteList);
+    const paletteKey = getExclusivePaletteKeyForSkin(safeKey);
+    const paletteEntry = PALETTES[paletteKey];
+    if (!paletteEntry) return;
+    const ditherAlgo = getDefaultDitherAlgoForSkin(safeKey);
+
+    try {
+      wx.setStorageSync(SKIN_STORAGE_KEY, safeKey);
+    } catch (e) {
+      // ignore
+    }
+
+    this._state.paletteKey = paletteKey;
     this._state.palette = hexToRgb(paletteEntry.colors);
     ensurePaletteFast(this._state.palette);
-    this.setData({ paletteKey: key }, () => this._scheduleProcess({ immediate: true }));
+
+    this.setData(
+      {
+        skinKey: safeKey,
+        skinClass: `skin-${safeKey}`,
+        skinIndex,
+        paletteList,
+        paletteKey,
+        ditherAlgo
+      },
+      () => {
+        this._scheduleProcess({ immediate: true });
+      }
+    );
+  },
+
+  _applyPaletteKey(key, options) {
+    const opts = options || {};
+    const nextKey = typeof key === "string" ? key : "";
+    const immediate = !!opts.immediate;
+
+    if (!nextKey || !PALETTES[nextKey]) return;
+    if (nextKey === this.data.paletteKey && nextKey === this._state.paletteKey) {
+      if (immediate) this._scheduleProcess({ immediate: true });
+      return;
+    }
+
+    const paletteEntry = PALETTES[nextKey];
+    if (!paletteEntry) return;
+
+    this._state.paletteKey = nextKey;
+    this._state.palette = hexToRgb(paletteEntry.colors);
+    ensurePaletteFast(this._state.palette);
+
+    this.setData({ paletteKey: nextKey }, () => {
+      this._scheduleProcess({ immediate });
+    });
   },
 
   async _triggerCameraCapture() {

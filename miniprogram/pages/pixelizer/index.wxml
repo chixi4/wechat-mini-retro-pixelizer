@@ -1,12 +1,25 @@
 <wxs module="grid" src="./grid.wxs"></wxs>
-<view class="page {{themeClass}} {{isIPad ? 'is-ipad' : ''}}" style="--safe-top: {{safeTopPx}}px; --safe-bottom: {{safeBottomPx}}px;">
-  <view class="safe-top-mask"></view>
+<view class="page {{themeClass}} {{skinClass}} {{isIPad ? 'is-ipad' : ''}}" style="--safe-top: {{safeTopPx}}px; --safe-bottom: {{safeBottomPx}}px;">
   <view
     class="header {{headerVisible ? 'visible' : ''}}"
     id="headerRef"
     style="--nav-pad-left: {{navPadLeftPx}}px; --nav-pad-right: {{navPadRightPx}}px;"
   >
-    <view class="title">Retro Pixelizer</view>
+    <swiper
+      class="header-skin-swiper"
+      current="{{skinIndex}}"
+      duration="240"
+      circular="true"
+      skip-hidden-item-layout
+      bindchange="onHeaderSkinSwiperChange"
+      bindanimationfinish="onHeaderSkinSwiperAnimationFinish"
+    >
+      <swiper-item wx:for="{{skinList}}" wx:key="key">
+        <view class="header-skin-slide {{item.headerClass}}">
+          <view class="title">Retro Pixelizer</view>
+        </view>
+      </swiper-item>
+    </swiper>
   </view>
 
   <view class="main {{hasImage ? 'has-image' : ''}}" id="mainContainer">
@@ -154,8 +167,6 @@
             class="palette-list"
             id="paletteList"
             scroll-y
-            scroll-top="{{paletteScrollTop}}"
-            scroll-with-animation="true"
           >
             <view
               wx:for="{{paletteList}}"

@@ -3,7 +3,11 @@ const PALETTES = {
     name: "Dreamscape8",
     colors: ["#c9cca1", "#caa05a", "#ae6a47", "#8b4049", "#543344", "#515262", "#63787d", "#8ea091"]
   },
-  "kodak-yellow-tone": { name: "Kodak Yellow Tone", colors: ["#f7cd45", "#060606"] },
+  "skin-red-pollen8": {
+    name: "Pollen8",
+    colors: ["#73464c", "#ab5675", "#ee6a7c", "#ffa7a5", "#ffe07e", "#ffe7d6", "#72dcbb", "#34acba"]
+  },
+  "skin-hero-kodak-yellow": { name: "Kodak Yellow Tone", colors: ["#f7cd45", "#060606"] },
   "blue-tone": { name: "Blue Tone", colors: ["#0101fb", "#060606"] },
   "red-tone": { name: "Red Tone", colors: ["#fd0500", "#060606"] },
   "gray-tone": { name: "Gray Tone", colors: ["#c6cbb3", "#060606"] },
