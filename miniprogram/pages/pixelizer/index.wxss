@@ -1075,8 +1075,8 @@
       rgba(255, 255, 255, 0) 16px
     ),
     linear-gradient(180deg, #f6a3a3 0%, #f08a8a 100%);
-  color: #1a0f0f;
-  --muted-text: rgba(26, 15, 15, 0.72);
+  color: #b11d1d;
+  --muted-text: rgba(143, 26, 26, 0.72);
   --grid-ink: #b11d1d;
 }
 
@@ -1108,8 +1108,8 @@
 }
 
 .page.skin-red .reset-btn {
-  border-color: #d12b2b;
-  color: #d12b2b;
+  border-color: #b11d1d;
+  color: #b11d1d;
 }
 
 .page.skin-red .palette-count {
@@ -1128,19 +1128,19 @@
 .page.skin-red .btn-toggle {
   background: #fbf1dd;
   border-color: #b11d1d;
-  color: #1a0f0f;
+  color: #8f1a1a;
 }
 
 .page.skin-red .btn-toggle.active {
   background: #d12b2b;
   border-color: #8f1a1a;
-  color: #ffffff;
+  color: #f6a3a3;
 }
 
 .page.skin-red .action-btn {
   background: #d12b2b;
   border-color: #8f1a1a;
-  color: #ffffff;
+  color: #f6a3a3;
 }
 
 .page.skin-red .canvas-container {
@@ -1171,13 +1171,13 @@
 .page.skin-red .palette-btn.active {
   background: #d12b2b;
   border-color: #8f1a1a;
-  color: #ffffff;
+  color: #f6a3a3;
 }
 
 .page.skin-red .close-btn {
   background: #fbf1dd;
   border-color: #b11d1d;
-  color: #1a0f0f;
+  color: #b11d1d;
 }
 
 .page.skin-hero {
@@ -1199,6 +1199,23 @@
   border-bottom-color: #0c0c0c;
 }
 
+.page.skin-hero.theme-dark .main.has-image .preview-area {
+  background: #fbf1dd;
+  border-bottom-color: #0c0c0c;
+}
+
+.page.skin-hero .camera-fade {
+  background: #fbf1dd;
+}
+
+.page.skin-hero .camera-capture-flash {
+  background: rgba(251, 241, 221, 0.68);
+}
+
+.page.skin-hero .camera-capture-vignette {
+  background: radial-gradient(circle at center, rgba(251, 241, 221, 0) 48%, rgba(251, 241, 221, 0.22) 100%);
+}
+
 .page.skin-hero .panel {
   background: #fbf1dd;
   border-color: #0c0c0c;
@@ -1213,13 +1230,18 @@
   color: #2b4fa3;
 }
 
+.page.skin-hero .label-row .label {
+  color: #2b4fa3;
+}
+
 .page.skin-hero .width-display {
   color: #2b4fa3;
 }
 
 .page.skin-hero .reset-btn {
+  background: #d12b2b;
   border-color: #d12b2b;
-  color: #d12b2b;
+  color: #fbf1dd;
 }
 
 .page.skin-hero .palette-count {
@@ -1242,12 +1264,12 @@
 }
 
 .page.skin-hero .slider-thumb-dot {
-  background: #f7c33c;
+  background: #d12b2b;
   border-color: #0c0c0c;
 }
 
 .page.skin-hero .slider-track {
-  background: #f7c33c;
+  background: #0c0c0c;
 }
 
 .page.skin-hero .action-btn {
@@ -1266,6 +1288,10 @@
   background: #0c0c0c;
   border-color: #0c0c0c;
   color: #f7c33c;
+}
+
+.page.skin-hero .palette-btn.active .dot {
+  border-color: #fbf1dd;
 }
 
 .page.skin-hero .close-btn {
