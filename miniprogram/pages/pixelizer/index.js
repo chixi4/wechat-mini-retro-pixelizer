@@ -931,11 +931,13 @@ Page({
       const worker = wx.createWorker("workers/pixelizer/index.js");
       worker.onMessage((res) => this._onWorkerMessage(res));
       this._worker = worker;
+      this._workerNoTransfer = false;
       this._workerBaseKey = "";
       this._workerRenderJob = null;
       return true;
     } catch (e) {
       this._worker = null;
+      this._workerNoTransfer = false;
       this._workerBaseKey = "";
       this._workerRenderJob = null;
       return false;
@@ -950,6 +952,7 @@ Page({
       // ignore
     }
     this._worker = null;
+    this._workerNoTransfer = false;
     this._workerBaseKey = "";
 
     if (this._workerRenderJob && typeof this._workerRenderJob.resolve === "function") {
@@ -997,9 +1000,17 @@ Page({
   _postWorkerMessage(payload) {
     if (!this._worker) return false;
     try {
-      const transfer = payload && payload.buffer instanceof ArrayBuffer ? [payload.buffer] : null;
-      if (transfer && transfer.length) {
-        this._worker.postMessage(payload, transfer);
+      const canTransfer = payload && payload.buffer instanceof ArrayBuffer;
+      const noTransfer = !!this._workerNoTransfer;
+      if (canTransfer && !noTransfer) {
+        try {
+          this._worker.postMessage(payload, [payload.buffer]);
+        } catch (e) {
+          // Some Android builds fail on ArrayBuffer transferList. Fallback to structured clone.
+          this._workerNoTransfer = true;
+          console.warn("[worker] postMessage(transfer) failed, fallback to clone", e);
+          this._worker.postMessage(payload);
+        }
       } else {
         this._worker.postMessage(payload);
       }
@@ -3271,6 +3282,10 @@ Page({
     this._camera.lastFrameAt = 0;
     this._camera.forceRender = true;
     this._camera.running = true;
+    if (this._camera.watchdogTimer) {
+      clearTimeout(this._camera.watchdogTimer);
+      this._camera.watchdogTimer = null;
+    }
 
     try {
       const listener = ctx.onCameraFrame((frame) => this._onCameraFrame(token, frame));
@@ -3286,6 +3301,23 @@ Page({
       return false;
     }
 
+    // Watchdog: if frames are coming but never rendered, the UI will stay "starting" forever.
+    // This is often caused by worker messaging failures on some Android builds.
+    const watchdogMs = 2600;
+    this._camera.watchdogTimer = setTimeout(() => {
+      if (!this._camera || token !== this._camera.token) return;
+      if (this.data.inputMode !== "camera") return;
+      if (this.data.cameraState === "running") return;
+      const hadFrame = typeof this._camera.lastFrameAt === "number" && this._camera.lastFrameAt > 0;
+      this._stopCameraFrames();
+      this.setData({
+        cameraState: "error",
+        cameraHint: hadFrame
+          ? "实时预览渲染失败\n可尝试重试或改用拍照上传"
+          : "相机无画面输出\n可尝试重试或检查权限"
+      });
+    }, watchdogMs);
+
     return true;
   },
 
@@ -3294,6 +3326,10 @@ Page({
     this._camera.token = (this._camera.token || 0) + 1;
     this._camera.renderToken = (this._camera.renderToken || 0) + 1;
     this._camera.forceRender = false;
+    if (this._camera.watchdogTimer) {
+      clearTimeout(this._camera.watchdogTimer);
+      this._camera.watchdogTimer = null;
+    }
 
     const listener = this._camera.listener;
     if (listener && typeof listener.stop === "function") {
@@ -3470,6 +3506,10 @@ Page({
       if (displayH !== this.data.mainCanvasCssH) nextData.mainCanvasCssH = displayH;
 
       const commit = () => {
+        if (this._camera && this._camera.watchdogTimer) {
+          clearTimeout(this._camera.watchdogTimer);
+          this._camera.watchdogTimer = null;
+        }
         const next = {};
         if (this.data.cameraState !== "running") {
           next.cameraState = "running";

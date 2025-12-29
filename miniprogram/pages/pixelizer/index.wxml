@@ -250,6 +250,7 @@
         class="camera-offscreen"
         device-position="back"
         resolution="low"
+        frame-size="small"
         flash="off"
         binderror="onCameraError"
       ></camera>
