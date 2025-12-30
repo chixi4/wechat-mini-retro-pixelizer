@@ -2240,8 +2240,38 @@ Page({
     });
   },
 
-  _notifyContentCheckError() {
+  _notifyContentCheckError(reason) {
+    const detail = reason ? String(reason) : "";
+    if (detail) {
+      wx.showModal({ title: "内容安全检测失败", content: detail, showCancel: false });
+      return;
+    }
     wx.showToast({ title: "内容安全检测失败", icon: "none" });
+  },
+
+  async _callContentSecurityImageCheck(filePath, contentType) {
+    if (!wx.cloud || typeof wx.cloud.uploadFile !== "function") {
+      throw new Error("cloud unavailable");
+    }
+    if (!filePath) throw new Error("missing filePath");
+
+    const safeContentType = contentType || "image/jpeg";
+    const extRaw = safeContentType.split("/")[1] || "jpg";
+    const ext = extRaw === "jpeg" ? "jpg" : extRaw;
+    const rand = Math.random().toString(16).slice(2, 10);
+    const cloudPath = `content-check/${Date.now()}_${rand}.${ext}`;
+
+    const upload = await wx.cloud.uploadFile({ cloudPath, filePath });
+    const fileID = upload && upload.fileID ? upload.fileID : "";
+    if (!fileID) throw new Error("upload failed");
+
+    const res = await wx.cloud.callFunction({
+      name: "contentSecurity",
+      data: { action: "image", fileID, contentType: safeContentType }
+    });
+    const result = res && res.result ? res.result : {};
+    const status = result.status || (result.ok ? "pass" : "error");
+    return { status, result };
   },
 
   _startContentCheck(src, info, img, options) {
@@ -2267,24 +2297,10 @@ Page({
         if (!filePath) throw new Error("missing filePath");
         const contentType =
           prepared && prepared.contentType ? prepared.contentType : this._getImageContentType(info, src);
-        const extRaw = contentType.split("/")[1] || "jpg";
-        const ext = extRaw === "jpeg" ? "jpg" : extRaw;
-        const rand = Math.random().toString(16).slice(2, 10);
-        const cloudPath = `content-check/${Date.now()}_${rand}.${ext}`;
 
-        const upload = await wx.cloud.uploadFile({ cloudPath, filePath });
-        if (token !== this._contentCheckToken) return "stale";
-        const fileID = upload && upload.fileID ? upload.fileID : "";
-        if (!fileID) throw new Error("upload failed");
-
-        const res = await wx.cloud.callFunction({
-          name: "contentSecurity",
-          data: { action: "image", fileID, contentType }
-        });
-        const result = res && res.result ? res.result : {};
-        const status = result.status || (result.ok ? "pass" : "error");
-
+        const { status, result } = await this._callContentSecurityImageCheck(filePath, contentType);
         if (token !== this._contentCheckToken) return status;
+
         this._contentCheckStatus = status;
         this._contentCheckError = result.errMsg || "";
         if (status === "reject" && !silent) this._notifyContentReject();
@@ -2308,7 +2324,7 @@ Page({
     if (status === "pass") return true;
 
     if (status === "pending" && this._contentCheckPromise) {
-      if (!silent) wx.showToast({ title: "正在内容安全检测", icon: "none" });
+      if (!silent) wx.showToast({ title: "加载中", icon: "none" });
       const finalStatus = await this._contentCheckPromise;
       if (finalStatus === "pass") return true;
     }
@@ -2323,8 +2339,44 @@ Page({
       return false;
     }
 
-    if (!silent) this._notifyContentCheckError();
+    if (!silent) this._notifyContentCheckError(this._contentCheckError);
     return false;
+  },
+
+  async _ensureCameraContentCheckAllowed(options) {
+    const silent = !!(options && options.silent);
+    if (!this._canvas || !this._canvas.work || !this._canvas.work.node) return false;
+    if (!wx.cloud || typeof wx.cloud.uploadFile !== "function") {
+      if (!silent) {
+        wx.showToast({ title: "内容安全未启用", icon: "none" });
+      }
+      return false;
+    }
+
+    try {
+      const prepared = await this._createContentCheckFile("camera", null, this._canvas.work.node);
+      const filePath = prepared && prepared.filePath ? prepared.filePath : "";
+      const contentType = prepared && prepared.contentType ? prepared.contentType : "image/jpeg";
+      if (!filePath) throw new Error("missing filePath");
+
+      const { status, result } = await this._callContentSecurityImageCheck(filePath, contentType);
+      const errMsg = result && result.errMsg ? result.errMsg : "";
+      if (status === "pass") return true;
+      if (!silent) {
+        if (status === "reject") {
+          this._notifyContentReject();
+          return false;
+        }
+        this._notifyContentCheckError(errMsg);
+      }
+      return false;
+    } catch (err) {
+      if (!silent) {
+        const errMsg = err && err.message ? err.message : err;
+        this._notifyContentCheckError(errMsg);
+      }
+      return false;
+    }
   },
 
   _getInteractiveTargetWidth(baseWidth, isInteracting) {
@@ -3538,6 +3590,26 @@ Page({
   async onChooseImage() {
     console.log("onChooseImage 被调用");
 
+    const previousImageMemory = this._inputMemory && this._inputMemory.image ? this._inputMemory.image : null;
+    const previousCheckSnapshot = {
+      status: this._contentCheckStatus,
+      source: this._contentCheckSource,
+      error: this._contentCheckError
+    };
+    let didApplyNewImage = false;
+    const restorePreviousCheck = () => {
+      if (didApplyNewImage) return;
+      if (!this.data.hasImage) return;
+      const status =
+        (previousImageMemory && previousImageMemory.contentCheckStatus) || previousCheckSnapshot.status || "idle";
+      const error = (previousImageMemory && previousImageMemory.contentCheckError) || previousCheckSnapshot.error || "";
+      const source = (previousImageMemory && previousImageMemory.src) || previousCheckSnapshot.source || "";
+      this._contentCheckStatus = status;
+      this._contentCheckError = error;
+      this._contentCheckSource = source;
+      this._contentCheckPromise = null;
+    };
+
     const resumeCameraAfter = this.data.inputMode === "camera";
     if (resumeCameraAfter) {
       this._stopCameraFrames();
@@ -3588,6 +3660,7 @@ Page({
 
       const ready = await this._ensureCanvases();
       if (!ready) {
+        restorePreviousCheck();
         wx.showToast({ title: "页面未就绪", icon: "none" });
         return;
       }
@@ -3625,11 +3698,46 @@ Page({
       });
       if (loadToken !== this._imageLoadToken) return;
 
+      const checkPromise = this._startContentCheck(src, info, img, { silent: true });
+      if (!checkPromise) {
+        restorePreviousCheck();
+        wx.showToast({ title: "内容安全未启用", icon: "none" });
+        if (resumeCameraAfter) {
+          this.setData({ cameraVisible: true, cameraState: "starting", cameraHint: "正在启动相机……" }, () => {
+            this._startCameraFrames();
+          });
+        }
+        return;
+      }
+
+      let checkStatus = "error";
+      try {
+        wx.showLoading({ title: "加载中" });
+        checkStatus = await checkPromise;
+      } finally {
+        wx.hideLoading();
+      }
+      if (loadToken !== this._imageLoadToken) return;
+
+      if (checkStatus !== "pass") {
+        restorePreviousCheck();
+        if (checkStatus === "reject") {
+          this._notifyContentReject();
+        } else {
+          this._notifyContentCheckError(this._contentCheckError);
+        }
+        if (resumeCameraAfter) {
+          this.setData({ cameraVisible: true, cameraState: "starting", cameraHint: "正在启动相机……" }, () => {
+            this._startCameraFrames();
+          });
+        }
+        return;
+      }
+
       this._state.imageToken += 1;
       this._state.originalImage = img;
       this._state.imageInfo = info;
       this._forceMainThreadToken = this._state.imageToken;
-      this._startContentCheck(src, info, img);
 
       this._inputMode = "image";
       this._inputMemory.image = {
@@ -3639,6 +3747,7 @@ Page({
         contentCheckStatus: this._contentCheckStatus,
         contentCheckError: this._contentCheckError
       };
+      didApplyNewImage = true;
 
       this._proc.scaled = { token: 0, w: 0, h: 0, data: null };
       this._proc.toneStats = { token: 0, w: 0, h: 0, stats: null };
@@ -3764,6 +3873,7 @@ Page({
       );
     } catch (e) {
       console.error("上传图片过程出错", e);
+      restorePreviousCheck();
       if (String(e && e.errMsg).includes("cancel")) {
         console.log("用户取消选择图片");
         if (resumeCameraAfter) {
@@ -4585,8 +4695,10 @@ Page({
           }
           return;
         }
-      }
-      if (!isCamera) {
+
+        const allowDownload = await this._ensureCameraContentCheckAllowed({ silent });
+        if (!allowDownload) return;
+      } else {
         const allowDownload = await this._ensureContentCheckAllowed({ silent });
         if (!allowDownload) return;
       }

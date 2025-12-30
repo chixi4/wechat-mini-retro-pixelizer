@@ -14,12 +14,14 @@ function getErrMsg(result) {
   return result.errMsg || result.errmsg || "";
 }
 
-exports.main = async (event) => {
-  const action = event && event.action ? String(event.action) : "";
-  if (action !== "image") {
-    return { ok: false, status: "error", errMsg: "unsupported action" };
-  }
+function normalizeSuggestStatus(suggest) {
+  if (suggest === "pass") return "pass";
+  if (suggest === "review") return "review";
+  if (suggest === "risky") return "reject";
+  return "error";
+}
 
+async function handleImage(event) {
   const fileID = event && event.fileID ? String(event.fileID) : "";
   if (!fileID) {
     return { ok: false, status: "error", errMsg: "missing fileID" };
@@ -71,4 +73,78 @@ exports.main = async (event) => {
       // ignore cleanup failures
     }
   }
+}
+
+async function handleText(event) {
+  const content = event && event.content != null ? String(event.content) : "";
+  if (!content) {
+    return { ok: false, status: "error", errMsg: "missing content" };
+  }
+
+  const scene = event && typeof event.scene === "number" ? event.scene : 2;
+  const title = event && event.title != null ? String(event.title) : "";
+  const nickname = event && event.nickname != null ? String(event.nickname) : "";
+  const signature = event && event.signature != null ? String(event.signature) : "";
+
+  const wxContext = cloud.getWXContext ? cloud.getWXContext() : {};
+  const openid = wxContext && wxContext.OPENID ? wxContext.OPENID : "";
+  if (!openid) {
+    return { ok: false, status: "error", errMsg: "missing openid" };
+  }
+
+  try {
+    const payload = {
+      openid,
+      scene,
+      version: 2,
+      content
+    };
+    if (title) payload.title = title;
+    if (nickname) payload.nickname = nickname;
+    if (signature) payload.signature = signature;
+
+    const checkRes = await cloud.openapi.security.msgSecCheck(payload);
+    const errCode = getErrCode(checkRes);
+    const traceId = checkRes && (checkRes.trace_id || checkRes.traceId) ? checkRes.trace_id || checkRes.traceId : "";
+
+    if (errCode !== 0 && errCode !== null) {
+      return {
+        ok: false,
+        status: "error",
+        errCode,
+        errMsg: getErrMsg(checkRes),
+        traceId
+      };
+    }
+
+    const suggest = checkRes && checkRes.result && checkRes.result.suggest ? checkRes.result.suggest : "";
+    const status = normalizeSuggestStatus(suggest);
+    return {
+      ok: status === "pass",
+      status,
+      errCode,
+      errMsg: getErrMsg(checkRes),
+      traceId,
+      result: checkRes.result,
+      detail: checkRes.detail
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      status: "error",
+      errCode: getErrCode(err),
+      errMsg: getErrMsg(err) || String(err && err.message ? err.message : err)
+    };
+  }
+}
+
+exports.main = async (event) => {
+  const action = event && event.action ? String(event.action) : "";
+  if (action === "image") {
+    return handleImage(event);
+  }
+  if (action === "text") {
+    return handleText(event);
+  }
+  return { ok: false, status: "error", errMsg: "unsupported action" };
 };
